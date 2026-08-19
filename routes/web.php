@@ -51,7 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('configuracion/categorias', fn () => 'TODO: Phase 6')->name('categories.index');
     Route::get('configuracion/preferencias', fn () => 'TODO: Phase 6')->name('preferences.edit');
-    Route::view('configuracion/exportar', 'coming-soon', ['title' => 'Exportar mis datos'])->name('data-export.index');
+    Route::get('configuracion/exportar', fn () => Inertia::render('ComingSoon', ['title' => 'Export my data']))->name('data-export.index');
 });
 
 require __DIR__.'/auth.php';
