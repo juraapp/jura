@@ -15,8 +15,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Las categorías del sistema se siembran desde la propia migración
-        // (create_categories_table) para que existan en cualquier entorno.
+        // System categories are seeded from the migration itself
+        // (create_categories_table) so they exist in any environment.
 
         // User::factory(10)->create();
 

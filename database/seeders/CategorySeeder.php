@@ -9,38 +9,38 @@ use Illuminate\Database\Seeder;
 class CategorySeeder extends Seeder
 {
     /**
-     * Categorías del sistema (user_id null, visibles para todos los usuarios).
-     * El usuario puede crear las suyas propias además de estas.
+     * System categories (user_id null, visible to every user). Users can
+     * create their own categories in addition to these.
      */
     public function run(): void
     {
         $expenseCategories = [
-            ['name' => 'Alimentación', 'icon' => 'banknotes', 'color' => '#f59e0b'],
-            ['name' => 'Transporte', 'icon' => 'arrow-path', 'color' => '#3b82f6'],
-            ['name' => 'Vivienda', 'icon' => 'home', 'color' => '#8b5cf6'],
-            ['name' => 'Servicios', 'icon' => 'cog', 'color' => '#64748b'],
-            ['name' => 'Entretenimiento', 'icon' => 'flag', 'color' => '#ec4899'],
-            ['name' => 'Educación', 'icon' => 'document-chart-bar', 'color' => '#06b6d4'],
-            ['name' => 'Salud', 'icon' => 'exclamation-triangle', 'color' => '#ef4444'],
-            ['name' => 'Compras', 'icon' => 'tag', 'color' => '#f97316'],
-            ['name' => 'Tecnología', 'icon' => 'adjustments', 'color' => '#0ea5e9'],
-            ['name' => 'Suscripciones', 'icon' => 'arrow-path', 'color' => '#a855f7'],
-            ['name' => 'Viajes', 'icon' => 'arrows-right-left', 'color' => '#14b8a6'],
-            ['name' => 'Mascotas', 'icon' => 'flag', 'color' => '#84cc16'],
-            ['name' => 'Deudas', 'icon' => 'arrow-down-circle', 'color' => '#dc2626'],
-            ['name' => 'Impuestos', 'icon' => 'document-chart-bar', 'color' => '#78716c'],
-            ['name' => 'Otros', 'icon' => 'tag', 'color' => '#6b7280'],
+            ['name' => 'Food', 'icon' => 'banknotes', 'color' => '#f59e0b'],
+            ['name' => 'Transportation', 'icon' => 'arrow-path', 'color' => '#3b82f6'],
+            ['name' => 'Housing', 'icon' => 'home', 'color' => '#8b5cf6'],
+            ['name' => 'Utilities', 'icon' => 'cog', 'color' => '#64748b'],
+            ['name' => 'Entertainment', 'icon' => 'flag', 'color' => '#ec4899'],
+            ['name' => 'Education', 'icon' => 'document-chart-bar', 'color' => '#06b6d4'],
+            ['name' => 'Health', 'icon' => 'exclamation-triangle', 'color' => '#ef4444'],
+            ['name' => 'Shopping', 'icon' => 'tag', 'color' => '#f97316'],
+            ['name' => 'Technology', 'icon' => 'adjustments', 'color' => '#0ea5e9'],
+            ['name' => 'Subscriptions', 'icon' => 'arrow-path', 'color' => '#a855f7'],
+            ['name' => 'Travel', 'icon' => 'arrows-right-left', 'color' => '#14b8a6'],
+            ['name' => 'Pets', 'icon' => 'flag', 'color' => '#84cc16'],
+            ['name' => 'Debt', 'icon' => 'arrow-down-circle', 'color' => '#dc2626'],
+            ['name' => 'Taxes', 'icon' => 'document-chart-bar', 'color' => '#78716c'],
+            ['name' => 'Other', 'icon' => 'tag', 'color' => '#6b7280'],
         ];
 
         $incomeCategories = [
-            ['name' => 'Salario', 'icon' => 'banknotes', 'color' => '#22c55e'],
-            ['name' => 'Trabajo independiente', 'icon' => 'wallet', 'color' => '#10b981'],
-            ['name' => 'Bonificación', 'icon' => 'arrow-up-circle', 'color' => '#059669'],
-            ['name' => 'Regalo', 'icon' => 'flag', 'color' => '#84cc16'],
-            ['name' => 'Rendimientos', 'icon' => 'arrow-trending-up', 'color' => '#16a34a'],
-            ['name' => 'Venta', 'icon' => 'tag', 'color' => '#0d9488'],
-            ['name' => 'Reembolso', 'icon' => 'arrow-path', 'color' => '#0891b2'],
-            ['name' => 'Otros', 'icon' => 'tag', 'color' => '#6b7280'],
+            ['name' => 'Salary', 'icon' => 'banknotes', 'color' => '#22c55e'],
+            ['name' => 'Freelance', 'icon' => 'wallet', 'color' => '#10b981'],
+            ['name' => 'Bonus', 'icon' => 'arrow-up-circle', 'color' => '#059669'],
+            ['name' => 'Gift', 'icon' => 'flag', 'color' => '#84cc16'],
+            ['name' => 'Investment Returns', 'icon' => 'arrow-trending-up', 'color' => '#16a34a'],
+            ['name' => 'Sale', 'icon' => 'tag', 'color' => '#0d9488'],
+            ['name' => 'Refund', 'icon' => 'arrow-path', 'color' => '#0891b2'],
+            ['name' => 'Other', 'icon' => 'tag', 'color' => '#6b7280'],
         ];
 
         foreach ($expenseCategories as $category) {

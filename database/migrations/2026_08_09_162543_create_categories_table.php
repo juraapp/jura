@@ -11,7 +11,7 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            // user_id null => categoría del sistema (semilla), visible para todos.
+            // user_id null => system (seeded) category, visible to everyone.
             $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('parent_id')->nullable()->constrained('categories')->cascadeOnDelete();
             $table->string('name');
@@ -25,10 +25,10 @@ return new class extends Migration
             $table->index(['user_id', 'type']);
         });
 
-        // Las categorías del sistema son datos de referencia, no datos de
-        // desarrollo: se siembran aquí para que existan en cualquier entorno
-        // (incluida producción) apenas se corre `migrate`, sin depender de
-        // que alguien recuerde ejecutar `db:seed`.
+        // System categories are reference data, not development data: they're
+        // seeded here so they exist in any environment (including production)
+        // as soon as `migrate` runs, without depending on someone remembering
+        // to run `db:seed`.
         (new CategorySeeder)->run();
     }
 

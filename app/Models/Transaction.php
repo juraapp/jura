@@ -59,8 +59,8 @@ class Transaction extends Model
     }
 
     /**
-     * Ingresos y gastos "reales" — excluye las dos patas de una transferencia,
-     * que nunca deben contar como movimiento de ingreso/gasto.
+     * "Real" income and expenses — excludes both legs of a transfer, which
+     * should never count as an income/expense movement.
      */
     public function scopeCashFlow(Builder $query): Builder
     {

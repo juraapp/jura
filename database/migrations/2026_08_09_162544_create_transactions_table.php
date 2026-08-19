@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('account_id')->constrained()->cascadeOnDelete();
             $table->string('type');
-            // Nulo únicamente cuando type es transfer_out/transfer_in.
+            // Null only when type is transfer_out/transfer_in.
             $table->foreignId('category_id')->nullable()->constrained()->restrictOnDelete();
             $table->decimal('amount', 15, 2);
             $table->date('date');
@@ -21,8 +21,8 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->string('payment_method')->nullable();
             $table->boolean('is_recurring_generated')->default(false);
-            // FK añadida en add_foreign_key_recurring_transaction_id_to_transactions_table
-            // (Fase 4) una vez existe la tabla recurring_transactions.
+            // FK added in add_foreign_key_recurring_transaction_id_to_transactions_table
+            // once the recurring_transactions table exists.
             $table->unsignedBigInteger('recurring_transaction_id')->nullable();
             $table->uuid('transfer_group_id')->nullable();
             $table->timestamps();
