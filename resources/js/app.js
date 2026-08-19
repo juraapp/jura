@@ -4,6 +4,7 @@ import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { initFlowbite } from 'flowbite';
 import { createApp, h } from 'vue';
+import { createI18n } from 'vue-i18n';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -20,8 +21,20 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
+        // Laravel's lang/{locale}/messages.php is the single source of truth
+        // for translated strings, shared on every request as the "i18n" prop
+        // so the server and client never fall out of sync.
+        const { locale, messages } = props.initialPage.props.i18n;
+        const i18n = createI18n({
+            legacy: false,
+            locale,
+            fallbackLocale: 'en',
+            messages: { [locale]: messages },
+        });
+
         return createApp({ render: () => h(App, props) })
             .use(plugin)
+            .use(i18n)
             .mount(el);
     },
     progress: {

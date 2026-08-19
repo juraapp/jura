@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Services\BalanceCalculator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Lang;
 use Inertia\Inertia;
 use Inertia\Middleware;
 
@@ -34,6 +35,10 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'appName' => config('app.name'),
+            'i18n' => [
+                'locale' => app()->getLocale(),
+                'messages' => Lang::get('messages'),
+            ],
             'auth' => [
                 'user' => $request->user(),
             ],
