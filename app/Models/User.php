@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -16,6 +17,10 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    protected $attributes = [
+        'currency_default' => 'COP',
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -30,33 +35,33 @@ class User extends Authenticatable
         ];
     }
 
-    public function accounts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function accounts(): HasMany
     {
-        return $this->hasMany(\App\Models\Account::class);
+        return $this->hasMany(Account::class);
     }
 
-    public function categories(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function categories(): HasMany
     {
-        return $this->hasMany(\App\Models\Category::class);
+        return $this->hasMany(Category::class);
     }
 
-    public function transactions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function transactions(): HasMany
     {
-        return $this->hasMany(\App\Models\Transaction::class);
+        return $this->hasMany(Transaction::class);
     }
 
-    public function budgets(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function budgets(): HasMany
     {
-        return $this->hasMany(\App\Models\Budget::class);
+        return $this->hasMany(Budget::class);
     }
 
-    public function savingsGoals(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function savingsGoals(): HasMany
     {
-        return $this->hasMany(\App\Models\SavingsGoal::class);
+        return $this->hasMany(SavingsGoal::class);
     }
 
-    public function recurringTransactions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function recurringTransactions(): HasMany
     {
-        return $this->hasMany(\App\Models\RecurringTransaction::class);
+        return $this->hasMany(RecurringTransaction::class);
     }
 }
