@@ -20,6 +20,7 @@ class User extends Authenticatable
 
     protected $attributes = [
         'currency_default' => 'COP',
+        'locale' => 'en',
     ];
 
     /**
