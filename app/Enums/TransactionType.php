@@ -12,9 +12,9 @@ enum TransactionType: string
     public function label(): string
     {
         return match ($this) {
-            self::Income => 'Ingreso',
-            self::Expense => 'Gasto',
-            self::TransferOut, self::TransferIn => 'Transferencia',
+            self::Income => __('enums.transaction_type.income'),
+            self::Expense => __('enums.transaction_type.expense'),
+            self::TransferOut, self::TransferIn => __('enums.transaction_type.transfer'),
         };
     }
 

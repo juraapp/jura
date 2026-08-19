@@ -25,8 +25,11 @@ class UpcomingRecurringPayment extends Notification
         return [
             'type' => 'upcoming_payment',
             'severity' => 'warning',
-            'message' => "Tienes un pago próximo: {$label} ({$amount}) el ".
-                $this->recurring->next_due_date->translatedFormat('d M').'.',
+            'message' => __('notifications.upcoming_payment', [
+                'label' => $label,
+                'amount' => $amount,
+                'date' => $this->recurring->next_due_date->translatedFormat('d M'),
+            ]),
             'recurring_transaction_id' => $this->recurring->id,
             'url' => route('recurring-transactions.index'),
         ];

@@ -9,9 +9,6 @@ enum BudgetPeriodType: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::Monthly => 'Mensual',
-            self::Yearly => 'Anual',
-        };
+        return __('enums.budget_period_type.'.$this->value);
     }
 }

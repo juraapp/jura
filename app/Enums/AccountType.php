@@ -12,13 +12,7 @@ enum AccountType: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::Bank => 'Cuenta bancaria',
-            self::Wallet => 'Billetera digital',
-            self::Cash => 'Efectivo',
-            self::CreditCard => 'Tarjeta de crédito',
-            self::Savings => 'Cuenta de ahorros',
-        };
+        return __('enums.account_type.'.$this->value);
     }
 
     public function icon(): string

@@ -13,12 +13,7 @@ enum RecurringFrequency: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::Weekly => 'Semanal',
-            self::Biweekly => 'Quincenal',
-            self::Monthly => 'Mensual',
-            self::Yearly => 'Anual',
-        };
+        return __('enums.recurring_frequency.'.$this->value);
     }
 
     public function addTo(Carbon $date): Carbon

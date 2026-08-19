@@ -26,8 +26,10 @@ class LowAccountBalance extends Notification
         return [
             'type' => 'low_balance',
             'severity' => 'warning',
-            'message' => "Tu saldo en {$this->account->name} está bajo: ".
-                $this->balance->format($this->account->currency, $notifiable->locale).'.',
+            'message' => __('notifications.low_balance', [
+                'account' => $this->account->name,
+                'amount' => $this->balance->format($this->account->currency, $notifiable->locale),
+            ]),
             'account_id' => $this->account->id,
             'url' => route('accounts.index'),
         ];

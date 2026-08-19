@@ -9,9 +9,6 @@ enum CategoryType: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::Income => 'Ingreso',
-            self::Expense => 'Gasto',
-        };
+        return __('enums.category_type.'.$this->value);
     }
 }

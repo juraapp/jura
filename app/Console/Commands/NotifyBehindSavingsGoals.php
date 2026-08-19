@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
 #[Signature('app:notify-behind-savings-goals')]
-#[Description('Notifica metas de ahorro activas que van atrasadas respecto a su fecha objetivo')]
+#[Description('Notify active savings goals that are falling behind their target date')]
 class NotifyBehindSavingsGoals extends Command
 {
     public function handle(): void
@@ -48,6 +48,6 @@ class NotifyBehindSavingsGoals extends Command
             }
         }
 
-        $this->info("Metas marcadas como atrasadas: {$flagged} de {$goals->count()} revisadas.");
+        $this->info("Goals flagged as behind schedule: {$flagged} of {$goals->count()} reviewed.");
     }
 }

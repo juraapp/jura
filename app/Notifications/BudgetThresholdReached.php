@@ -29,8 +29,8 @@ class BudgetThresholdReached extends Notification
             'type' => 'budget_alert',
             'severity' => $this->exceeded ? 'critical' : 'warning',
             'message' => $this->exceeded
-                ? "Superaste el presupuesto de {$category} ({$this->percentageLabel()}% usado)."
-                : "Has gastado el {$this->percentageLabel()}% de tu presupuesto de {$category}.",
+                ? __('notifications.budget_exceeded', ['category' => $category, 'percentage' => $this->percentageLabel()])
+                : __('notifications.budget_threshold', ['category' => $category, 'percentage' => $this->percentageLabel()]),
             'budget_id' => $this->budget->id,
             'url' => route('budgets.index'),
         ];
