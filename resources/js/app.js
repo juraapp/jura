@@ -1,9 +1,24 @@
-import { initFlowbite } from 'flowbite';
-import './charts';
+import '../css/app.css';
 
-// Flowbite's dropdowns/modals/tooltips are wired via data-attributes and only
-// auto-init on DOMContentLoaded. Livewire swaps the DOM on every navigation
-// and on most component updates, so we re-run the initializer after both.
-document.addEventListener('DOMContentLoaded', initFlowbite);
-document.addEventListener('livewire:navigated', initFlowbite);
-document.addEventListener('livewire:load', initFlowbite);
+import { createInertiaApp } from '@inertiajs/vue3';
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { createApp, h } from 'vue';
+
+const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+createInertiaApp({
+    title: (title) => `${title} - ${appName}`,
+    resolve: (name) =>
+        resolvePageComponent(
+            `./Pages/${name}.vue`,
+            import.meta.glob('./Pages/**/*.vue'),
+        ),
+    setup({ el, App, props, plugin }) {
+        return createApp({ render: () => h(App, props) })
+            .use(plugin)
+            .mount(el);
+    },
+    progress: {
+        color: '#4B5563',
+    },
+});

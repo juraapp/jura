@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-[x-cloak] {
-    display: none !important;
-}
-
 .tabular-nums {
     font-variant-numeric: tabular-nums;
 }
