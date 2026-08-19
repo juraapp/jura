@@ -25,33 +25,33 @@ Route::middleware('auth')->group(function () {
     Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 });
 
-// TODO(Phase 5/6): URIs translated to English and re-wired to Inertia controllers.
+// TODO(Phase 6): re-wired to real Inertia controllers.
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('finanzas/transacciones', fn () => 'TODO: Phase 6')->name('transactions.index');
-    Route::get('finanzas/transacciones/importar', fn () => 'TODO: Phase 6')->name('transactions.import');
-    Route::get('finanzas/transacciones/importar/plantilla', TransactionImportTemplateController::class)->name('transactions.import.template');
-    Route::get('finanzas/ingresos', fn () => 'TODO: Phase 6')->name('incomes.index');
-    Route::get('finanzas/gastos', fn () => 'TODO: Phase 6')->name('expenses.index');
-    Route::get('finanzas/transferencias', fn () => 'TODO: Phase 6')->name('transfers.index');
+    Route::get('finances/transactions', fn () => 'TODO: Phase 6')->name('transactions.index');
+    Route::get('finances/transactions/import', fn () => 'TODO: Phase 6')->name('transactions.import');
+    Route::get('finances/transactions/import/template', TransactionImportTemplateController::class)->name('transactions.import.template');
+    Route::get('finances/incomes', fn () => 'TODO: Phase 6')->name('incomes.index');
+    Route::get('finances/expenses', fn () => 'TODO: Phase 6')->name('expenses.index');
+    Route::get('finances/transfers', fn () => 'TODO: Phase 6')->name('transfers.index');
 
-    Route::get('cuentas', fn () => 'TODO: Phase 6')->name('accounts.index');
+    Route::get('accounts', fn () => 'TODO: Phase 6')->name('accounts.index');
 
-    Route::get('planificacion/presupuestos', fn () => 'TODO: Phase 6')->name('budgets.index');
-    Route::get('planificacion/metas', fn () => 'TODO: Phase 6')->name('savings-goals.index');
-    Route::get('planificacion/recurrentes', fn () => 'TODO: Phase 6')->name('recurring-transactions.index');
+    Route::get('planning/budgets', fn () => 'TODO: Phase 6')->name('budgets.index');
+    Route::get('planning/goals', fn () => 'TODO: Phase 6')->name('savings-goals.index');
+    Route::get('planning/recurring', fn () => 'TODO: Phase 6')->name('recurring-transactions.index');
 
-    Route::get('reportes/mensual', fn () => 'TODO: Phase 6')->name('reports.monthly');
-    Route::get('reportes/mensual/pdf', MonthlyReportPdfController::class)->name('reports.monthly.pdf');
+    Route::get('reports/monthly', fn () => 'TODO: Phase 6')->name('reports.monthly');
+    Route::get('reports/monthly/pdf', MonthlyReportPdfController::class)->name('reports.monthly.pdf');
 
-    Route::get('reportes/anual', fn () => 'TODO: Phase 6')->name('reports.annual');
-    Route::get('reportes/anual/pdf', AnnualReportPdfController::class)->name('reports.annual.pdf');
+    Route::get('reports/annual', fn () => 'TODO: Phase 6')->name('reports.annual');
+    Route::get('reports/annual/pdf', AnnualReportPdfController::class)->name('reports.annual.pdf');
 
-    Route::get('reportes/personalizado', fn () => 'TODO: Phase 6')->name('reports.custom');
-    Route::get('reportes/personalizado/csv', CustomReportCsvController::class)->name('reports.custom.csv');
+    Route::get('reports/custom', fn () => 'TODO: Phase 6')->name('reports.custom');
+    Route::get('reports/custom/csv', CustomReportCsvController::class)->name('reports.custom.csv');
 
-    Route::get('configuracion/categorias', fn () => 'TODO: Phase 6')->name('categories.index');
-    Route::get('configuracion/preferencias', fn () => 'TODO: Phase 6')->name('preferences.edit');
-    Route::get('configuracion/exportar', fn () => Inertia::render('ComingSoon', ['title' => 'Export my data']))->name('data-export.index');
+    Route::get('settings/categories', fn () => 'TODO: Phase 6')->name('categories.index');
+    Route::get('settings/preferences', fn () => 'TODO: Phase 6')->name('preferences.edit');
+    Route::get('settings/export', fn () => Inertia::render('ComingSoon', ['title' => 'Export my data']))->name('data-export.index');
 });
 
 require __DIR__.'/auth.php';
