@@ -9,16 +9,16 @@ use App\Support\Money;
 use Illuminate\Support\Collection;
 
 /**
- * Turns the numbers ReportService already computed into short Spanish
- * sentences. Every phrase is a template filled with real aggregates —
- * never freeform generated text — so nothing here can be "made up".
+ * Turns the numbers ReportService already computed into short sentences.
+ * Every phrase is a template filled with real aggregates — never freeform
+ * generated text — so nothing here can be "made up".
  */
 class InsightService
 {
-    /** Gastos individuales por debajo de este monto cuentan como "hormiga". */
+    /** Individual expenses below this amount count as "ant expenses" (small, frequent purchases). */
     private const ANT_EXPENSE_THRESHOLD = 30000;
 
-    /** Un gasto se marca inusual si supera la media histórica + N desviaciones. */
+    /** An expense is flagged as unusual if it exceeds the historical mean plus N standard deviations. */
     private const UNUSUAL_STDDEV_MULTIPLIER = 1.5;
 
     /**
@@ -34,55 +34,48 @@ class InsightService
         }
 
         if ($summary['topCategory']) {
-            $lines[] = sprintf(
-                '%s representó el %s%% de tus gastos este mes.',
-                $summary['topCategory']['category']?->name ?? 'Una categoría',
-                number_format($summary['topCategory']['percentage'], 1),
-            );
+            $lines[] = __('insights.top_category', [
+                'category' => $summary['topCategory']['category']?->name ?? __('insights.default_category'),
+                'percentage' => number_format($summary['topCategory']['percentage'], 1),
+            ]);
         }
 
         if ($summary['savings']->isPositive() && ! $summary['income']->isZero()) {
-            $lines[] = sprintf(
-                'Ahorraste %s este mes, equivalente al %s%% de tus ingresos.',
-                $summary['savings']->format($currency),
-                number_format($summary['savingsRate'], 1),
-            );
+            $lines[] = __('insights.savings_positive', [
+                'amount' => $summary['savings']->format($currency),
+                'percentage' => number_format($summary['savingsRate'], 1),
+            ]);
         } elseif ($summary['savings']->isNegative()) {
-            $lines[] = sprintf(
-                'Gastaste %s más de lo que ingresó este mes.',
-                $summary['savings']->abs()->format($currency),
-            );
+            $lines[] = __('insights.savings_negative', [
+                'amount' => $summary['savings']->abs()->format($currency),
+            ]);
         }
 
         if ($summary['daysOfAutonomy'] !== null) {
-            $lines[] = sprintf(
-                'Con tu ritmo de gasto actual, tu dinero disponible te alcanza para %s días sin nuevos ingresos.',
-                number_format($summary['daysOfAutonomy'], 0),
-            );
+            $lines[] = __('insights.days_of_autonomy', [
+                'days' => number_format($summary['daysOfAutonomy'], 0),
+            ]);
         }
 
         if ($user && $year && $month) {
             $ants = $this->antExpenses($user, $year, $month, $currency, $summary['expense']);
             if ($ants && $ants['percentageOfExpense'] >= 5) {
-                $lines[] = sprintf(
-                    'Tus gastos hormiga (compras menores a $%s) sumaron %s este mes en %d %s — %s%% de tu gasto total.',
-                    number_format(self::ANT_EXPENSE_THRESHOLD, 0, ',', '.'),
-                    $ants['total']->format($currency),
-                    $ants['count'],
-                    $ants['count'] === 1 ? 'movimiento' : 'movimientos',
-                    number_format($ants['percentageOfExpense'], 1),
-                );
+                $lines[] = __('insights.ant_expenses', [
+                    'threshold' => number_format(self::ANT_EXPENSE_THRESHOLD, 0, ',', '.'),
+                    'total' => $ants['total']->format($currency),
+                    'movement' => trans_choice('insights.movement', $ants['count']),
+                    'percentage' => number_format($ants['percentageOfExpense'], 1),
+                ]);
             }
 
             $unusual = $this->unusualExpenses($user, $year, $month, $currency);
             if ($unusual->isNotEmpty()) {
                 $top = $unusual->sortByDesc(fn (Transaction $t) => $t->amount->toFloat())->first();
-                $lines[] = sprintf(
-                    'Detectamos un gasto inusual: %s (%s) está muy por encima de tu promedio habitual en %s.',
-                    $top->description ?: $top->category?->name,
-                    $top->amount->format($currency),
-                    $top->category?->name ?? 'esa categoría',
-                );
+                $lines[] = __('insights.unusual_expense', [
+                    'description' => $top->description ?: $top->category?->name,
+                    'amount' => $top->amount->format($currency),
+                    'category' => $top->category?->name ?? __('insights.that_category'),
+                ]);
             }
         }
 
@@ -90,8 +83,8 @@ class InsightService
     }
 
     /**
-     * Gastos hormiga: la suma de compras pequeñas y frecuentes que, juntas,
-     * suelen pesar más de lo que el usuario percibe.
+     * "Ant expenses": the sum of small, frequent purchases that, together,
+     * usually weigh more than the user perceives.
      *
      * @return array{total: Money, count: int, percentageOfExpense: float}|null
      */
@@ -120,9 +113,10 @@ class InsightService
     }
 
     /**
-     * Gastos que se salen notablemente del patrón histórico de su categoría
-     * (más de N desviaciones estándar sobre la media de los últimos 6 meses,
-     * excluyendo el mes actual). No requiere ML: es media + desviación simple.
+     * Expenses that stand out notably from their category's historical
+     * pattern (more than N standard deviations above the mean of the last
+     * 6 months, excluding the current month). No ML required: mean + simple
+     * standard deviation.
      *
      * @return Collection<int, Transaction>
      */
@@ -170,13 +164,12 @@ class InsightService
         $change = $summary['changeExpense'];
 
         if (abs($change) < 1) {
-            return 'Tus gastos se mantuvieron prácticamente iguales al mes anterior.';
+            return __('insights.expense_vs_previous_month_flat');
         }
 
-        return sprintf(
-            'Este mes gastaste %s%% %s al mes anterior.',
-            number_format(abs($change), 1),
-            $change > 0 ? 'más' : 'menos',
-        );
+        return __('insights.expense_vs_previous_month', [
+            'percentage' => number_format(abs($change), 1),
+            'direction' => __($change > 0 ? 'insights.more' : 'insights.less'),
+        ]);
     }
 }

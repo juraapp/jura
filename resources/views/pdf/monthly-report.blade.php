@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{ str_replace('_', '-', $user->locale) }}">
 <head>
     <meta charset="utf-8">
-    <title>Reporte mensual — {{ $periodLabel }}</title>
+    <title>{{ __('pdf.monthly_title', ['period' => $periodLabel], $user->locale) }}</title>
     <style>
         body { font-family: 'Helvetica', sans-serif; color: #1f2937; font-size: 12px; }
         h1 { font-size: 20px; margin-bottom: 0; }
@@ -22,7 +22,7 @@
     </style>
 </head>
 <body>
-    <h1>Reporte financiero mensual</h1>
+    <h1>{{ __('pdf.monthly_heading', [], $user->locale) }}</h1>
     <p class="subtitle">{{ $user->name }} &middot; {{ ucfirst($periodLabel) }}</p>
 
     @foreach ($summary as $currency => $currencySummary)
@@ -33,22 +33,22 @@
         <table class="grid">
             <tr>
                 <td>
-                    <div class="label">Ingresos</div>
+                    <div class="label">{{ __('pdf.income', [], $user->locale) }}</div>
                     <div class="value green">{{ $currencySummary['income']->format($currency, $user->locale) }}</div>
                 </td>
                 <td>
-                    <div class="label">Gastos</div>
+                    <div class="label">{{ __('pdf.expense', [], $user->locale) }}</div>
                     <div class="value red">{{ $currencySummary['expense']->format($currency, $user->locale) }}</div>
                 </td>
                 <td>
-                    <div class="label">Ahorro ({{ number_format($currencySummary['savingsRate'], 1) }}%)</div>
+                    <div class="label">{{ __('pdf.savings', ['rate' => number_format($currencySummary['savingsRate'], 1)], $user->locale) }}</div>
                     <div class="value">{{ $currencySummary['savings']->format($currency, $user->locale) }}</div>
                 </td>
             </tr>
         </table>
 
         @if (! empty($highlights[$currency]))
-            <h2>Análisis del mes</h2>
+            <h2>{{ __('pdf.monthly_insights_heading', [], $user->locale) }}</h2>
             <ul class="insights">
                 @foreach ($highlights[$currency] as $line)
                     <li>{{ $line }}</li>
@@ -56,19 +56,19 @@
             </ul>
         @endif
 
-        <h2>Gastos por categoría</h2>
+        <h2>{{ __('pdf.expenses_by_category_heading', [], $user->locale) }}</h2>
         @php $categoryRows = $expenseByCategory->get($currency, collect()); @endphp
         @if ($categoryRows->isEmpty())
-            <p>Sin gastos registrados en este periodo.</p>
+            <p>{{ __('pdf.no_expenses_this_period', [], $user->locale) }}</p>
         @else
             <table class="list">
                 <thead>
-                    <tr><th>Categoría</th><th style="text-align:right">Valor</th><th style="text-align:right">%</th></tr>
+                    <tr><th>{{ __('pdf.category', [], $user->locale) }}</th><th style="text-align:right">{{ __('pdf.value', [], $user->locale) }}</th><th style="text-align:right">%</th></tr>
                 </thead>
                 <tbody>
                     @foreach ($categoryRows as $row)
                         <tr>
-                            <td>{{ $row['category']?->name ?? 'Sin categoría' }}</td>
+                            <td>{{ $row['category']?->name ?? __('pdf.no_category', [], $user->locale) }}</td>
                             <td style="text-align:right">{{ $row['total']->format($currency, $user->locale) }}</td>
                             <td style="text-align:right">{{ number_format($row['percentage'], 1) }}%</td>
                         </tr>

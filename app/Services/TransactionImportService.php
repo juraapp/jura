@@ -23,36 +23,30 @@ class TransactionImportService
 {
     public const MAX_ROWS = 1000;
 
-    /** Normalized header cell => canonical field. 'valor'/'monto' are synonyms; 'moneda' is tolerated but ignored. */
-    private const COLUMN_ALIASES = [
-        'fecha' => 'fecha',
-        'descripcion' => 'descripcion',
-        'categoria' => 'categoria',
-        'cuenta' => 'cuenta',
-        'tipo' => 'tipo',
-        'notas' => 'notas',
-        'monto' => 'monto',
-        'valor' => 'monto',
+    /** Extra header synonyms not already covered by the en/es messages.csv labels. */
+    private const EXTRA_COLUMN_ALIASES = [
+        'valor' => 'amount',
+        'value' => 'amount',
     ];
 
-    private const REQUIRED_COLUMNS = ['fecha' => 'Fecha', 'cuenta' => 'Cuenta', 'categoria' => 'Categoría', 'tipo' => 'Tipo', 'monto' => 'Monto'];
+    private const REQUIRED_COLUMNS = ['date', 'account', 'category', 'type', 'amount'];
 
     /**
-     * @return array<int, array{line: int, fecha: ?string, descripcion: ?string, categoria: ?string, cuenta: ?string, tipo: ?string, notas: ?string, monto: ?string}>
+     * @return array<int, array{line: int, date: ?string, description: ?string, category: ?string, account: ?string, type: ?string, notes: ?string, amount: ?string}>
      */
     public function parse(string $realPath): array
     {
         $handle = fopen($realPath, 'r');
 
         if ($handle === false) {
-            throw new TransactionImportException('No se pudo leer el archivo.');
+            throw new TransactionImportException(__('messages.import.could_not_read_file'));
         }
 
         try {
             $firstLine = fgets($handle);
 
             if ($firstLine === false || trim($firstLine) === '') {
-                throw new TransactionImportException('El archivo está vacío.');
+                throw new TransactionImportException(__('messages.import.empty_file'));
             }
 
             rewind($handle);
@@ -61,7 +55,7 @@ class TransactionImportService
             $header = fgetcsv($handle, 0, $delimiter, '"', '\\');
 
             if ($header === false) {
-                throw new TransactionImportException('El archivo está vacío.');
+                throw new TransactionImportException(__('messages.import.empty_file'));
             }
 
             $header[0] = $this->stripBom((string) $header[0]);
@@ -79,20 +73,18 @@ class TransactionImportService
                 }
 
                 if (count($rows) >= self::MAX_ROWS) {
-                    throw new TransactionImportException(
-                        'El archivo tiene más de '.self::MAX_ROWS.' filas; divídelo en archivos más pequeños.'
-                    );
+                    throw new TransactionImportException(__('messages.import.too_many_rows', ['max' => self::MAX_ROWS]));
                 }
 
                 $rows[] = [
                     'line' => $line,
-                    'fecha' => $this->columnValue($data, $columnMap, 'fecha'),
-                    'descripcion' => $this->columnValue($data, $columnMap, 'descripcion'),
-                    'categoria' => $this->columnValue($data, $columnMap, 'categoria'),
-                    'cuenta' => $this->columnValue($data, $columnMap, 'cuenta'),
-                    'tipo' => $this->columnValue($data, $columnMap, 'tipo'),
-                    'notas' => $this->columnValue($data, $columnMap, 'notas'),
-                    'monto' => $this->columnValue($data, $columnMap, 'monto'),
+                    'date' => $this->columnValue($data, $columnMap, 'date'),
+                    'description' => $this->columnValue($data, $columnMap, 'description'),
+                    'category' => $this->columnValue($data, $columnMap, 'category'),
+                    'account' => $this->columnValue($data, $columnMap, 'account'),
+                    'type' => $this->columnValue($data, $columnMap, 'type'),
+                    'notes' => $this->columnValue($data, $columnMap, 'notes'),
+                    'amount' => $this->columnValue($data, $columnMap, 'amount'),
                 ];
             }
 
@@ -145,43 +137,43 @@ class TransactionImportService
     {
         $errors = [];
 
-        $type = $this->resolveType($row['tipo']);
+        $type = $this->resolveType($row['type']);
         if ($type === null) {
-            $errors[] = "Tipo inválido: '{$row['tipo']}' (use 'Ingreso' o 'Gasto').";
+            $errors[] = __('messages.import.invalid_type', ['value' => (string) $row['type']]);
         }
 
-        $accountId = $accounts[Str::lower(trim((string) $row['cuenta']))] ?? null;
+        $accountId = $accounts[Str::lower(trim((string) $row['account']))] ?? null;
         if ($accountId === null) {
-            $errors[] = "Cuenta '{$row['cuenta']}' no encontrada.";
+            $errors[] = __('messages.import.account_not_found', ['account' => (string) $row['account']]);
         }
 
         $categoryId = null;
         if ($type !== null) {
-            $categoryKey = $type->value.'|'.Str::lower(trim((string) $row['categoria']));
+            $categoryKey = $type->value.'|'.Str::lower(trim((string) $row['category']));
             $categoryId = $categories[$categoryKey] ?? null;
             if ($categoryId === null) {
-                $errors[] = "Categoría '{$row['categoria']}' no existe para el tipo '{$type->label()}'.";
+                $errors[] = __('messages.import.category_not_found', ['category' => (string) $row['category'], 'type' => $type->label()]);
             }
         }
 
-        $amount = $this->parseAmount($row['monto']);
+        $amount = $this->parseAmount($row['amount']);
         if ($amount === null) {
-            $errors[] = "Monto inválido: '{$row['monto']}'.";
+            $errors[] = __('messages.import.invalid_amount', ['value' => (string) $row['amount']]);
         }
 
-        $date = $this->parseDate($row['fecha']);
+        $date = $this->parseDate($row['date']);
         if ($date === null) {
-            $errors[] = "Fecha inválida: '{$row['fecha']}'.";
+            $errors[] = __('messages.import.invalid_date', ['value' => (string) $row['date']]);
         }
 
-        $description = $row['descripcion'];
+        $description = $row['description'];
         if ($description !== null && mb_strlen($description) > 255) {
-            $errors[] = 'Descripción supera 255 caracteres.';
+            $errors[] = __('messages.import.description_too_long');
         }
 
-        $notes = $row['notas'];
+        $notes = $row['notes'];
         if ($notes !== null && mb_strlen($notes) > 2000) {
-            $errors[] = 'Notas superan 2000 caracteres.';
+            $errors[] = __('messages.import.notes_too_long');
         }
 
         if (! empty($errors)) {
@@ -295,16 +287,38 @@ class TransactionImportService
         return substr_count($sampleLine, ';') > substr_count($sampleLine, ',') ? ';' : ',';
     }
 
+    /**
+     * Builds the accepted-header-cell => canonical-field map from both
+     * locales' messages.csv labels (so an English or Spanish template CSV
+     * both import correctly), plus a couple of extra known synonyms.
+     *
+     * @return array<string, string>
+     */
+    private function columnAliases(): array
+    {
+        $aliases = self::EXTRA_COLUMN_ALIASES;
+
+        foreach (['en', 'es'] as $locale) {
+            foreach (trans('messages.csv', [], $locale) as $field => $label) {
+                $normalized = Str::of($label)->trim()->lower()->ascii()->toString();
+                $aliases[$normalized] = $field;
+            }
+        }
+
+        return $aliases;
+    }
+
     /** @return array<string, int> canonical field => column index */
     private function mapColumns(array $header): array
     {
+        $aliases = $this->columnAliases();
         $map = [];
 
         foreach ($header as $index => $cell) {
             $normalized = Str::of((string) $cell)->trim()->lower()->ascii()->toString();
 
-            if (isset(self::COLUMN_ALIASES[$normalized])) {
-                $map[self::COLUMN_ALIASES[$normalized]] = $index;
+            if (isset($aliases[$normalized])) {
+                $map[$aliases[$normalized]] = $index;
             }
         }
 
@@ -313,16 +327,15 @@ class TransactionImportService
 
     private function assertRequiredColumns(array $columnMap): void
     {
-        $missing = [];
-
-        foreach (self::REQUIRED_COLUMNS as $key => $label) {
-            if (! isset($columnMap[$key])) {
-                $missing[] = $label;
-            }
-        }
+        $missing = array_filter(
+            self::REQUIRED_COLUMNS,
+            fn (string $field) => ! isset($columnMap[$field])
+        );
 
         if (! empty($missing)) {
-            throw new TransactionImportException('Faltan columnas obligatorias en el archivo: '.implode(', ', $missing).'.');
+            $labels = array_map(fn (string $field) => __("messages.csv.{$field}"), $missing);
+
+            throw new TransactionImportException(__('messages.import.missing_columns', ['columns' => implode(', ', $labels)]));
         }
     }
 

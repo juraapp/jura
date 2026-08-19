@@ -49,7 +49,7 @@ final class Money implements Stringable
     public function divide(string|int|float $divisor): self
     {
         if (bccomp((string) $divisor, '0', self::SCALE) === 0) {
-            throw new InvalidArgumentException('No se puede dividir un monto entre cero.');
+            throw new InvalidArgumentException('Cannot divide an amount by zero.');
         }
 
         return new self(bcdiv($this->amount, (string) $divisor, self::SCALE));
@@ -96,7 +96,7 @@ final class Money implements Stringable
     }
 
     /**
-     * Percentage this amount represents of $whole, e.g. gasto / ingreso * 100.
+     * Percentage this amount represents of $whole, e.g. expense / income * 100.
      * Returns 0.0 when $whole is zero to keep callers free of division guards.
      */
     public function percentageOf(self $whole): float
@@ -121,7 +121,7 @@ final class Money implements Stringable
         return $this->amount;
     }
 
-    public function format(string $currency = 'COP', string $locale = 'es'): string
+    public function format(string $currency = 'COP', string $locale = 'en'): string
     {
         $formatter = new \NumberFormatter(str_replace('_', '-', $locale), \NumberFormatter::CURRENCY);
 
