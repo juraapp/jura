@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Reports\AnnualReportPdfController;
@@ -12,8 +13,7 @@ use Inertia\Inertia;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : redirect()->route('login'));
 
-// TODO(Phase 6): replaced by a real DashboardController.
-Route::get('dashboard', fn () => Inertia::render('Dashboard'))
+Route::get('dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 

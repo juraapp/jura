@@ -5,6 +5,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { initFlowbite } from 'flowbite';
 import { createApp, h } from 'vue';
 import { createI18n } from 'vue-i18n';
+import VueApexCharts from 'vue3-apexcharts';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -35,6 +36,7 @@ createInertiaApp({
         return createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(i18n)
+            .component('apexchart', VueApexCharts)
             .mount(el);
     },
     progress: {
