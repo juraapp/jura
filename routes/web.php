@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Reports\AnnualReportPdfController;
@@ -34,7 +35,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('finances/expenses', fn () => 'TODO: Phase 6')->name('expenses.index');
     Route::get('finances/transfers', fn () => 'TODO: Phase 6')->name('transfers.index');
 
-    Route::get('accounts', fn () => 'TODO: Phase 6')->name('accounts.index');
+    Route::get('accounts', [AccountController::class, 'index'])->name('accounts.index');
+    Route::post('accounts', [AccountController::class, 'store'])->name('accounts.store');
+    Route::patch('accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');
+    Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
 
     Route::get('planning/budgets', fn () => 'TODO: Phase 6')->name('budgets.index');
     Route::get('planning/goals', fn () => 'TODO: Phase 6')->name('savings-goals.index');
