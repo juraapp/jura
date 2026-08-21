@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
@@ -53,7 +54,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('reports/custom', fn () => 'TODO: Phase 6')->name('reports.custom');
     Route::get('reports/custom/csv', CustomReportCsvController::class)->name('reports.custom.csv');
 
-    Route::get('settings/categories', fn () => 'TODO: Phase 6')->name('categories.index');
+    Route::get('settings/categories', [CategoryController::class, 'index'])->name('categories.index');
+    Route::post('settings/categories', [CategoryController::class, 'store'])->name('categories.store');
+    Route::patch('settings/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::delete('settings/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
     Route::get('settings/preferences', fn () => 'TODO: Phase 6')->name('preferences.edit');
     Route::get('settings/export', fn () => Inertia::render('ComingSoon', ['title' => 'Export my data']))->name('data-export.index');
 });
