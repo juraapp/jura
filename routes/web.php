@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
@@ -41,7 +42,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');
     Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
 
-    Route::get('planning/budgets', fn () => 'TODO: Phase 6')->name('budgets.index');
+    Route::get('planning/budgets', [BudgetController::class, 'index'])->name('budgets.index');
+    Route::post('planning/budgets', [BudgetController::class, 'store'])->name('budgets.store');
+    Route::patch('planning/budgets/{budget}', [BudgetController::class, 'update'])->name('budgets.update');
+    Route::delete('planning/budgets/{budget}', [BudgetController::class, 'destroy'])->name('budgets.destroy');
     Route::get('planning/goals', fn () => 'TODO: Phase 6')->name('savings-goals.index');
     Route::get('planning/recurring', fn () => 'TODO: Phase 6')->name('recurring-transactions.index');
 
