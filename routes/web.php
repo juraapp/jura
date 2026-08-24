@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\Reports\AnnualReportPdfController;
 use App\Http\Controllers\Reports\CustomReportCsvController;
 use App\Http\Controllers\Reports\MonthlyReportPdfController;
@@ -52,7 +53,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('planning/goals/{savingsGoal}', [SavingsGoalController::class, 'update'])->name('savings-goals.update');
     Route::delete('planning/goals/{savingsGoal}', [SavingsGoalController::class, 'destroy'])->name('savings-goals.destroy');
     Route::post('planning/goals/{savingsGoal}/contributions', [SavingsGoalController::class, 'contribute'])->name('savings-goals.contribute');
-    Route::get('planning/recurring', fn () => 'TODO: Phase 6')->name('recurring-transactions.index');
+    Route::get('planning/recurring', [RecurringTransactionController::class, 'index'])->name('recurring-transactions.index');
+    Route::post('planning/recurring', [RecurringTransactionController::class, 'store'])->name('recurring-transactions.store');
+    Route::patch('planning/recurring/{recurringTransaction}', [RecurringTransactionController::class, 'update'])->name('recurring-transactions.update');
+    Route::patch('planning/recurring/{recurringTransaction}/toggle', [RecurringTransactionController::class, 'toggleActive'])->name('recurring-transactions.toggle');
+    Route::delete('planning/recurring/{recurringTransaction}', [RecurringTransactionController::class, 'destroy'])->name('recurring-transactions.destroy');
 
     Route::get('reports/monthly', fn () => 'TODO: Phase 6')->name('reports.monthly');
     Route::get('reports/monthly/pdf', MonthlyReportPdfController::class)->name('reports.monthly.pdf');
