@@ -11,6 +11,7 @@ use App\Http\Controllers\Reports\AnnualReportPdfController;
 use App\Http\Controllers\Reports\CustomReportCsvController;
 use App\Http\Controllers\Reports\MonthlyReportPdfController;
 use App\Http\Controllers\SavingsGoalController;
+use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransactionImportTemplateController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -32,12 +33,17 @@ Route::middleware('auth')->group(function () {
 
 // TODO(Phase 6): re-wired to real Inertia controllers.
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('finances/transactions', fn () => 'TODO: Phase 6')->name('transactions.index');
+    Route::get('finances/transactions', [TransactionController::class, 'index'])->name('transactions.index');
+    Route::post('finances/transactions', [TransactionController::class, 'store'])->name('transactions.store');
+    Route::get('finances/transactions/form-options', [TransactionController::class, 'formOptions'])->name('transactions.form-options');
+    Route::get('finances/transactions/{transaction}/edit-data', [TransactionController::class, 'editData'])->name('transactions.edit-data');
+    Route::patch('finances/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
+    Route::delete('finances/transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
     Route::get('finances/transactions/import', fn () => 'TODO: Phase 6')->name('transactions.import');
     Route::get('finances/transactions/import/template', TransactionImportTemplateController::class)->name('transactions.import.template');
-    Route::get('finances/incomes', fn () => 'TODO: Phase 6')->name('incomes.index');
-    Route::get('finances/expenses', fn () => 'TODO: Phase 6')->name('expenses.index');
-    Route::get('finances/transfers', fn () => 'TODO: Phase 6')->name('transfers.index');
+    Route::get('finances/incomes', [TransactionController::class, 'index'])->defaults('type', 'income')->name('incomes.index');
+    Route::get('finances/expenses', [TransactionController::class, 'index'])->defaults('type', 'expense')->name('expenses.index');
+    Route::get('finances/transfers', [TransactionController::class, 'index'])->defaults('type', 'transfer')->name('transfers.index');
 
     Route::get('accounts', [AccountController::class, 'index'])->name('accounts.index');
     Route::post('accounts', [AccountController::class, 'store'])->name('accounts.store');

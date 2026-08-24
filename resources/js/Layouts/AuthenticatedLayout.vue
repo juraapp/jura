@@ -2,6 +2,7 @@
 import Sidebar from '@/Components/Sidebar.vue';
 import Topbar from '@/Components/Topbar.vue';
 import ToastContainer from '@/Components/ToastContainer.vue';
+import GlobalTransactionModal from '@/Components/GlobalTransactionModal.vue';
 </script>
 
 <template>
@@ -24,4 +25,5 @@ import ToastContainer from '@/Components/ToastContainer.vue';
     </div>
 
     <ToastContainer />
+    <GlobalTransactionModal />
 </template>
