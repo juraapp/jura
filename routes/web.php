@@ -9,6 +9,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Reports\AnnualReportPdfController;
 use App\Http\Controllers\Reports\CustomReportCsvController;
 use App\Http\Controllers\Reports\MonthlyReportPdfController;
+use App\Http\Controllers\SavingsGoalController;
 use App\Http\Controllers\TransactionImportTemplateController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -46,7 +47,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/budgets', [BudgetController::class, 'store'])->name('budgets.store');
     Route::patch('planning/budgets/{budget}', [BudgetController::class, 'update'])->name('budgets.update');
     Route::delete('planning/budgets/{budget}', [BudgetController::class, 'destroy'])->name('budgets.destroy');
-    Route::get('planning/goals', fn () => 'TODO: Phase 6')->name('savings-goals.index');
+    Route::get('planning/goals', [SavingsGoalController::class, 'index'])->name('savings-goals.index');
+    Route::post('planning/goals', [SavingsGoalController::class, 'store'])->name('savings-goals.store');
+    Route::patch('planning/goals/{savingsGoal}', [SavingsGoalController::class, 'update'])->name('savings-goals.update');
+    Route::delete('planning/goals/{savingsGoal}', [SavingsGoalController::class, 'destroy'])->name('savings-goals.destroy');
+    Route::post('planning/goals/{savingsGoal}/contributions', [SavingsGoalController::class, 'contribute'])->name('savings-goals.contribute');
     Route::get('planning/recurring', fn () => 'TODO: Phase 6')->name('recurring-transactions.index');
 
     Route::get('reports/monthly', fn () => 'TODO: Phase 6')->name('reports.monthly');
