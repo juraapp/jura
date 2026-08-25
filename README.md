@@ -59,3 +59,14 @@ The app runs at `http://localhost`. The seeder creates a test user:
 - `resources/js/Components` and `resources/js/Layouts` — shared Vue components and the authenticated/guest layouts.
 - `app/Policies` — per-model authorization (every write path is scoped to the authenticated user).
 - `database/migrations` — schema, including the multi-currency support added on top of the base schema.
+
+## Documentation
+
+Deeper reference docs live in [`docs/`](docs/):
+
+- [`architecture.md`](docs/architecture.md) — stack, request lifecycle, shared Inertia props, frontend directory layout.
+- [`domain-model.md`](docs/domain-model.md) — the models, the `BelongsToUser` scoping pattern, key services, `Money`.
+- [`frontend-conventions.md`](docs/frontend-conventions.md) — the CRUD-page shape, the global transaction modal, Flowbite/Inertia navigation, Wayfinder usage.
+- [`i18n-conventions.md`](docs/i18n-conventions.md) — `lang/` structure, the vue-i18n bootstrap, and its current gap (Vue pages are still English-hardcoded).
+- [`dark-mode.md`](docs/dark-mode.md) — the FOUC script, `useDarkMode()`, chart re-theming.
+- [`testing-conventions.md`](docs/testing-conventions.md) — PHPUnit conventions, `assertInertia()` patterns, and the sharp edges found while writing the suite.
