@@ -12,6 +12,7 @@ use App\Http\Controllers\Reports\CustomReportCsvController;
 use App\Http\Controllers\Reports\MonthlyReportPdfController;
 use App\Http\Controllers\SavingsGoalController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\TransactionImportController;
 use App\Http\Controllers\TransactionImportTemplateController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -39,7 +40,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('finances/transactions/{transaction}/edit-data', [TransactionController::class, 'editData'])->name('transactions.edit-data');
     Route::patch('finances/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
     Route::delete('finances/transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
-    Route::get('finances/transactions/import', fn () => 'TODO: Phase 6')->name('transactions.import');
+    Route::get('finances/transactions/import', [TransactionImportController::class, 'create'])->name('transactions.import');
+    Route::post('finances/transactions/import/parse', [TransactionImportController::class, 'parse'])->name('transactions.import.parse');
+    Route::post('finances/transactions/import', [TransactionImportController::class, 'store'])->name('transactions.import.store');
     Route::get('finances/transactions/import/template', TransactionImportTemplateController::class)->name('transactions.import.template');
     Route::get('finances/incomes', [TransactionController::class, 'index'])->defaults('type', 'income')->name('incomes.index');
     Route::get('finances/expenses', [TransactionController::class, 'index'])->defaults('type', 'expense')->name('expenses.index');
