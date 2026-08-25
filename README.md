@@ -1,6 +1,6 @@
-# FinanceTrack
+# Jura
 
-FinanceTrack is a personal finance management app for tracking accounts, income, expenses, budgets, savings goals, and recurring payments across multiple currencies — built with Laravel, Livewire, and Volt.
+Jura is a personal finance management app for tracking accounts, income, expenses, budgets, savings goals, and recurring payments across multiple currencies — built with Laravel and Inertia + Vue.
 
 ## Features
 
@@ -16,11 +16,11 @@ FinanceTrack is a personal finance management app for tracking accounts, income,
 
 ## Tech stack
 
-- **Backend**: PHP 8.3, Laravel 13
-- **Frontend**: Livewire 3 + Volt (single-file components), Tailwind CSS, Alpine.js, ApexCharts
+- **Backend**: PHP 8.5, Laravel 13
+- **Frontend**: Inertia.js + Vue 3, Tailwind CSS, Flowbite, vue3-apexcharts
 - **Database**: MariaDB
 - **Cache/sessions**: Redis
-- **PDF export**: barryvdh/laravel-dompdf
+- **PDF export**: spatie/laravel-pdf
 - **Local environment**: Laravel Sail (Docker)
 
 ## Getting started
@@ -49,11 +49,13 @@ The app runs at `http://localhost`. The seeder creates a test user:
 ./vendor/bin/sail artisan migrate:fresh --seed   # reset the database
 ./vendor/bin/sail artisan test                   # run the test suite
 ./vendor/bin/sail npm run build                  # build front-end assets for production
+./vendor/bin/sail npm run dev                    # run the Vite dev server (required for local frontend changes)
 ```
 
 ## Project structure
 
-- `app/Services` — business logic (transaction ledger, balances, budgets, reports, insights, CSV import), kept out of Livewire components.
-- `app/Livewire` and `resources/views/livewire` — Livewire class components and Volt single-file components, one per feature.
+- `app/Services` — business logic (transaction ledger, balances, budgets, reports, insights, CSV import), kept out of controllers.
+- `app/Http/Controllers` and `resources/js/Pages` — one Inertia controller/Vue page pair per feature, with validation extracted into `app/Http/Requests`.
+- `resources/js/Components` and `resources/js/Layouts` — shared Vue components and the authenticated/guest layouts.
 - `app/Policies` — per-model authorization (every write path is scoped to the authenticated user).
 - `database/migrations` — schema, including the multi-currency support added on top of the base schema.
