@@ -25,8 +25,8 @@ class UpdateTransactionRequest extends FormRequest
         }
 
         return [
-            'account_id' => ['required', 'integer', 'exists:accounts,id'],
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $this->user()->id)],
+            'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $this->user()->id)->orWhereNull('user_id'))],
             'amount' => ['required', 'numeric', 'gt:0'],
             'date' => ['required', 'date'],
             'description' => ['nullable', 'string', 'max:255'],
