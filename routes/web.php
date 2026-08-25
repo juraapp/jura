@@ -34,7 +34,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 });
 
-// TODO(Phase 6): re-wired to real Inertia controllers.
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('finances/transactions', [TransactionController::class, 'index'])->name('transactions.index');
     Route::post('finances/transactions', [TransactionController::class, 'store'])->name('transactions.store');
