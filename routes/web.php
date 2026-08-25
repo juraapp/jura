@@ -8,6 +8,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreferenceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecurringTransactionController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Reports\AnnualReportPdfController;
 use App\Http\Controllers\Reports\CustomReportCsvController;
 use App\Http\Controllers\Reports\MonthlyReportPdfController;
@@ -69,13 +70,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('planning/recurring/{recurringTransaction}/toggle', [RecurringTransactionController::class, 'toggleActive'])->name('recurring-transactions.toggle');
     Route::delete('planning/recurring/{recurringTransaction}', [RecurringTransactionController::class, 'destroy'])->name('recurring-transactions.destroy');
 
-    Route::get('reports/monthly', fn () => 'TODO: Phase 6')->name('reports.monthly');
+    Route::get('reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
     Route::get('reports/monthly/pdf', MonthlyReportPdfController::class)->name('reports.monthly.pdf');
 
-    Route::get('reports/annual', fn () => 'TODO: Phase 6')->name('reports.annual');
+    Route::get('reports/annual', [ReportController::class, 'annual'])->name('reports.annual');
     Route::get('reports/annual/pdf', AnnualReportPdfController::class)->name('reports.annual.pdf');
 
-    Route::get('reports/custom', fn () => 'TODO: Phase 6')->name('reports.custom');
+    Route::get('reports/custom', [ReportController::class, 'custom'])->name('reports.custom');
     Route::get('reports/custom/csv', CustomReportCsvController::class)->name('reports.custom.csv');
 
     Route::get('settings/categories', [CategoryController::class, 'index'])->name('categories.index');
