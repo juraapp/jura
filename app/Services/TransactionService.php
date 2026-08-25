@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Owns every write path for the transaction ledger. Controllers/Livewire
- * components never touch Transaction::create() directly so that transfer
+ * Owns every write path for the transaction ledger. Controllers never
+ * touch Transaction::create() directly so that transfer
  * double-entry, cache invalidation, and validation invariants (positive
  * amounts, distinct transfer accounts) stay enforced in exactly one place.
  */
