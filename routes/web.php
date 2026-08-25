@@ -5,6 +5,7 @@ use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PreferenceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\Reports\AnnualReportPdfController;
@@ -81,7 +82,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('settings/categories', [CategoryController::class, 'store'])->name('categories.store');
     Route::patch('settings/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('settings/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
-    Route::get('settings/preferences', fn () => 'TODO: Phase 6')->name('preferences.edit');
+    Route::get('settings/preferences', [PreferenceController::class, 'edit'])->name('preferences.edit');
+    Route::patch('settings/preferences', [PreferenceController::class, 'update'])->name('preferences.update');
     Route::get('settings/export', fn () => Inertia::render('ComingSoon', ['title' => 'Export my data']))->name('data-export.index');
 });
 
