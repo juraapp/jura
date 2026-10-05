@@ -22,6 +22,7 @@ class BudgetFactory extends Factory
             'user_id' => User::factory(),
             'category_id' => Category::factory()->expense(),
             'amount' => fake()->randomFloat(2, 50000, 2000000),
+            'allocated_amount' => null,
             'currency' => 'COP',
             'period_type' => BudgetPeriodType::Monthly,
             'period_start' => Carbon::now()->startOfMonth()->toDateString(),

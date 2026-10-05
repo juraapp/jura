@@ -15,6 +15,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import { store, update, destroy } from '@/actions/App/Http/Controllers/BudgetController';
+import { index as forecastsIndex } from '@/routes/budget-forecasts';
 
 defineProps({
     budgets: { type: Array, required: true },
@@ -168,6 +169,19 @@ const barColor = (status) => ({
                             <span v-else-if="budget.status === 'near_limit'" class="font-medium text-orange-500">Near limit</span>
                             <span v-else class="text-gray-400">
                                 <Money :amount="budget.remaining" :currency="budget.currency" /> available
+                            </span>
+                        </div>
+
+                        <div v-if="budget.forecastCount > 0" class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-xs dark:border-gray-700">
+                            <button
+                                type="button"
+                                class="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                                @click="router.visit(forecastsIndex(budget.id).url)"
+                            >
+                                {{ budget.forecastCount }} projected expense{{ budget.forecastCount > 1 ? 's' : '' }}
+                            </button>
+                            <span class="text-gray-400">
+                                effective: <Money :amount="budget.effectiveRemaining" :currency="budget.currency" />
                             </span>
                         </div>
                     </div>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\BudgetForecastController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
@@ -58,6 +59,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/budgets', [BudgetController::class, 'store'])->name('budgets.store');
     Route::patch('planning/budgets/{budget}', [BudgetController::class, 'update'])->name('budgets.update');
     Route::delete('planning/budgets/{budget}', [BudgetController::class, 'destroy'])->name('budgets.destroy');
+    Route::get('planning/budgets/{budget}/forecasts', [BudgetForecastController::class, 'index'])->name('budget-forecasts.index');
+    Route::post('planning/budgets/{budget}/forecasts', [BudgetForecastController::class, 'store'])->name('budget-forecasts.store');
+    Route::patch('planning/budgets/{budget}/forecasts/{budgetForecast}', [BudgetForecastController::class, 'update'])->name('budget-forecasts.update');
+    Route::delete('planning/budgets/{budget}/forecasts/{budgetForecast}', [BudgetForecastController::class, 'destroy'])->name('budget-forecasts.destroy');
     Route::get('planning/goals', [SavingsGoalController::class, 'index'])->name('savings-goals.index');
     Route::post('planning/goals', [SavingsGoalController::class, 'store'])->name('savings-goals.store');
     Route::patch('planning/goals/{savingsGoal}', [SavingsGoalController::class, 'update'])->name('savings-goals.update');
