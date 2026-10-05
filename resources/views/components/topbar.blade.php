@@ -5,7 +5,7 @@
         class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 lg:hidden dark:text-gray-400 dark:hover:bg-gray-700"
     >
         <x-dynamic-icon name="bars-3" class="h-6 w-6" />
-        <span class="sr-only">{{ __('Abrir menú') }}</span>
+        <span class="sr-only">{{ __('Open menu') }}</span>
     </button>
 
     <livewire:net-worth-badge />
@@ -17,7 +17,7 @@
             class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-800"
         >
             <x-dynamic-icon name="plus" class="h-4 w-4" />
-            <span class="hidden sm:inline">{{ __('Nueva transacción') }}</span>
+            <span class="hidden sm:inline">{{ __('New transaction') }}</span>
         </button>
 
         <button
@@ -27,7 +27,7 @@
         >
             <x-dynamic-icon name="sun" class="h-5 w-5" x-show="darkMode" x-cloak />
             <x-dynamic-icon name="moon" class="h-5 w-5" x-show="!darkMode" x-cloak />
-            <span class="sr-only">{{ __('Cambiar tema') }}</span>
+            <span class="sr-only">{{ __('Toggle theme') }}</span>
         </button>
 
         <livewire:notification-bell />
@@ -57,16 +57,16 @@
                 </div>
 
                 <a href="{{ route('profile') }}" wire:navigate class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-                    {{ __('Perfil y seguridad') }}
+                    {{ __('Profile & security') }}
                 </a>
                 <a href="{{ route('preferences.edit') }}" wire:navigate class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-                    {{ __('Preferencias') }}
+                    {{ __('Preferences') }}
                 </a>
 
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="block w-full px-4 py-2 text-start text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700">
-                        {{ __('Cerrar sesión') }}
+                        {{ __('Log Out') }}
                     </button>
                 </form>
             </div>

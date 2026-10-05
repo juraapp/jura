@@ -78,7 +78,7 @@ class TransactionsIndex extends Component
         $service->delete($transaction);
 
         $this->confirmingDeleteId = null;
-        $this->dispatch('toast', type: 'success', message: __('Transacción eliminada.'));
+        $this->dispatch('toast', type: 'success', message: __('Transaction deleted.'));
     }
 
     #[On('finances-updated')]
@@ -90,10 +90,10 @@ class TransactionsIndex extends Component
     public function pageTitle(): string
     {
         return match ($this->typeFilter) {
-            'income' => __('Ingresos'),
-            'expense' => __('Gastos'),
-            'transfer' => __('Transferencias'),
-            default => __('Transacciones'),
+            'income' => __('Income'),
+            'expense' => __('Expenses'),
+            'transfer' => __('Transfers'),
+            default => __('Transactions'),
         };
     }
 

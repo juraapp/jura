@@ -10,8 +10,8 @@ enum BudgetPeriodType: string
     public function label(): string
     {
         return match ($this) {
-            self::Monthly => 'Mensual',
-            self::Yearly => 'Anual',
+            self::Monthly => __('Monthly'),
+            self::Yearly => __('Annual'),
         };
     }
 }

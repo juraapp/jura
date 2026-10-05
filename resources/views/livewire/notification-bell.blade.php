@@ -6,7 +6,7 @@
                 {{ $unreadCount > 9 ? '9+' : $unreadCount }}
             </span>
         @endif
-        <span class="sr-only">{{ __('Notificaciones') }}</span>
+        <span class="sr-only">{{ __('Notifications') }}</span>
     </button>
 
     <div
@@ -16,10 +16,10 @@
         class="absolute right-0 z-30 mt-2 w-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
     >
         <div class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-            <p class="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">{{ __('Notificaciones') }}</p>
+            <p class="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">{{ __('Notifications') }}</p>
             @if ($unreadCount > 0)
                 <button wire:click="markAllAsRead" class="shrink-0 whitespace-nowrap text-xs font-medium text-primary-600 hover:underline dark:text-primary-400">
-                    {{ __('Marcar todas') }}
+                    {{ __('Mark all') }}
                 </button>
             @endif
         </div>
@@ -43,12 +43,16 @@
                         <x-dynamic-icon name="exclamation-triangle" class="h-3.5 w-3.5" />
                     </span>
                     <div class="min-w-0">
-                        <p class="text-sm text-gray-700 dark:text-gray-300">{{ $notification->data['message'] ?? '' }}</p>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">
+                            {{ isset($notification->data['message_key'])
+                                ? __($notification->data['message_key'], $notification->data['message_params'] ?? [])
+                                : ($notification->data['message'] ?? '') }}
+                        </p>
                         <p class="mt-0.5 text-xs text-gray-400">{{ $notification->created_at->diffForHumans() }}</p>
                     </div>
                 </a>
             @empty
-                <p class="px-4 py-8 text-center text-sm text-gray-400">{{ __('No tienes notificaciones.') }}</p>
+                <p class="px-4 py-8 text-center text-sm text-gray-400">{{ __('You have no notifications.') }}</p>
             @endforelse
         </div>
     </div>

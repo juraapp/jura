@@ -14,10 +14,10 @@ enum RecurringFrequency: string
     public function label(): string
     {
         return match ($this) {
-            self::Weekly => 'Semanal',
-            self::Biweekly => 'Quincenal',
-            self::Monthly => 'Mensual',
-            self::Yearly => 'Anual',
+            self::Weekly => __('Weekly'),
+            self::Biweekly => __('Biweekly'),
+            self::Monthly => __('Monthly'),
+            self::Yearly => __('Annual'),
         };
     }
 

@@ -13,11 +13,11 @@ enum PaymentMethod: string
     public function label(): string
     {
         return match ($this) {
-            self::Cash => 'Efectivo',
-            self::DebitCard => 'Tarjeta débito',
-            self::CreditCard => 'Tarjeta crédito',
-            self::BankTransfer => 'Transferencia bancaria',
-            self::Other => 'Otro',
+            self::Cash => __('Cash'),
+            self::DebitCard => __('Debit card'),
+            self::CreditCard => __('Credit card'),
+            self::BankTransfer => __('Bank transfer'),
+            self::Other => __('Other'),
         };
     }
 }

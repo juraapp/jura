@@ -23,19 +23,27 @@ class TransactionImportService
 {
     public const MAX_ROWS = 1000;
 
-    /** Normalized header cell => canonical field. 'valor'/'monto' are synonyms; 'moneda' is tolerated but ignored. */
+    /** Normalized header cell => canonical field. Accepts both English and Spanish headers; 'valor'/'amount'/'monto' are synonyms; 'moneda'/'currency' is tolerated but ignored. */
     private const COLUMN_ALIASES = [
         'fecha' => 'fecha',
+        'date' => 'fecha',
         'descripcion' => 'descripcion',
+        'description' => 'descripcion',
         'categoria' => 'categoria',
+        'category' => 'categoria',
         'cuenta' => 'cuenta',
+        'account' => 'cuenta',
         'tipo' => 'tipo',
+        'type' => 'tipo',
         'notas' => 'notas',
+        'notes' => 'notas',
         'monto' => 'monto',
+        'amount' => 'monto',
         'valor' => 'monto',
+        'value' => 'monto',
     ];
 
-    private const REQUIRED_COLUMNS = ['fecha' => 'Fecha', 'cuenta' => 'Cuenta', 'categoria' => 'Categoría', 'tipo' => 'Tipo', 'monto' => 'Monto'];
+    private const REQUIRED_COLUMNS = ['fecha' => 'Date', 'cuenta' => 'Account', 'categoria' => 'Category', 'tipo' => 'Type', 'monto' => 'Amount'];
 
     /**
      * @return array<int, array{line: int, fecha: ?string, descripcion: ?string, categoria: ?string, cuenta: ?string, tipo: ?string, notas: ?string, monto: ?string}>
@@ -45,14 +53,14 @@ class TransactionImportService
         $handle = fopen($realPath, 'r');
 
         if ($handle === false) {
-            throw new TransactionImportException('No se pudo leer el archivo.');
+            throw new TransactionImportException(__('The file could not be read.'));
         }
 
         try {
             $firstLine = fgets($handle);
 
             if ($firstLine === false || trim($firstLine) === '') {
-                throw new TransactionImportException('El archivo está vacío.');
+                throw new TransactionImportException(__('The file is empty.'));
             }
 
             rewind($handle);
@@ -61,7 +69,7 @@ class TransactionImportService
             $header = fgetcsv($handle, 0, $delimiter, '"', '\\');
 
             if ($header === false) {
-                throw new TransactionImportException('El archivo está vacío.');
+                throw new TransactionImportException(__('The file is empty.'));
             }
 
             $header[0] = $this->stripBom((string) $header[0]);
@@ -80,7 +88,7 @@ class TransactionImportService
 
                 if (count($rows) >= self::MAX_ROWS) {
                     throw new TransactionImportException(
-                        'El archivo tiene más de '.self::MAX_ROWS.' filas; divídelo en archivos más pequeños.'
+                        __('The file has more than :max rows; split it into smaller files.', ['max' => self::MAX_ROWS])
                     );
                 }
 
@@ -147,12 +155,12 @@ class TransactionImportService
 
         $type = $this->resolveType($row['tipo']);
         if ($type === null) {
-            $errors[] = "Tipo inválido: '{$row['tipo']}' (use 'Ingreso' o 'Gasto').";
+            $errors[] = __("Invalid type: ':type' (use 'Income' or 'Expense').", ['type' => $row['tipo']]);
         }
 
         $accountId = $accounts[Str::lower(trim((string) $row['cuenta']))] ?? null;
         if ($accountId === null) {
-            $errors[] = "Cuenta '{$row['cuenta']}' no encontrada.";
+            $errors[] = __("Account ':account' not found.", ['account' => $row['cuenta']]);
         }
 
         $categoryId = null;
@@ -160,28 +168,28 @@ class TransactionImportService
             $categoryKey = $type->value.'|'.Str::lower(trim((string) $row['categoria']));
             $categoryId = $categories[$categoryKey] ?? null;
             if ($categoryId === null) {
-                $errors[] = "Categoría '{$row['categoria']}' no existe para el tipo '{$type->label()}'.";
+                $errors[] = __("Category ':category' doesn't exist for type ':type'.", ['category' => $row['categoria'], 'type' => $type->label()]);
             }
         }
 
         $amount = $this->parseAmount($row['monto']);
         if ($amount === null) {
-            $errors[] = "Monto inválido: '{$row['monto']}'.";
+            $errors[] = __("Invalid amount: ':amount'.", ['amount' => $row['monto']]);
         }
 
         $date = $this->parseDate($row['fecha']);
         if ($date === null) {
-            $errors[] = "Fecha inválida: '{$row['fecha']}'.";
+            $errors[] = __("Invalid date: ':date'.", ['date' => $row['fecha']]);
         }
 
         $description = $row['descripcion'];
         if ($description !== null && mb_strlen($description) > 255) {
-            $errors[] = 'Descripción supera 255 caracteres.';
+            $errors[] = __('Description exceeds 255 characters.');
         }
 
         $notes = $row['notas'];
         if ($notes !== null && mb_strlen($notes) > 2000) {
-            $errors[] = 'Notas superan 2000 caracteres.';
+            $errors[] = __('Notes exceed 2000 characters.');
         }
 
         if (! empty($errors)) {
@@ -317,12 +325,12 @@ class TransactionImportService
 
         foreach (self::REQUIRED_COLUMNS as $key => $label) {
             if (! isset($columnMap[$key])) {
-                $missing[] = $label;
+                $missing[] = __($label);
             }
         }
 
         if (! empty($missing)) {
-            throw new TransactionImportException('Faltan columnas obligatorias en el archivo: '.implode(', ', $missing).'.');
+            throw new TransactionImportException(__('Required columns are missing from the file: :columns.', ['columns' => implode(', ', $missing)]));
         }
     }
 

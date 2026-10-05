@@ -70,7 +70,7 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->showModal = false;
         $this->resetForm();
-        $this->dispatch('toast', type: 'success', message: __('Categoría guardada correctamente.'));
+        $this->dispatch('toast', type: 'success', message: __('Category saved successfully.'));
     }
 
     public function confirmDelete(int $categoryId): void
@@ -85,10 +85,10 @@ new #[Layout('layouts.app')] class extends Component
         $this->authorize('delete', $category);
 
         if ($category->transactions()->exists()) {
-            $this->dispatch('toast', type: 'error', message: __('No puedes eliminar una categoría con transacciones registradas.'));
+            $this->dispatch('toast', type: 'error', message: __('You can\'t delete a category that has recorded transactions.'));
         } else {
             $category->delete();
-            $this->dispatch('toast', type: 'success', message: __('Categoría eliminada.'));
+            $this->dispatch('toast', type: 'success', message: __('Category deleted.'));
         }
 
         $this->confirmingDeleteId = null;
@@ -116,11 +116,11 @@ new #[Layout('layouts.app')] class extends Component
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ __('Categorías') }}
+                {{ __('Categories') }}
             </h2>
             <button onclick="Livewire.dispatch('open-create-category')" type="button" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
                 <x-dynamic-icon name="plus" class="h-4 w-4" />
-                {{ __('Nueva categoría') }}
+                {{ __('New category') }}
             </button>
         </div>
     </x-slot>
@@ -137,7 +137,7 @@ new #[Layout('layouts.app')] class extends Component
                                 <div>
                                     <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $category->name }}</p>
                                     @if ($category->is_system)
-                                        <span class="text-xs text-gray-400">{{ __('Categoría del sistema') }}</span>
+                                        <span class="text-xs text-gray-400">{{ __('System category') }}</span>
                                     @endif
                                 </div>
                             </div>
@@ -166,7 +166,7 @@ new #[Layout('layouts.app')] class extends Component
         <div x-show="show" x-transition class="relative mx-auto mb-6 overflow-hidden rounded-xl bg-white shadow-xl sm:mx-auto sm:mt-16 sm:w-full sm:max-w-md dark:bg-gray-800">
             <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    {{ $editingId ? __('Editar categoría') : __('Nueva categoría') }}
+                    {{ $editingId ? __('Edit category') : __('New category') }}
                 </h3>
                 <button type="button" x-on:click="show = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <x-dynamic-icon name="x-mark" class="h-5 w-5" />
@@ -175,22 +175,22 @@ new #[Layout('layouts.app')] class extends Component
 
             <form wire:submit="save" class="space-y-4 px-6 py-5">
                 <div>
-                    <x-input-label for="name" :value="__('Nombre')" />
+                    <x-input-label for="name" :value="__('Name')" />
                     <x-text-input wire:model="name" id="name" type="text" class="mt-1 block w-full" />
                     <x-input-error class="mt-1" :messages="$errors->get('name')" />
                 </div>
 
                 <div>
-                    <x-input-label for="type" :value="__('Tipo')" />
+                    <x-input-label for="type" :value="__('Type')" />
                     <select wire:model="type" id="type" @disabled($editingId) class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        <option value="expense">{{ __('Gasto') }}</option>
-                        <option value="income">{{ __('Ingreso') }}</option>
+                        <option value="expense">{{ __('Expense') }}</option>
+                        <option value="income">{{ __('Income') }}</option>
                     </select>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <x-input-label for="icon" :value="__('Ícono')" />
+                        <x-input-label for="icon" :value="__('Icon')" />
                         <select wire:model="icon" id="icon" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                             @foreach ($iconChoices as $choice)
                                 <option value="{{ $choice }}">{{ $choice }}</option>
@@ -207,16 +207,16 @@ new #[Layout('layouts.app')] class extends Component
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full" style="background-color: {{ $color }}1a; color: {{ $color }};">
                         <x-dynamic-icon :name="$icon" class="h-4 w-4" />
                     </span>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('Vista previa') }}</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('Preview') }}</span>
                 </div>
             </form>
 
             <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
                 <button type="button" x-on:click="show = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                    {{ __('Cancelar') }}
+                    {{ __('Cancel') }}
                 </button>
                 <button wire:click="save" type="button" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-                    {{ __('Guardar') }}
+                    {{ __('Save') }}
                 </button>
             </div>
         </div>
@@ -228,15 +228,15 @@ new #[Layout('layouts.app')] class extends Component
 
         <div x-show="show" x-transition class="relative mx-auto mb-6 overflow-hidden rounded-xl bg-white shadow-xl sm:mx-auto sm:mt-24 sm:w-full sm:max-w-md dark:bg-gray-800">
             <div class="px-6 py-5">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('¿Eliminar esta categoría?') }}</h3>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Esta acción no se puede deshacer.') }}</p>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Delete this category?') }}</h3>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('This action cannot be undone.') }}</p>
             </div>
             <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
                 <button type="button" x-on:click="$wire.confirmingDeleteId = null" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                    {{ __('Cancelar') }}
+                    {{ __('Cancel') }}
                 </button>
                 <button wire:click="delete" type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-                    {{ __('Eliminar') }}
+                    {{ __('Delete') }}
                 </button>
             </div>
         </div>

@@ -15,7 +15,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
- * Global "Nueva transacción" modal — mounted once in the app layout so it can
+ * Global "New transaction" modal — mounted once in the app layout so it can
  * be opened from the topbar, empty states, or a transaction row's edit
  * action anywhere in the app without re-navigating.
  */
@@ -156,7 +156,7 @@ class TransactionForm extends Component
     {
         $this->show = false;
         $this->dispatch('finances-updated');
-        $this->dispatch('toast', type: 'success', message: __('Transacción guardada correctamente.'));
+        $this->dispatch('toast', type: 'success', message: __('Transaction saved successfully.'));
         $this->resetForm();
     }
 

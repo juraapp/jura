@@ -9,18 +9,18 @@
         {{-- Filtros --}}
         <div class="mb-4 grid grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-3 lg:grid-cols-6 dark:border-gray-700 dark:bg-gray-800">
             <div class="col-span-2 sm:col-span-1 lg:col-span-2">
-                <input wire:model.live.debounce.400ms="search" type="text" placeholder="{{ __('Buscar descripción...') }}" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
+                <input wire:model.live.debounce.400ms="search" type="text" placeholder="{{ __('Search description...') }}" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
             </div>
 
             <select wire:model.live="accountFilter" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                <option value="">{{ __('Todas las cuentas') }}</option>
+                <option value="">{{ __('All accounts') }}</option>
                 @foreach ($accounts as $account)
                     <option value="{{ $account->id }}">{{ $account->name }}</option>
                 @endforeach
             </select>
 
             <select wire:model.live="categoryFilter" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                <option value="">{{ __('Todas las categorías') }}</option>
+                <option value="">{{ __('All categories') }}</option>
                 @foreach ($categories as $category)
                     <option value="{{ $category->id }}">{{ $category->name }}</option>
                 @endforeach
@@ -33,13 +33,13 @@
         @if ($transactions->isEmpty())
             <x-empty-state
                 icon="list-bullet"
-                :title="__('No hay transacciones para estos filtros')"
-                :description="__('Registra tu primer movimiento o ajusta los filtros de búsqueda.')"
+                :title="__('There are no transactions for these filters')"
+                :description="__('Record your first transaction or adjust the search filters.')"
             >
                 <x-slot name="action">
                     <button type="button" x-on:click="$dispatch('open-transaction-form', { type: 'expense' })" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                         <x-dynamic-icon name="plus" class="h-4 w-4" />
-                        {{ __('Nueva transacción') }}
+                        {{ __('New transaction') }}
                     </button>
                 </x-slot>
             </x-empty-state>
@@ -49,10 +49,10 @@
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-900/40">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Fecha') }}</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Descripción') }}</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Cuenta') }}</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Valor') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Date') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Description') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Account') }}</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Value') }}</th>
                                 <th class="px-4 py-3"></th>
                             </tr>
                         </thead>
@@ -73,10 +73,10 @@
                                             @endif
                                             <div>
                                                 <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {{ $transaction->description ?: ($transaction->category->name ?? __('Transferencia')) }}
+                                                    {{ $transaction->description ?: ($transaction->category->name ?? __('Transfer')) }}
                                                 </p>
                                                 <p class="text-xs text-gray-400">
-                                                    {{ $transaction->category->name ?? __('Transferencia entre cuentas') }}
+                                                    {{ $transaction->category->name ?? __('Transfer between accounts') }}
                                                 </p>
                                             </div>
                                         </div>
@@ -121,17 +121,17 @@
 
         <div x-show="show" x-transition class="relative mx-auto mb-6 overflow-hidden rounded-xl bg-white shadow-xl sm:mx-auto sm:mt-24 sm:w-full sm:max-w-md dark:bg-gray-800">
             <div class="px-6 py-5">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('¿Eliminar esta transacción?') }}</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Delete this transaction?') }}</h3>
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    {{ __('Si es una transferencia, se eliminarán ambos movimientos (origen y destino). Esta acción no se puede deshacer.') }}
+                    {{ __('If it\'s a transfer, both transactions (source and destination) will be deleted. This action cannot be undone.') }}
                 </p>
             </div>
             <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
                 <button type="button" x-on:click="$wire.confirmingDeleteId = null" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                    {{ __('Cancelar') }}
+                    {{ __('Cancel') }}
                 </button>
                 <button wire:click="delete" type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-                    {{ __('Eliminar') }}
+                    {{ __('Delete') }}
                 </button>
             </div>
         </div>

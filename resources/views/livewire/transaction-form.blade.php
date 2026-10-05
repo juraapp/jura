@@ -29,7 +29,7 @@
     >
         <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                {{ $editingId ? __('Editar transacción') : __('Nueva transacción') }}
+                {{ $editingId ? __('Edit transaction') : __('New transaction') }}
             </h3>
             <button type="button" x-on:click="show = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                 <x-dynamic-icon name="x-mark" class="h-5 w-5" />
@@ -57,9 +57,9 @@
         <form wire:submit="save" class="max-h-[65vh] space-y-4 overflow-y-auto px-6 py-5">
             @if ($activeTab === 'transfer')
                 <div>
-                    <x-input-label for="from_account_id" :value="__('Cuenta origen')" />
+                    <x-input-label for="from_account_id" :value="__('Source account')" />
                     <select wire:model="from_account_id" id="from_account_id" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        <option value="">{{ __('Selecciona una cuenta') }}</option>
+                        <option value="">{{ __('Select an account') }}</option>
                         @foreach ($accounts as $account)
                             <option value="{{ $account->id }}">{{ $account->name }}</option>
                         @endforeach
@@ -68,9 +68,9 @@
                 </div>
 
                 <div>
-                    <x-input-label for="to_account_id" :value="__('Cuenta destino')" />
+                    <x-input-label for="to_account_id" :value="__('Destination account')" />
                     <select wire:model="to_account_id" id="to_account_id" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        <option value="">{{ __('Selecciona una cuenta') }}</option>
+                        <option value="">{{ __('Select an account') }}</option>
                         @foreach ($accounts as $account)
                             <option value="{{ $account->id }}">{{ $account->name }}</option>
                         @endforeach
@@ -79,9 +79,9 @@
                 </div>
             @else
                 <div>
-                    <x-input-label for="account_id" :value="__('Cuenta')" />
+                    <x-input-label for="account_id" :value="__('Account')" />
                     <select wire:model="account_id" id="account_id" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        <option value="">{{ __('Selecciona una cuenta') }}</option>
+                        <option value="">{{ __('Select an account') }}</option>
                         @foreach ($accounts as $account)
                             <option value="{{ $account->id }}">{{ $account->name }}</option>
                         @endforeach
@@ -90,9 +90,9 @@
                 </div>
 
                 <div>
-                    <x-input-label for="category_id" :value="__('Categoría')" />
+                    <x-input-label for="category_id" :value="__('Category')" />
                     <select wire:model="category_id" id="category_id" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        <option value="">{{ __('Selecciona una categoría') }}</option>
+                        <option value="">{{ __('Select a category') }}</option>
                         @foreach ($categories as $category)
                             <option value="{{ $category->id }}">{{ $category->name }}</option>
                         @endforeach
@@ -103,13 +103,13 @@
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <x-input-label for="amount" :value="__('Valor')" />
+                    <x-input-label for="amount" :value="__('Value')" />
                     <x-text-input wire:model="amount" id="amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                     <x-input-error class="mt-1" :messages="$errors->get('amount')" />
                 </div>
 
                 <div>
-                    <x-input-label for="date" :value="__('Fecha')" />
+                    <x-input-label for="date" :value="__('Date')" />
                     <x-text-input wire:model="date" id="date" type="date" class="mt-1 block w-full" />
                     <x-input-error class="mt-1" :messages="$errors->get('date')" />
                 </div>
@@ -117,9 +117,9 @@
 
             @if ($activeTab === 'expense')
                 <div>
-                    <x-input-label for="payment_method" :value="__('Método de pago')" />
+                    <x-input-label for="payment_method" :value="__('Payment method')" />
                     <select wire:model="payment_method" id="payment_method" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        <option value="">{{ __('Sin especificar') }}</option>
+                        <option value="">{{ __('Not specified') }}</option>
                         @foreach (\App\Enums\PaymentMethod::cases() as $method)
                             <option value="{{ $method->value }}">{{ $method->label() }}</option>
                         @endforeach
@@ -128,13 +128,13 @@
             @endif
 
             <div>
-                <x-input-label for="description" :value="__('Descripción')" />
+                <x-input-label for="description" :value="__('Description')" />
                 <x-text-input wire:model="description" id="description" type="text" class="mt-1 block w-full" />
                 <x-input-error class="mt-1" :messages="$errors->get('description')" />
             </div>
 
             <div>
-                <x-input-label for="notes" :value="__('Notas')" />
+                <x-input-label for="notes" :value="__('Notes')" />
                 <textarea wire:model="notes" id="notes" rows="2" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"></textarea>
                 <x-input-error class="mt-1" :messages="$errors->get('notes')" />
             </div>
@@ -142,10 +142,10 @@
 
         <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
             <button type="button" x-on:click="show = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                {{ __('Cancelar') }}
+                {{ __('Cancel') }}
             </button>
             <button wire:click="save" wire:loading.attr="disabled" type="button" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50">
-                {{ __('Guardar') }}
+                {{ __('Save') }}
             </button>
         </div>
     </div>

@@ -84,7 +84,7 @@ new #[Layout('layouts.app')] class extends Component
 
         $this->showModal = false;
         $this->resetForm();
-        $this->dispatch('toast', type: 'success', message: __('Meta guardada correctamente.'));
+        $this->dispatch('toast', type: 'success', message: __('Goal saved successfully.'));
     }
 
     public function confirmDelete(int $goalId): void
@@ -100,7 +100,7 @@ new #[Layout('layouts.app')] class extends Component
         $goal->delete();
 
         $this->confirmingDeleteId = null;
-        $this->dispatch('toast', type: 'success', message: __('Meta eliminada.'));
+        $this->dispatch('toast', type: 'success', message: __('Goal deleted.'));
     }
 
     public function openContribution(int $goalId): void
@@ -133,7 +133,7 @@ new #[Layout('layouts.app')] class extends Component
         }
 
         $this->showContributionModal = false;
-        $this->dispatch('toast', type: 'success', message: __('Aporte registrado.'));
+        $this->dispatch('toast', type: 'success', message: __('Contribution recorded.'));
     }
 
     private function resetForm(): void
@@ -189,11 +189,11 @@ new #[Layout('layouts.app')] class extends Component
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ __('Metas de ahorro') }}
+                {{ __('Savings goals') }}
             </h2>
             <button onclick="Livewire.dispatch('open-create-goal')" type="button" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
                 <x-dynamic-icon name="plus" class="h-4 w-4" />
-                {{ __('Nueva meta') }}
+                {{ __('New goal') }}
             </button>
         </div>
     </x-slot>
@@ -202,13 +202,13 @@ new #[Layout('layouts.app')] class extends Component
         @if ($goals->isEmpty())
             <x-empty-state
                 icon="flag"
-                :title="__('Define tu primera meta de ahorro')"
-                :description="__('Ponle nombre, un valor objetivo y una fecha, y te diremos cuánto deberías ahorrar cada mes.')"
+                :title="__('Define your first savings goal')"
+                :description="__('Give it a name, a target amount, and a date, and we\'ll tell you how much you should save each month.')"
             >
                 <x-slot name="action">
                     <button wire:click="create" type="button" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                         <x-dynamic-icon name="plus" class="h-4 w-4" />
-                        {{ __('Crear mi primera meta') }}
+                        {{ __('Create my first goal') }}
                     </button>
                 </x-slot>
             </x-empty-state>
@@ -225,7 +225,7 @@ new #[Layout('layouts.app')] class extends Component
                                     <p class="font-semibold text-gray-900 dark:text-white">{{ $row['model']->name }}</p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
                                         @if ($row['model']->target_date)
-                                            {{ __('Meta') }}: {{ $row['model']->target_date->translatedFormat('d M Y') }} &middot;
+                                            {{ __('Goal') }}: {{ $row['model']->target_date->translatedFormat('d M Y') }} &middot;
                                         @endif
                                         {{ $row['model']->currency }}
                                     </p>
@@ -244,7 +244,7 @@ new #[Layout('layouts.app')] class extends Component
                         <div class="mt-4">
                             <div class="mb-1 flex items-baseline justify-between text-sm">
                                 <span class="font-semibold text-gray-900 dark:text-white"><x-money :amount="$row['saved']" :currency="$row['model']->currency" /></span>
-                                <span class="text-gray-400">{{ __('de') }} <x-money :amount="$row['model']->target_amount" :currency="$row['model']->currency" /></span>
+                                <span class="text-gray-400">{{ __('of') }} <x-money :amount="$row['model']->target_amount" :currency="$row['model']->currency" /></span>
                             </div>
                             <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                                 <div class="h-full rounded-full bg-primary-600 transition-all" style="width: {{ $row['percentage'] }}%"></div>
@@ -252,17 +252,17 @@ new #[Layout('layouts.app')] class extends Component
                             <div class="mt-1.5 flex items-center justify-between text-xs">
                                 <span class="text-gray-400">{{ number_format($row['percentage'], 0) }}%</span>
                                 @if ($row['model']->status->value === 'completed')
-                                    <span class="font-medium text-green-600 dark:text-green-400">{{ __('¡Meta completada!') }}</span>
+                                    <span class="font-medium text-green-600 dark:text-green-400">{{ __('Goal completed!') }}</span>
                                 @elseif ($row['schedule'] === 'behind')
-                                    <span class="font-medium text-orange-500">{{ __('Vas atrasado') }}</span>
+                                    <span class="font-medium text-orange-500">{{ __('You\'re behind') }}</span>
                                 @elseif ($row['schedule'] === 'ahead')
-                                    <span class="font-medium text-green-600 dark:text-green-400">{{ __('Vas al día') }}</span>
+                                    <span class="font-medium text-green-600 dark:text-green-400">{{ __('You\'re on track') }}</span>
                                 @endif
                             </div>
 
                             @if ($row['suggestedMonthly'])
                                 <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                    {{ __('Aporte mensual sugerido') }}: <span class="font-medium text-gray-700 dark:text-gray-300"><x-money :amount="$row['suggestedMonthly']" :currency="$row['model']->currency" /></span>
+                                    {{ __('Suggested monthly contribution') }}: <span class="font-medium text-gray-700 dark:text-gray-300"><x-money :amount="$row['suggestedMonthly']" :currency="$row['model']->currency" /></span>
                                 </p>
                             @endif
                         </div>
@@ -270,7 +270,7 @@ new #[Layout('layouts.app')] class extends Component
                         @if ($row['model']->status->value !== 'completed')
                             <button wire:click="openContribution({{ $row['model']->id }})" type="button" class="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100 dark:border-primary-500/30 dark:bg-primary-500/10 dark:text-primary-400">
                                 <x-dynamic-icon name="plus" class="h-3.5 w-3.5" />
-                                {{ __('Registrar aporte') }}
+                                {{ __('Record contribution') }}
                             </button>
                         @endif
                     </div>
@@ -284,25 +284,25 @@ new #[Layout('layouts.app')] class extends Component
         <div x-show="show" x-on:click="show = false" x-transition.opacity class="fixed inset-0 bg-gray-900/60"></div>
         <div x-show="show" x-transition class="relative mx-auto mb-6 overflow-hidden rounded-xl bg-white shadow-xl sm:mx-auto sm:mt-16 sm:w-full sm:max-w-md dark:bg-gray-800">
             <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $editingId ? __('Editar meta') : __('Nueva meta') }}</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $editingId ? __('Edit goal') : __('New goal') }}</h3>
                 <button type="button" x-on:click="show = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <x-dynamic-icon name="x-mark" class="h-5 w-5" />
                 </button>
             </div>
             <form wire:submit="save" class="space-y-4 px-6 py-5">
                 <div>
-                    <x-input-label for="name" :value="__('Nombre')" />
+                    <x-input-label for="name" :value="__('Name')" />
                     <x-text-input wire:model="name" id="name" type="text" class="mt-1 block w-full" placeholder="Comprar laptop" />
                     <x-input-error class="mt-1" :messages="$errors->get('name')" />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <x-input-label for="target_amount" :value="__('Valor objetivo')" />
+                        <x-input-label for="target_amount" :value="__('Target amount')" />
                         <x-text-input wire:model="target_amount" id="target_amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                         <x-input-error class="mt-1" :messages="$errors->get('target_amount')" />
                     </div>
                     <div>
-                        <x-input-label for="goal_currency" :value="__('Moneda')" />
+                        <x-input-label for="goal_currency" :value="__('Currency')" />
                         <select wire:model="currency" id="goal_currency" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                             @foreach ($currencies as $currencyOption)
                                 <option value="{{ $currencyOption }}">{{ $currencyOption }}</option>
@@ -312,7 +312,7 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
                 </div>
                 <div>
-                    <x-input-label for="target_date" :value="__('Fecha objetivo (opcional)')" />
+                    <x-input-label for="target_date" :value="__('Target date (optional)')" />
                     <x-text-input wire:model="target_date" id="target_date" type="date" class="mt-1 block w-full" />
                     <x-input-error class="mt-1" :messages="$errors->get('target_date')" />
                 </div>
@@ -322,8 +322,8 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             </form>
             <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
-                <button type="button" x-on:click="show = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">{{ __('Cancelar') }}</button>
-                <button wire:click="save" type="button" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">{{ __('Guardar') }}</button>
+                <button type="button" x-on:click="show = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">{{ __('Cancel') }}</button>
+                <button wire:click="save" type="button" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">{{ __('Save') }}</button>
             </div>
         </div>
     </div>
@@ -333,25 +333,25 @@ new #[Layout('layouts.app')] class extends Component
         <div x-show="show" x-on:click="show = false" x-transition.opacity class="fixed inset-0 bg-gray-900/60"></div>
         <div x-show="show" x-transition class="relative mx-auto mb-6 overflow-hidden rounded-xl bg-white shadow-xl sm:mx-auto sm:mt-24 sm:w-full sm:max-w-sm dark:bg-gray-800">
             <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Registrar aporte') }}</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Record contribution') }}</h3>
                 <button type="button" x-on:click="show = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <x-dynamic-icon name="x-mark" class="h-5 w-5" />
                 </button>
             </div>
             <form wire:submit="saveContribution" class="space-y-4 px-6 py-5">
                 <div>
-                    <x-input-label for="contribution_amount" :value="__('Valor')" />
+                    <x-input-label for="contribution_amount" :value="__('Value')" />
                     <x-text-input wire:model="contribution_amount" id="contribution_amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                     <x-input-error class="mt-1" :messages="$errors->get('contribution_amount')" />
                 </div>
                 <div>
-                    <x-input-label for="contribution_date" :value="__('Fecha')" />
+                    <x-input-label for="contribution_date" :value="__('Date')" />
                     <x-text-input wire:model="contribution_date" id="contribution_date" type="date" class="mt-1 block w-full" />
                 </div>
             </form>
             <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
-                <button type="button" x-on:click="show = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">{{ __('Cancelar') }}</button>
-                <button wire:click="saveContribution" type="button" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">{{ __('Guardar') }}</button>
+                <button type="button" x-on:click="show = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">{{ __('Cancel') }}</button>
+                <button wire:click="saveContribution" type="button" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">{{ __('Save') }}</button>
             </div>
         </div>
     </div>
@@ -361,11 +361,11 @@ new #[Layout('layouts.app')] class extends Component
         <div x-show="show" x-on:click="$wire.confirmingDeleteId = null" x-transition.opacity class="fixed inset-0 bg-gray-900/60"></div>
         <div x-show="show" x-transition class="relative mx-auto mb-6 overflow-hidden rounded-xl bg-white shadow-xl sm:mx-auto sm:mt-24 sm:w-full sm:max-w-md dark:bg-gray-800">
             <div class="px-6 py-5">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('¿Eliminar esta meta?') }}</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Delete this goal?') }}</h3>
             </div>
             <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
-                <button type="button" x-on:click="$wire.confirmingDeleteId = null" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">{{ __('Cancelar') }}</button>
-                <button wire:click="delete" type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">{{ __('Eliminar') }}</button>
+                <button type="button" x-on:click="$wire.confirmingDeleteId = null" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">{{ __('Cancel') }}</button>
+                <button wire:click="delete" type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">{{ __('Delete') }}</button>
             </div>
         </div>
     </div>

@@ -20,13 +20,13 @@ class CustomReportCsvController extends Controller
             ->orderBy('date')
             ->get();
 
-        $filename = "transacciones-{$from->toDateString()}-a-{$to->toDateString()}.csv";
+        $filename = "transactions-{$from->toDateString()}-to-{$to->toDateString()}.csv";
 
         return response()->streamDownload(function () use ($transactions) {
             $handle = fopen('php://output', 'w');
             // BOM para que Excel detecte UTF-8 correctamente.
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Fecha', 'Tipo', 'Descripción', 'Categoría', 'Cuenta', 'Moneda', 'Valor']);
+            fputcsv($handle, [__('Date'), __('Type'), __('Description'), __('Category'), __('Account'), __('Currency'), __('Value')]);
 
             foreach ($transactions as $transaction) {
                 fputcsv($handle, [

@@ -1,6 +1,8 @@
-# FinanceTrack
+# Jura
 
-FinanceTrack is a personal finance management app for tracking accounts, income, expenses, budgets, savings goals, and recurring payments across multiple currencies — built with Laravel, Livewire, and Volt.
+*[Leer en español](README.es.md)*
+
+Jura is a personal finance management app for tracking accounts, income, expenses, budgets, savings goals, and recurring payments across multiple currencies — built with Laravel, Livewire, and Volt.
 
 ## Features
 
@@ -13,6 +15,7 @@ FinanceTrack is a personal finance management app for tracking accounts, income,
 - **Dashboard & reports** — monthly, annual, and custom-range reports with category/account breakdowns, PDF/CSV export, and automatic spending insights.
 - **Notifications** — low balance, budget threshold, upcoming recurring payment, and behind-schedule savings goal alerts.
 - **Multi-currency aware** — every aggregate (net worth, reports, budgets) is grouped by currency instead of summing different currencies together.
+- **Localization** — English by default, with Spanish available as a secondary language via `lang/es.json`.
 
 ## Tech stack
 
@@ -57,3 +60,7 @@ The app runs at `http://localhost`. The seeder creates a test user:
 - `app/Livewire` and `resources/views/livewire` — Livewire class components and Volt single-file components, one per feature.
 - `app/Policies` — per-model authorization (every write path is scoped to the authenticated user).
 - `database/migrations` — schema, including the multi-currency support added on top of the base schema.
+
+## Localization
+
+The app locale (`APP_LOCALE`, default `en`) drives translated UI strings via `lang/es.json`. Source strings are written in English (`__('English text')`); Spanish is fully supported as a secondary language by adding a matching entry to `lang/es.json`. Independently, each user can set a `locale` preference under **Preferences** (English/Spanish) that only affects number and date formatting (e.g. `1,234.56` vs `1.234,56`), not which language the UI text is translated into.

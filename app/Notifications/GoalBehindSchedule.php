@@ -22,7 +22,8 @@ class GoalBehindSchedule extends Notification
         return [
             'type' => 'goal_behind',
             'severity' => 'warning',
-            'message' => "Tu meta \"{$this->goal->name}\" va atrasada respecto a la fecha objetivo.",
+            'message_key' => 'Your goal ":name" is behind its target date.',
+            'message_params' => ['name' => $this->goal->name],
             'savings_goal_id' => $this->goal->id,
             'url' => route('savings-goals.index'),
         ];

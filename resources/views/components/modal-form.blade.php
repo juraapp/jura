@@ -16,7 +16,7 @@
 
         <button type="button" x-on:click="show = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300">
             <x-dynamic-icon name="x-mark" class="h-5 w-5" />
-            <span class="sr-only">{{ __('Cerrar') }}</span>
+            <span class="sr-only">{{ __('Close') }}</span>
         </button>
     </div>
 

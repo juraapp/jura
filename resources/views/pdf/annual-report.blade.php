@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
-    <title>Reporte anual — {{ $year }}</title>
+    <title>{{ __('Annual report') }} — {{ $year }}</title>
     <style>
         body { font-family: 'Helvetica', sans-serif; color: #1f2937; font-size: 12px; }
         h1 { font-size: 20px; margin-bottom: 0; }
@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <h1>Reporte financiero anual</h1>
+    <h1>{{ __('Annual financial report') }}</h1>
     <p class="subtitle">{{ $user->name }} &middot; {{ $year }}</p>
 
     @foreach ($summary as $currency => $currencySummary)
@@ -31,38 +31,38 @@
         <table class="grid">
             <tr>
                 <td>
-                    <div class="label">Ingresos totales</div>
+                    <div class="label">{{ __('Total income') }}</div>
                     <div class="value green">{{ $currencySummary['income']->format($currency, $user->locale) }}</div>
                 </td>
                 <td>
-                    <div class="label">Gastos totales</div>
+                    <div class="label">{{ __('Total expenses') }}</div>
                     <div class="value red">{{ $currencySummary['expense']->format($currency, $user->locale) }}</div>
                 </td>
                 <td>
-                    <div class="label">Ahorro anual ({{ number_format($currencySummary['savingsRate'], 1) }}%)</div>
+                    <div class="label">{{ __('Annual savings (:rate%)', ['rate' => number_format($currencySummary['savingsRate'], 1)]) }}</div>
                     <div class="value">{{ $currencySummary['savings']->format($currency, $user->locale) }}</div>
                 </td>
                 <td>
-                    <div class="label">Promedio mensual de gasto</div>
+                    <div class="label">{{ __('Monthly average expense') }}</div>
                     <div class="value">{{ $currencySummary['avgMonthlyExpense']->format($currency, $user->locale) }}</div>
                 </td>
             </tr>
         </table>
 
         @if ($currencySummary['topCategory'])
-            <p><strong>Categoría donde más gastaste:</strong> {{ $currencySummary['topCategory']['category']?->name }} ({{ number_format($currencySummary['topCategory']['percentage'], 1) }}% del total)</p>
+            <p><strong>{{ __('Category where you spent the most') }}:</strong> {{ $currencySummary['topCategory']['category']?->name }} ({{ number_format($currencySummary['topCategory']['percentage'], 1) }}% {{ __('of the total') }})</p>
         @endif
         @if ($currencySummary['bestIncomeMonth'])
-            <p><strong>Mes con mayores ingresos:</strong> {{ ucfirst($currencySummary['bestIncomeMonth']['label']) }} ({{ $currencySummary['bestIncomeMonth']['income']->format($currency, $user->locale) }})</p>
+            <p><strong>{{ __('Month with the highest income') }}:</strong> {{ ucfirst($currencySummary['bestIncomeMonth']['label']) }} ({{ $currencySummary['bestIncomeMonth']['income']->format($currency, $user->locale) }})</p>
         @endif
         @if ($currencySummary['worstExpenseMonth'])
-            <p><strong>Mes con mayores gastos:</strong> {{ ucfirst($currencySummary['worstExpenseMonth']['label']) }} ({{ $currencySummary['worstExpenseMonth']['expense']->format($currency, $user->locale) }})</p>
+            <p><strong>{{ __('Month with the highest expenses') }}:</strong> {{ ucfirst($currencySummary['worstExpenseMonth']['label']) }} ({{ $currencySummary['worstExpenseMonth']['expense']->format($currency, $user->locale) }})</p>
         @endif
 
-        <h2>Comparación mes a mes</h2>
+        <h2>{{ __('Month-by-month comparison') }}</h2>
         <table class="list">
             <thead>
-                <tr><th>Mes</th><th style="text-align:right">Ingresos</th><th style="text-align:right">Gastos</th><th style="text-align:right">Ahorro</th></tr>
+                <tr><th>{{ __('Month') }}</th><th style="text-align:right">{{ __('Income') }}</th><th style="text-align:right">{{ __('Expenses') }}</th><th style="text-align:right">{{ __('Savings') }}</th></tr>
             </thead>
             <tbody>
                 @foreach ($currencySummary['months'] as $row)

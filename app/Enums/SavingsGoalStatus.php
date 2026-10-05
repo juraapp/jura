@@ -11,9 +11,9 @@ enum SavingsGoalStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Active => 'Activa',
-            self::Completed => 'Completada',
-            self::Archived => 'Archivada',
+            self::Active => __('Active'),
+            self::Completed => __('Completed'),
+            self::Archived => __('Archived'),
         };
     }
 }

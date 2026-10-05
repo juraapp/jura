@@ -88,7 +88,7 @@ new #[Layout('layouts.app')] class extends Component
         $this->showModal = false;
         $this->resetForm();
         $this->dispatch('finances-updated');
-        $this->dispatch('toast', type: 'success', message: __('Cuenta guardada correctamente.'));
+        $this->dispatch('toast', type: 'success', message: __('Account saved successfully.'));
     }
 
     public function confirmDelete(int $accountId): void
@@ -104,10 +104,10 @@ new #[Layout('layouts.app')] class extends Component
 
         if ($account->transactions()->exists() || $account->recurringTransactions()->exists()) {
             $account->update(['is_active' => false]);
-            $this->dispatch('toast', type: 'warning', message: __('La cuenta tiene movimientos o recurrentes asociados: se archivó en lugar de eliminarse.'));
+            $this->dispatch('toast', type: 'warning', message: __('The account has associated transactions or recurring items, so it was archived instead of deleted.'));
         } else {
             $account->delete();
-            $this->dispatch('toast', type: 'success', message: __('Cuenta eliminada.'));
+            $this->dispatch('toast', type: 'success', message: __('Account deleted.'));
         }
 
         $this->confirmingDeleteId = null;
@@ -148,11 +148,11 @@ new #[Layout('layouts.app')] class extends Component
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ __('Bancos y billeteras') }}
+                {{ __('Banks & wallets') }}
             </h2>
             <button onclick="Livewire.dispatch('open-create-account')" type="button" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
                 <x-dynamic-icon name="plus" class="h-4 w-4" />
-                {{ __('Nueva cuenta') }}
+                {{ __('New account') }}
             </button>
         </div>
     </x-slot>
@@ -161,13 +161,13 @@ new #[Layout('layouts.app')] class extends Component
         @if ($accounts->isEmpty())
             <x-empty-state
                 icon="wallet"
-                :title="__('Todavía no tienes cuentas registradas')"
-                :description="__('Agrega tus bancos, billeteras digitales o efectivo para empezar a registrar movimientos.')"
+                :title="__('You don\'t have any accounts yet')"
+                :description="__('Add your banks, digital wallets, or cash to start recording transactions.')"
             >
                 <x-slot name="action">
                     <button wire:click="create" type="button" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                         <x-dynamic-icon name="plus" class="h-4 w-4" />
-                        {{ __('Crear mi primera cuenta') }}
+                        {{ __('Create my first account') }}
                     </button>
                 </x-slot>
             </x-empty-state>
@@ -185,7 +185,7 @@ new #[Layout('layouts.app')] class extends Component
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
                                         {{ $row['model']->type->label() }}
                                         @if ($row['model']->masked_number) &middot; {{ $row['model']->masked_number }} @endif
-                                        @unless ($row['model']->is_active) &middot; {{ __('Archivada') }} @endunless
+                                        @unless ($row['model']->is_active) &middot; {{ __('Archived') }} @endunless
                                     </p>
                                 </div>
                             </div>
@@ -216,7 +216,7 @@ new #[Layout('layouts.app')] class extends Component
         <div x-show="show" x-transition class="relative mx-auto mb-6 overflow-hidden rounded-xl bg-white shadow-xl sm:mx-auto sm:mt-16 sm:w-full sm:max-w-lg dark:bg-gray-800">
             <div class="flex items-start justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    {{ $editingId ? __('Editar cuenta') : __('Nueva cuenta') }}
+                    {{ $editingId ? __('Edit account') : __('New account') }}
                 </h3>
                 <button type="button" x-on:click="show = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <x-dynamic-icon name="x-mark" class="h-5 w-5" />
@@ -225,14 +225,14 @@ new #[Layout('layouts.app')] class extends Component
 
             <form wire:submit="save" class="max-h-[65vh] space-y-4 overflow-y-auto px-6 py-5">
                 <div>
-                    <x-input-label for="name" :value="__('Nombre')" />
+                    <x-input-label for="name" :value="__('Name')" />
                     <x-text-input wire:model="name" id="name" type="text" class="mt-1 block w-full" placeholder="Bancolombia Ahorros" />
                     <x-input-error class="mt-1" :messages="$errors->get('name')" />
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <x-input-label for="type" :value="__('Tipo')" />
+                        <x-input-label for="type" :value="__('Type')" />
                         <select wire:model="type" id="type" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                             @foreach ($accountTypes as $accountType)
                                 <option value="{{ $accountType->value }}">{{ $accountType->label() }}</option>
@@ -241,19 +241,19 @@ new #[Layout('layouts.app')] class extends Component
                     </div>
 
                     <div>
-                        <x-input-label for="currency" :value="__('Moneda')" />
+                        <x-input-label for="currency" :value="__('Currency')" />
                         <x-text-input wire:model="currency" id="currency" type="text" maxlength="3" class="mt-1 block w-full uppercase" />
                     </div>
                 </div>
 
                 <div>
-                    <x-input-label for="institution" :value="__('Banco o entidad')" />
+                    <x-input-label for="institution" :value="__('Bank or institution')" />
                     <x-text-input wire:model="institution" id="institution" type="text" class="mt-1 block w-full" placeholder="Bancolombia, Nu, Nequi..." />
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <x-input-label for="initial_balance" :value="__('Saldo inicial')" />
+                        <x-input-label for="initial_balance" :value="__('Initial balance')" />
                         <x-text-input wire:model="initial_balance" id="initial_balance" type="number" step="0.01" class="mt-1 block w-full" />
                         <x-input-error class="mt-1" :messages="$errors->get('initial_balance')" />
                     </div>
@@ -265,27 +265,27 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
 
                 <div>
-                    <x-input-label for="masked_number" :value="__('Número (opcional, parcialmente oculto)')" />
+                    <x-input-label for="masked_number" :value="__('Number (optional, partially hidden)')" />
                     <x-text-input wire:model="masked_number" id="masked_number" type="text" class="mt-1 block w-full" placeholder="****1234" />
                 </div>
 
                 <div>
-                    <x-input-label for="notes" :value="__('Notas')" />
+                    <x-input-label for="notes" :value="__('Notes')" />
                     <textarea wire:model="notes" id="notes" rows="2" class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"></textarea>
                 </div>
 
                 <label class="flex items-center gap-2">
                     <input wire:model="is_active" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ __('Cuenta activa') }}</span>
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ __('Active account') }}</span>
                 </label>
             </form>
 
             <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
                 <button type="button" x-on:click="show = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                    {{ __('Cancelar') }}
+                    {{ __('Cancel') }}
                 </button>
                 <button wire:click="save" type="button" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
-                    {{ __('Guardar') }}
+                    {{ __('Save') }}
                 </button>
             </div>
         </div>
@@ -297,17 +297,17 @@ new #[Layout('layouts.app')] class extends Component
 
         <div x-show="show" x-transition class="relative mx-auto mb-6 overflow-hidden rounded-xl bg-white shadow-xl sm:mx-auto sm:mt-24 sm:w-full sm:max-w-md dark:bg-gray-800">
             <div class="px-6 py-5">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('¿Eliminar esta cuenta?') }}</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Delete this account?') }}</h3>
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    {{ __('Si tiene movimientos registrados, en lugar de eliminarla se archivará para conservar tu historial.') }}
+                    {{ __('If it has recorded transactions, it will be archived instead of deleted to preserve your history.') }}
                 </p>
             </div>
             <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50">
                 <button type="button" x-on:click="$wire.confirmingDeleteId = null" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                    {{ __('Cancelar') }}
+                    {{ __('Cancel') }}
                 </button>
                 <button wire:click="delete" type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-                    {{ __('Eliminar') }}
+                    {{ __('Delete') }}
                 </button>
             </div>
         </div>

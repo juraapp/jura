@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
-    <title>Reporte mensual — {{ $periodLabel }}</title>
+    <title>{{ __('Monthly report') }} — {{ $periodLabel }}</title>
     <style>
         body { font-family: 'Helvetica', sans-serif; color: #1f2937; font-size: 12px; }
         h1 { font-size: 20px; margin-bottom: 0; }
@@ -22,7 +22,7 @@
     </style>
 </head>
 <body>
-    <h1>Reporte financiero mensual</h1>
+    <h1>{{ __('Monthly financial report') }}</h1>
     <p class="subtitle">{{ $user->name }} &middot; {{ ucfirst($periodLabel) }}</p>
 
     @foreach ($summary as $currency => $currencySummary)
@@ -33,22 +33,22 @@
         <table class="grid">
             <tr>
                 <td>
-                    <div class="label">Ingresos</div>
+                    <div class="label">{{ __('Income') }}</div>
                     <div class="value green">{{ $currencySummary['income']->format($currency, $user->locale) }}</div>
                 </td>
                 <td>
-                    <div class="label">Gastos</div>
+                    <div class="label">{{ __('Expenses') }}</div>
                     <div class="value red">{{ $currencySummary['expense']->format($currency, $user->locale) }}</div>
                 </td>
                 <td>
-                    <div class="label">Ahorro ({{ number_format($currencySummary['savingsRate'], 1) }}%)</div>
+                    <div class="label">{{ __('Savings (:rate%)', ['rate' => number_format($currencySummary['savingsRate'], 1)]) }}</div>
                     <div class="value">{{ $currencySummary['savings']->format($currency, $user->locale) }}</div>
                 </td>
             </tr>
         </table>
 
         @if (! empty($highlights[$currency]))
-            <h2>Análisis del mes</h2>
+            <h2>{{ __('Analysis of the month') }}</h2>
             <ul class="insights">
                 @foreach ($highlights[$currency] as $line)
                     <li>{{ $line }}</li>
@@ -56,19 +56,19 @@
             </ul>
         @endif
 
-        <h2>Gastos por categoría</h2>
+        <h2>{{ __('Expenses by category') }}</h2>
         @php $categoryRows = $expenseByCategory->get($currency, collect()); @endphp
         @if ($categoryRows->isEmpty())
-            <p>Sin gastos registrados en este periodo.</p>
+            <p>{{ __('No expenses recorded in this period.') }}</p>
         @else
             <table class="list">
                 <thead>
-                    <tr><th>Categoría</th><th style="text-align:right">Valor</th><th style="text-align:right">%</th></tr>
+                    <tr><th>{{ __('Category') }}</th><th style="text-align:right">{{ __('Value') }}</th><th style="text-align:right">%</th></tr>
                 </thead>
                 <tbody>
                     @foreach ($categoryRows as $row)
                         <tr>
-                            <td>{{ $row['category']?->name ?? 'Sin categoría' }}</td>
+                            <td>{{ $row['category']?->name ?? __('No category') }}</td>
                             <td style="text-align:right">{{ $row['total']->format($currency, $user->locale) }}</td>
                             <td style="text-align:right">{{ number_format($row['percentage'], 1) }}%</td>
                         </tr>

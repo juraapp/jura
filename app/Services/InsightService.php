@@ -34,55 +34,49 @@ class InsightService
         }
 
         if ($summary['topCategory']) {
-            $lines[] = sprintf(
-                '%s representó el %s%% de tus gastos este mes.',
-                $summary['topCategory']['category']?->name ?? 'Una categoría',
-                number_format($summary['topCategory']['percentage'], 1),
-            );
+            $lines[] = __(':category accounted for :percentage% of your expenses this month.', [
+                'category' => $summary['topCategory']['category']?->name ?? __('A category'),
+                'percentage' => number_format($summary['topCategory']['percentage'], 1),
+            ]);
         }
 
         if ($summary['savings']->isPositive() && ! $summary['income']->isZero()) {
-            $lines[] = sprintf(
-                'Ahorraste %s este mes, equivalente al %s%% de tus ingresos.',
-                $summary['savings']->format($currency),
-                number_format($summary['savingsRate'], 1),
-            );
+            $lines[] = __('You saved :amount this month, equivalent to :rate% of your income.', [
+                'amount' => $summary['savings']->format($currency),
+                'rate' => number_format($summary['savingsRate'], 1),
+            ]);
         } elseif ($summary['savings']->isNegative()) {
-            $lines[] = sprintf(
-                'Gastaste %s más de lo que ingresó este mes.',
-                $summary['savings']->abs()->format($currency),
-            );
+            $lines[] = __('You spent :amount more than you earned this month.', [
+                'amount' => $summary['savings']->abs()->format($currency),
+            ]);
         }
 
         if ($summary['daysOfAutonomy'] !== null) {
-            $lines[] = sprintf(
-                'Con tu ritmo de gasto actual, tu dinero disponible te alcanza para %s días sin nuevos ingresos.',
-                number_format($summary['daysOfAutonomy'], 0),
-            );
+            $lines[] = __('At your current spending pace, your available money will last :days days without new income.', [
+                'days' => number_format($summary['daysOfAutonomy'], 0),
+            ]);
         }
 
         if ($user && $year && $month) {
             $ants = $this->antExpenses($user, $year, $month, $currency, $summary['expense']);
             if ($ants && $ants['percentageOfExpense'] >= 5) {
-                $lines[] = sprintf(
-                    'Tus gastos hormiga (compras menores a $%s) sumaron %s este mes en %d %s — %s%% de tu gasto total.',
-                    number_format(self::ANT_EXPENSE_THRESHOLD, 0, ',', '.'),
-                    $ants['total']->format($currency),
-                    $ants['count'],
-                    $ants['count'] === 1 ? 'movimiento' : 'movimientos',
-                    number_format($ants['percentageOfExpense'], 1),
-                );
+                $lines[] = __('Your small purchases (under $:threshold) added up to :amount this month across :count :unit — :percentage% of your total spending.', [
+                    'threshold' => number_format(self::ANT_EXPENSE_THRESHOLD, 0, ',', '.'),
+                    'amount' => $ants['total']->format($currency),
+                    'count' => $ants['count'],
+                    'unit' => $ants['count'] === 1 ? __('transaction') : __('transactions'),
+                    'percentage' => number_format($ants['percentageOfExpense'], 1),
+                ]);
             }
 
             $unusual = $this->unusualExpenses($user, $year, $month, $currency);
             if ($unusual->isNotEmpty()) {
                 $top = $unusual->sortByDesc(fn (Transaction $t) => $t->amount->toFloat())->first();
-                $lines[] = sprintf(
-                    'Detectamos un gasto inusual: %s (%s) está muy por encima de tu promedio habitual en %s.',
-                    $top->description ?: $top->category?->name,
-                    $top->amount->format($currency),
-                    $top->category?->name ?? 'esa categoría',
-                );
+                $lines[] = __('We detected an unusual expense: :description (:amount) is well above your usual average in :category.', [
+                    'description' => $top->description ?: $top->category?->name,
+                    'amount' => $top->amount->format($currency),
+                    'category' => $top->category?->name ?? __('that category'),
+                ]);
             }
         }
 
@@ -170,13 +164,12 @@ class InsightService
         $change = $summary['changeExpense'];
 
         if (abs($change) < 1) {
-            return 'Tus gastos se mantuvieron prácticamente iguales al mes anterior.';
+            return __('Your expenses stayed about the same as last month.');
         }
 
-        return sprintf(
-            'Este mes gastaste %s%% %s al mes anterior.',
-            number_format(abs($change), 1),
-            $change > 0 ? 'más' : 'menos',
-        );
+        return __('This month you spent :percentage% :direction than last month.', [
+            'percentage' => number_format(abs($change), 1),
+            'direction' => $change > 0 ? __('more') : __('less'),
+        ]);
     }
 }

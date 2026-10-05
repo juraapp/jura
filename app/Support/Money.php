@@ -49,7 +49,7 @@ final class Money implements Stringable
     public function divide(string|int|float $divisor): self
     {
         if (bccomp((string) $divisor, '0', self::SCALE) === 0) {
-            throw new InvalidArgumentException('No se puede dividir un monto entre cero.');
+            throw new InvalidArgumentException('Cannot divide an amount by zero.');
         }
 
         return new self(bcdiv($this->amount, (string) $divisor, self::SCALE));

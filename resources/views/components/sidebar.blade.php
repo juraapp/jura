@@ -2,48 +2,48 @@
     $sections = [
         [
             'items' => [
-                ['label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'home'],
+                ['label' => __('Dashboard'), 'route' => 'dashboard', 'icon' => 'home'],
             ],
         ],
         [
-            'title' => 'Finanzas',
+            'title' => __('Finances'),
             'items' => [
-                ['label' => 'Transacciones', 'route' => 'transactions.index', 'icon' => 'list-bullet'],
-                ['label' => 'Importar CSV', 'route' => 'transactions.import', 'icon' => 'arrow-up-tray'],
-                ['label' => 'Ingresos', 'route' => 'incomes.index', 'icon' => 'arrow-up-circle'],
-                ['label' => 'Gastos', 'route' => 'expenses.index', 'icon' => 'arrow-down-circle'],
-                ['label' => 'Transferencias', 'route' => 'transfers.index', 'icon' => 'arrows-right-left'],
+                ['label' => __('Transactions'), 'route' => 'transactions.index', 'icon' => 'list-bullet'],
+                ['label' => __('Import CSV'), 'route' => 'transactions.import', 'icon' => 'arrow-up-tray'],
+                ['label' => __('Income'), 'route' => 'incomes.index', 'icon' => 'arrow-up-circle'],
+                ['label' => __('Expenses'), 'route' => 'expenses.index', 'icon' => 'arrow-down-circle'],
+                ['label' => __('Transfers'), 'route' => 'transfers.index', 'icon' => 'arrows-right-left'],
             ],
         ],
         [
-            'title' => 'Cuentas',
+            'title' => __('Accounts'),
             'items' => [
-                ['label' => 'Bancos y billeteras', 'route' => 'accounts.index', 'icon' => 'wallet'],
+                ['label' => __('Banks & wallets'), 'route' => 'accounts.index', 'icon' => 'wallet'],
             ],
         ],
         [
-            'title' => 'Planificación',
+            'title' => __('Planning'),
             'items' => [
-                ['label' => 'Presupuestos', 'route' => 'budgets.index', 'icon' => 'chart-pie'],
-                ['label' => 'Metas de ahorro', 'route' => 'savings-goals.index', 'icon' => 'flag'],
-                ['label' => 'Gastos recurrentes', 'route' => 'recurring-transactions.index', 'icon' => 'arrow-path'],
+                ['label' => __('Budgets'), 'route' => 'budgets.index', 'icon' => 'chart-pie'],
+                ['label' => __('Savings goals'), 'route' => 'savings-goals.index', 'icon' => 'flag'],
+                ['label' => __('Recurring expenses'), 'route' => 'recurring-transactions.index', 'icon' => 'arrow-path'],
             ],
         ],
         [
-            'title' => 'Reportes',
+            'title' => __('Reports'),
             'items' => [
-                ['label' => 'Mensual', 'route' => 'reports.monthly', 'icon' => 'document-chart-bar'],
-                ['label' => 'Anual', 'route' => 'reports.annual', 'icon' => 'document-chart-bar'],
-                ['label' => 'Personalizado', 'route' => 'reports.custom', 'icon' => 'document-chart-bar'],
+                ['label' => __('Monthly'), 'route' => 'reports.monthly', 'icon' => 'document-chart-bar'],
+                ['label' => __('Annual'), 'route' => 'reports.annual', 'icon' => 'document-chart-bar'],
+                ['label' => __('Custom'), 'route' => 'reports.custom', 'icon' => 'document-chart-bar'],
             ],
         ],
         [
-            'title' => 'Configuración',
+            'title' => __('Settings'),
             'items' => [
-                ['label' => 'Perfil y seguridad', 'route' => 'profile', 'icon' => 'user-circle'],
-                ['label' => 'Categorías', 'route' => 'categories.index', 'icon' => 'tag'],
-                ['label' => 'Preferencias', 'route' => 'preferences.edit', 'icon' => 'adjustments'],
-                ['label' => 'Exportar mis datos', 'route' => 'data-export.index', 'icon' => 'arrow-down-tray'],
+                ['label' => __('Profile & security'), 'route' => 'profile', 'icon' => 'user-circle'],
+                ['label' => __('Categories'), 'route' => 'categories.index', 'icon' => 'tag'],
+                ['label' => __('Preferences'), 'route' => 'preferences.edit', 'icon' => 'adjustments'],
+                ['label' => __('Export my data'), 'route' => 'data-export.index', 'icon' => 'arrow-down-tray'],
             ],
         ],
     ];

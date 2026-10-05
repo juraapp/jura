@@ -9,33 +9,33 @@
         @if (! $hasAnyAccount)
             <x-empty-state
                 icon="wallet"
-                :title="__('Empecemos por crear tu primera cuenta')"
-                :description="__('Registra tus bancos, billeteras o efectivo para que el dashboard pueda calcular tu patrimonio y tus gastos.')"
+                :title="__('Let\'s start by creating your first account')"
+                :description="__('Record your banks, wallets, or cash so the dashboard can calculate your net worth and expenses.')"
             >
                 <x-slot name="action">
                     <a href="{{ route('accounts.index') }}" wire:navigate class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                         <x-dynamic-icon name="plus" class="h-4 w-4" />
-                        {{ __('Crear mi primera cuenta') }}
+                        {{ __('Create my first account') }}
                     </a>
                 </x-slot>
             </x-empty-state>
         @elseif (! $hasAnyTransaction)
             <x-empty-state
                 icon="list-bullet"
-                :title="__('Registra tu primer movimiento')"
-                :description="__('En cuanto registres ingresos y gastos, aquí verás tu resumen financiero completo.')"
+                :title="__('Record your first transaction')"
+                :description="__('As soon as you record income and expenses, you\'ll see your full financial summary here.')"
             >
                 <x-slot name="action">
                     <button type="button" x-on:click="$dispatch('open-transaction-form', { type: 'expense' })" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                         <x-dynamic-icon name="plus" class="h-4 w-4" />
-                        {{ __('Nueva transacción') }}
+                        {{ __('New transaction') }}
                     </button>
                 </x-slot>
             </x-empty-state>
         @else
             {{-- Patrimonio total: nunca mezcla monedas, una línea por cada una --}}
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <x-stat-card :label="__('Patrimonio total')" icon="banknotes">
+                <x-stat-card :label="__('Total net worth')" icon="banknotes">
                     @foreach ($netWorthByCurrency as $nwCurrency => $nwAmount)
                         <div><x-money :amount="$nwAmount" :currency="$nwCurrency" /></div>
                     @endforeach
@@ -51,37 +51,37 @@
 
                     {{-- Fila 1: tarjetas de resumen --}}
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <x-stat-card :label="__('Ingresos del mes')" icon="arrow-up-circle" icon-color="text-green-600 dark:text-green-400" icon-bg="bg-green-50 dark:bg-green-500/10">
+                        <x-stat-card :label="__('Income this month')" icon="arrow-up-circle" icon-color="text-green-600 dark:text-green-400" icon-bg="bg-green-50 dark:bg-green-500/10">
                             <x-money :amount="$currencySummary['income']" :currency="$currency" />
                             <x-slot name="footer">
                                 <x-badge-variation :value="$currencySummary['changeIncome']" :favorable-when-positive="true" />
-                                <span class="ms-1 text-gray-400">{{ __('vs. mes anterior') }}</span>
+                                <span class="ms-1 text-gray-400">{{ __('vs. last month') }}</span>
                             </x-slot>
                         </x-stat-card>
 
-                        <x-stat-card :label="__('Gastos del mes')" icon="arrow-down-circle" icon-color="text-red-600 dark:text-red-400" icon-bg="bg-red-50 dark:bg-red-500/10">
+                        <x-stat-card :label="__('Expenses this month')" icon="arrow-down-circle" icon-color="text-red-600 dark:text-red-400" icon-bg="bg-red-50 dark:bg-red-500/10">
                             <x-money :amount="$currencySummary['expense']" :currency="$currency" />
                             <x-slot name="footer">
                                 <x-badge-variation :value="$currencySummary['changeExpense']" :favorable-when-positive="false" />
-                                <span class="ms-1 text-gray-400">{{ __('vs. mes anterior') }}</span>
+                                <span class="ms-1 text-gray-400">{{ __('vs. last month') }}</span>
                             </x-slot>
                         </x-stat-card>
 
-                        <x-stat-card :label="__('Ahorro del mes')" icon="chart-pie">
+                        <x-stat-card :label="__('Savings this month')" icon="chart-pie">
                             <x-money :amount="$currencySummary['savings']" :currency="$currency" />
                             <x-slot name="footer">
                                 <span class="font-medium {{ $currencySummary['savings']->isNegative() ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">
                                     {{ number_format($currencySummary['savingsRate'], 1) }}%
                                 </span>
-                                <span class="ms-1 text-gray-400">{{ __('de tasa de ahorro') }}</span>
+                                <span class="ms-1 text-gray-400">{{ __('savings rate') }}</span>
                             </x-slot>
                         </x-stat-card>
 
-                        <x-stat-card :label="__('Gasto promedio diario')" icon="calendar">
+                        <x-stat-card :label="__('Average daily spending')" icon="calendar">
                             <x-money :amount="$currencySummary['avgDailyExpense']" :currency="$currency" />
                         </x-stat-card>
 
-                        <x-stat-card :label="__('Mayor gasto del mes')" icon="arrow-trending-up">
+                        <x-stat-card :label="__('Largest expense of the month')" icon="arrow-trending-up">
                             @if ($currencySummary['biggestExpense'])
                                 <x-money :amount="$currencySummary['biggestExpense']->amount" :currency="$currency" />
                                 <x-slot name="footer">
@@ -92,22 +92,22 @@
                             @endif
                         </x-stat-card>
 
-                        <x-stat-card :label="__('Categoría con más gasto')" icon="tag">
+                        <x-stat-card :label="__('Category with the most spending')" icon="tag">
                             @if ($currencySummary['topCategory'])
                                 {{ $currencySummary['topCategory']['category']?->name }}
                                 <x-slot name="footer">
-                                    <span class="text-gray-400">{{ number_format($currencySummary['topCategory']['percentage'], 1) }}% {{ __('de tus gastos') }}</span>
+                                    <span class="text-gray-400">{{ number_format($currencySummary['topCategory']['percentage'], 1) }}% {{ __('of your expenses') }}</span>
                                 </x-slot>
                             @else
                                 <span class="text-gray-400">&mdash;</span>
                             @endif
                         </x-stat-card>
 
-                        <x-stat-card :label="__('Días de autonomía financiera')" icon="flag">
+                        <x-stat-card :label="__('Days of financial runway')" icon="flag">
                             @if ($currencySummary['daysOfAutonomy'] !== null)
-                                {{ number_format($currencySummary['daysOfAutonomy'], 0) }} {{ __('días') }}
+                                {{ number_format($currencySummary['daysOfAutonomy'], 0) }} {{ __('days') }}
                                 <x-slot name="footer">
-                                    <span class="text-gray-400">{{ __('con tu ritmo de gasto actual') }}</span>
+                                    <span class="text-gray-400">{{ __('at your current spending pace') }}</span>
                                 </x-slot>
                             @else
                                 <span class="text-gray-400">&mdash;</span>
@@ -120,7 +120,7 @@
                         <div class="rounded-xl border border-primary-100 bg-primary-50/60 p-5 dark:border-primary-500/20 dark:bg-primary-500/5">
                             <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-primary-800 dark:text-primary-300">
                                 <x-dynamic-icon name="document-chart-bar" class="h-4 w-4" />
-                                {{ __('¿En qué se me fue el dinero este mes?') }}
+                                {{ __('Where did my money go this month?') }}
                             </h3>
                             <ul class="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                                 @foreach ($highlights[$currency] as $line)
@@ -140,12 +140,12 @@
                         @endphp
                         {{-- Gastos por categoría --}}
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Gastos por categoría (este mes)') }}</h3>
+                            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Expenses by category (this month)') }}</h3>
                             @if ($categoryRows->isEmpty())
-                                <p class="py-12 text-center text-sm text-gray-400">{{ __('Sin gastos registrados este mes.') }}</p>
+                                <p class="py-12 text-center text-sm text-gray-400">{{ __('No expenses recorded this month.') }}</p>
                             @else
                                 @php
-                                    $categoryLabels = $categoryRows->map(fn ($row) => $row['category']?->name ?? __('Sin categoría'));
+                                    $categoryLabels = $categoryRows->map(fn ($row) => $row['category']?->name ?? __('No category'));
                                     $categoryColors = $categoryRows->map(fn ($row) => $row['category']?->color ?? '#6b7280');
                                     $categoryValues = $categoryRows->map(fn ($row) => $row['total']->toFloat());
                                     $chartId = 'chart-expense-category-'.$currency;
@@ -170,7 +170,7 @@
                         {{-- Evolución mensual --}}
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                             <div class="mb-4 flex items-center justify-between">
-                                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Evolución mensual') }}</h3>
+                                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Monthly trend') }}</h3>
                                 <div class="flex gap-1">
                                     @foreach ([6 => '6M', 12 => '12M'] as $value => $label)
                                         <button
@@ -197,13 +197,13 @@
                             <div wire:key="{{ $chartKey }}" wire:ignore id="{{ $chartId }}" x-data x-init="window.renderFinanceChart('{{ $chartId }}', (palette) => ({
                                 chart: { type: 'line', height: 288, fontFamily: 'Figtree, sans-serif', toolbar: { show: false } },
                                 series: [
-                                    { name: '{{ __('Ingresos') }}', data: @js($evoIncome) },
-                                    { name: '{{ __('Gastos') }}', data: @js($evoExpense) },
-                                    { name: '{{ __('Ahorro') }}', data: @js($evoSavings) },
+                                    { name: '{{ __('Income') }}', data: @js($evoIncome) },
+                                    { name: '{{ __('Expenses') }}', data: @js($evoExpense) },
+                                    { name: '{{ __('Savings') }}', data: @js($evoSavings) },
                                 ],
                                 colors: [palette.income, palette.expense, palette.savings],
                                 xaxis: { categories: @js($evoLabels), labels: { style: { colors: palette.text } } },
-                                yaxis: { labels: { style: { colors: palette.text }, formatter: (v) => formatCompact(v) } },
+                                yaxis: { labels: { style: { colors: palette.text }, formatter: (v) => formatCompact(v, '{{ auth()->user()->locale }}') } },
                                 grid: { borderColor: palette.grid },
                                 stroke: { width: 2, curve: 'smooth' },
                                 legend: { labels: { colors: palette.text } },
@@ -216,9 +216,9 @@
                         @endphp
                         {{-- Gasto por cuenta --}}
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Gastos por cuenta (este mes)') }}</h3>
+                            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Expenses by account (this month)') }}</h3>
                             @if ($accountRows->isEmpty())
-                                <p class="py-12 text-center text-sm text-gray-400">{{ __('Sin gastos registrados este mes.') }}</p>
+                                <p class="py-12 text-center text-sm text-gray-400">{{ __('No expenses recorded this month.') }}</p>
                             @else
                                 @php
                                     $accLabels = $accountRows->map(fn ($row) => $row['account']->name);
@@ -230,9 +230,9 @@
                                 <div wire:key="{{ $chartKey }}" wire:ignore id="{{ $chartId }}" x-data x-init="window.renderFinanceChart('{{ $chartId }}', (palette) => ({
                                     chart: { type: 'bar', height: 288, fontFamily: 'Figtree, sans-serif', toolbar: { show: false } },
                                     plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: '55%' } },
-                                    series: [{ name: '{{ __('Gasto') }}', data: @js($accValues) }],
+                                    series: [{ name: '{{ __('Expense') }}', data: @js($accValues) }],
                                     colors: @js($accColors),
-                                    xaxis: { categories: @js($accLabels), labels: { style: { colors: palette.text }, formatter: (v) => formatCompact(v) } },
+                                    xaxis: { categories: @js($accLabels), labels: { style: { colors: palette.text }, formatter: (v) => formatCompact(v, '{{ auth()->user()->locale }}') } },
                                     yaxis: { labels: { style: { colors: palette.text } } },
                                     grid: { borderColor: palette.grid },
                                     legend: { show: false },
@@ -247,9 +247,9 @@
                         @endphp
                         {{-- Distribución del dinero actual --}}
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Distribución del dinero actual') }}</h3>
+                            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Current money distribution') }}</h3>
                             @if ($distRows->isEmpty())
-                                <p class="py-12 text-center text-sm text-gray-400">{{ __('Todavía no tienes saldo positivo en tus cuentas.') }}</p>
+                                <p class="py-12 text-center text-sm text-gray-400">{{ __('You don\'t have a positive balance in your accounts yet.') }}</p>
                             @else
                                 @php
                                     $distLabels = $distRows->map(fn ($row) => $row['account']->name);
@@ -276,7 +276,7 @@
                         @endphp
                         {{-- Evolución del patrimonio --}}
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2 dark:border-gray-700 dark:bg-gray-800">
-                            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Evolución del patrimonio') }}</h3>
+                            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Net worth over time') }}</h3>
                             @php
                                 $nwLabels = $nwRows->pluck('label');
                                 $nwValues = $nwRows->map(fn ($row) => $row['netWorth']->toFloat());
@@ -285,11 +285,11 @@
                             @endphp
                             <div wire:key="{{ $chartKey }}" wire:ignore id="{{ $chartId }}" x-data x-init="window.renderFinanceChart('{{ $chartId }}', (palette) => ({
                                 chart: { type: 'area', height: 260, fontFamily: 'Figtree, sans-serif', toolbar: { show: false } },
-                                series: [{ name: '{{ __('Patrimonio') }}', data: @js($nwValues) }],
+                                series: [{ name: '{{ __('Net worth') }}', data: @js($nwValues) }],
                                 colors: [palette.series[0]],
                                 fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
                                 xaxis: { categories: @js($nwLabels), labels: { style: { colors: palette.text } } },
-                                yaxis: { labels: { style: { colors: palette.text }, formatter: (v) => formatCompact(v) } },
+                                yaxis: { labels: { style: { colors: palette.text }, formatter: (v) => formatCompact(v, '{{ auth()->user()->locale }}') } },
                                 grid: { borderColor: palette.grid },
                                 stroke: { width: 2, curve: 'smooth' },
                                 dataLabels: { enabled: false },

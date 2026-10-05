@@ -9,7 +9,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('app:notify-upcoming-recurring-payments')]
-#[Description('Notifica pagos recurrentes que vencen dentro de los próximos 3 días')]
+#[Description('Notifies recurring payments due within the next 3 days')]
 class NotifyUpcomingRecurringPayments extends Command
 {
     public function handle(): void
@@ -30,6 +30,6 @@ class NotifyUpcomingRecurringPayments extends Command
             }
         }
 
-        $this->info("Revisados {$recurrences->count()} recurrentes próximos a vencer.");
+        $this->info("Checked {$recurrences->count()} upcoming recurring transactions.");
     }
 }

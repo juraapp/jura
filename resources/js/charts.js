@@ -29,15 +29,15 @@ function isDark() {
 window.isDarkNow = isDark;
 
 window.formatMoney = function formatMoney(value, currency, locale) {
-    return new Intl.NumberFormat((locale || 'es').replace('_', '-'), {
+    return new Intl.NumberFormat((locale || 'en').replace('_', '-'), {
         style: 'currency',
         currency: currency || 'COP',
         maximumFractionDigits: 0,
     }).format(value);
 };
 
-window.formatCompact = function formatCompact(value) {
-    return new Intl.NumberFormat('es', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+window.formatCompact = function formatCompact(value, locale) {
+    return new Intl.NumberFormat((locale || 'en').replace('_', '-'), { notation: 'compact', maximumFractionDigits: 1 }).format(value);
 };
 
 window.financeCharts = window.financeCharts || {};

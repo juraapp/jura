@@ -44,7 +44,7 @@ new #[Layout('layouts.app')] class extends Component
             $rawRows = $importer->parse($this->file->getRealPath());
 
             if (empty($rawRows)) {
-                $this->parseError = __('El archivo no tiene filas de datos.');
+                $this->parseError = __('The file has no data rows.');
                 $this->reset('file');
 
                 return;
@@ -75,7 +75,7 @@ new #[Layout('layouts.app')] class extends Component
         $this->step = 'done';
 
         $this->dispatch('finances-updated');
-        $this->dispatch('toast', type: 'success', message: __(':count transacciones importadas.', ['count' => $result['imported']]));
+        $this->dispatch('toast', type: 'success', message: __(':count transactions imported.', ['count' => $result['imported']]));
     }
 
     public function startOver(): void
@@ -93,10 +93,10 @@ new #[Layout('layouts.app')] class extends Component
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ __('Importar transacciones') }}
+                {{ __('Import transactions') }}
             </h2>
             <a href="{{ route('transactions.index') }}" wire:navigate class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                {{ __('Volver a transacciones') }}
+                {{ __('Back to transactions') }}
             </a>
         </div>
     </x-slot>
@@ -120,13 +120,13 @@ new #[Layout('layouts.app')] class extends Component
                 <x-dynamic-icon name="arrow-up-tray" class="mx-auto h-10 w-10 text-gray-400" />
 
                 <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                    {{ __('Arrastra tu archivo CSV aquí o') }}
+                    {{ __('Drag your CSV file here or') }}
                     <button type="button" x-on:click="$refs.fileInput.click()" class="font-medium text-primary-600 hover:underline">
-                        {{ __('selecciona un archivo') }}
+                        {{ __('select a file') }}
                     </button>
                 </p>
 
-                <div wire:loading wire:target="file" class="mt-3 text-sm text-gray-500">{{ __('Procesando archivo…') }}</div>
+                <div wire:loading wire:target="file" class="mt-3 text-sm text-gray-500">{{ __('Processing file…') }}</div>
 
                 <x-input-error class="mt-3" :messages="$errors->get('file')" />
 
@@ -137,10 +137,10 @@ new #[Layout('layouts.app')] class extends Component
                 <div class="mt-6 space-y-2">
                     <a href="{{ route('transactions.import.template') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:underline">
                         <x-dynamic-icon name="arrow-down-tray" class="h-4 w-4" />
-                        {{ __('Descargar plantilla CSV') }}
+                        {{ __('Download CSV template') }}
                     </a>
                     <p class="text-xs text-gray-400">
-                        {{ __('Reemplaza las filas de ejemplo con tus datos reales, usando exactamente los nombres de tus cuentas y categorías existentes.') }}
+                        {{ __('Replace the example rows with your real data, using the exact names of your existing accounts and categories.') }}
                     </p>
                 </div>
             </div>
@@ -154,20 +154,20 @@ new #[Layout('layouts.app')] class extends Component
             <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <p class="text-sm text-gray-600 dark:text-gray-400">
-                        <span class="font-semibold text-green-600 dark:text-green-400">{{ $validCount }} {{ __('nuevas') }}</span>
+                        <span class="font-semibold text-green-600 dark:text-green-400">{{ $validCount }} {{ __('new') }}</span>
                         &middot;
-                        <span class="font-semibold text-amber-600 dark:text-amber-400">{{ $duplicateCount }} {{ __('posibles duplicados') }}</span>
+                        <span class="font-semibold text-amber-600 dark:text-amber-400">{{ $duplicateCount }} {{ __('possible duplicates') }}</span>
                         &middot;
-                        <span class="font-semibold text-red-600 dark:text-red-400">{{ $errorCount }} {{ __('con error') }}</span>
+                        <span class="font-semibold text-red-600 dark:text-red-400">{{ $errorCount }} {{ __('with error') }}</span>
                     </p>
 
                     <div class="flex items-center gap-3">
                         <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <input wire:model="includeDuplicates" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600">
-                            {{ __('Importar también los duplicados') }}
+                            {{ __('Import duplicates too') }}
                         </label>
                         <button wire:click="startOver" type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                            {{ __('Cancelar') }}
+                            {{ __('Cancel') }}
                         </button>
                         <button
                             wire:click="confirmImport"
@@ -175,7 +175,7 @@ new #[Layout('layouts.app')] class extends Component
                             @disabled($validCount === 0 && ! $this->includeDuplicates)
                             class="rounded-lg bg-primary-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {{ __('Importar') }}
+                            {{ __('Import') }}
                         </button>
                     </div>
                 </div>
@@ -186,13 +186,13 @@ new #[Layout('layouts.app')] class extends Component
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-900/40">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Línea') }}</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Fecha') }}</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Tipo') }}</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Categoría') }}</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Cuenta') }}</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Monto') }}</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Estado') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Line') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Date') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Type') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Category') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Account') }}</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Amount') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Status') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -208,12 +208,12 @@ new #[Layout('layouts.app')] class extends Component
                                         @if ($row['status'] === 'valid')
                                             <span class="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
                                                 <x-dynamic-icon name="check-circle" class="h-4 w-4" />
-                                                {{ __('Nueva') }}
+                                                {{ __('New') }}
                                             </span>
                                         @elseif ($row['status'] === 'duplicate')
-                                            <span class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400" title="{{ __('Ya existe una transacción con la misma cuenta, fecha, monto y descripción.') }}">
+                                            <span class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400" title="{{ __('A transaction with the same account, date, amount, and description already exists.') }}">
                                                 <x-dynamic-icon name="exclamation-triangle" class="h-4 w-4" />
-                                                {{ __('Posible duplicado') }}
+                                                {{ __('Possible duplicate') }}
                                             </span>
                                         @else
                                             <span class="inline-flex items-start gap-1 text-red-600 dark:text-red-400">
@@ -231,20 +231,20 @@ new #[Layout('layouts.app')] class extends Component
         @else
             <x-empty-state
                 icon="check-circle"
-                :title="__(':count transacciones importadas.', ['count' => $importedCount])"
+                :title="__(':count transactions imported.', ['count' => $importedCount])"
                 :description="trim(
-                    ($skippedCount > 0 ? __(':count filas se omitieron por errores. ', ['count' => $skippedCount]) : '')
-                    . ($duplicateSkippedCount > 0 ? __(':count posibles duplicados no se importaron.', ['count' => $duplicateSkippedCount]) : '')
+                    ($skippedCount > 0 ? __(':count rows were skipped due to errors. ', ['count' => $skippedCount]) : '')
+                    . ($duplicateSkippedCount > 0 ? __(':count possible duplicates were not imported.', ['count' => $duplicateSkippedCount]) : '')
                 ) ?: null"
             >
                 <x-slot name="action">
                     <div class="flex items-center gap-3">
                         <button wire:click="startOver" type="button" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
                             <x-dynamic-icon name="arrow-up-tray" class="h-4 w-4" />
-                            {{ __('Importar otro archivo') }}
+                            {{ __('Import another file') }}
                         </button>
                         <a href="{{ route('transactions.index') }}" wire:navigate class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                            {{ __('Ver transacciones') }}
+                            {{ __('View transactions') }}
                         </a>
                     </div>
                 </x-slot>

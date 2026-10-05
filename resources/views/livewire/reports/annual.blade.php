@@ -35,7 +35,7 @@ new #[Layout('layouts.app')] class extends Component
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ __('Reporte anual') }}
+                {{ __('Annual report') }}
             </h2>
             <div class="flex items-center gap-2">
                 <button wire:click="previousYear" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">
@@ -47,7 +47,7 @@ new #[Layout('layouts.app')] class extends Component
                 </button>
                 <a href="{{ route('reports.annual.pdf', ['year' => $year]) }}" target="_blank" class="ms-2 inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
                     <x-dynamic-icon name="arrow-down-tray" class="h-4 w-4" />
-                    {{ __('Exportar PDF') }}
+                    {{ __('Export PDF') }}
                 </a>
             </div>
         </div>
@@ -61,42 +61,42 @@ new #[Layout('layouts.app')] class extends Component
                 @endif
 
                 <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <x-stat-card :label="__('Ingresos totales')" icon="arrow-up-circle" icon-color="text-green-600 dark:text-green-400" icon-bg="bg-green-50 dark:bg-green-500/10">
+                    <x-stat-card :label="__('Total income')" icon="arrow-up-circle" icon-color="text-green-600 dark:text-green-400" icon-bg="bg-green-50 dark:bg-green-500/10">
                         <x-money :amount="$currencySummary['income']" :currency="$currency" />
                     </x-stat-card>
-                    <x-stat-card :label="__('Gastos totales')" icon="arrow-down-circle" icon-color="text-red-600 dark:text-red-400" icon-bg="bg-red-50 dark:bg-red-500/10">
+                    <x-stat-card :label="__('Total expenses')" icon="arrow-down-circle" icon-color="text-red-600 dark:text-red-400" icon-bg="bg-red-50 dark:bg-red-500/10">
                         <x-money :amount="$currencySummary['expense']" :currency="$currency" />
                     </x-stat-card>
-                    <x-stat-card :label="__('Ahorro total')" icon="chart-pie">
+                    <x-stat-card :label="__('Total savings')" icon="chart-pie">
                         <x-money :amount="$currencySummary['savings']" :currency="$currency" />
-                        <x-slot name="footer">{{ number_format($currencySummary['savingsRate'], 1) }}% {{ __('tasa de ahorro anual') }}</x-slot>
+                        <x-slot name="footer">{{ number_format($currencySummary['savingsRate'], 1) }}% {{ __('annual savings rate') }}</x-slot>
                     </x-stat-card>
-                    <x-stat-card :label="__('Promedio mensual')" icon="calendar">
+                    <x-stat-card :label="__('Monthly average')" icon="calendar">
                         <x-money :amount="$currencySummary['avgMonthlyExpense']" :currency="$currency" />
-                        <x-slot name="footer">{{ __('de gasto') }}</x-slot>
+                        <x-slot name="footer">{{ __('of spending') }}</x-slot>
                     </x-stat-card>
                 </div>
 
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     @if ($currencySummary['bestIncomeMonth'])
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Mes con mayores ingresos') }}</p>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Month with the highest income') }}</p>
                             <p class="mt-1 text-lg font-semibold capitalize text-gray-900 dark:text-white">{{ $currencySummary['bestIncomeMonth']['label'] }}</p>
                             <p class="text-sm text-gray-500"><x-money :amount="$currencySummary['bestIncomeMonth']['income']" :currency="$currency" /></p>
                         </div>
                     @endif
                     @if ($currencySummary['worstExpenseMonth'])
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Mes con mayores gastos') }}</p>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Month with the highest expenses') }}</p>
                             <p class="mt-1 text-lg font-semibold capitalize text-gray-900 dark:text-white">{{ $currencySummary['worstExpenseMonth']['label'] }}</p>
                             <p class="text-sm text-gray-500"><x-money :amount="$currencySummary['worstExpenseMonth']['expense']" :currency="$currency" /></p>
                         </div>
                     @endif
                     @if ($currencySummary['topCategory'])
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Categoría donde más gastaste') }}</p>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Category where you spent the most') }}</p>
                             <p class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{{ $currencySummary['topCategory']['category']?->name }}</p>
-                            <p class="text-sm text-gray-500">{{ number_format($currencySummary['topCategory']['percentage'], 1) }}% {{ __('del total') }}</p>
+                            <p class="text-sm text-gray-500">{{ number_format($currencySummary['topCategory']['percentage'], 1) }}% {{ __('of the total') }}</p>
                         </div>
                     @endif
                 </div>
@@ -105,10 +105,10 @@ new #[Layout('layouts.app')] class extends Component
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-900/40">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Mes') }}</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Ingresos') }}</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Gastos') }}</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Ahorro') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Month') }}</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Income') }}</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Expenses') }}</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Savings') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
