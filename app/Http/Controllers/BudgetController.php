@@ -8,6 +8,7 @@ use App\Http\Requests\Budgets\StoreBudgetRequest;
 use App\Http\Requests\Budgets\UpdateBudgetRequest;
 use App\Models\Budget;
 use App\Models\Category;
+use App\Services\BudgetForecastService;
 use App\Services\BudgetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
@@ -17,7 +18,7 @@ use Inertia\Response;
 
 class BudgetController extends Controller
 {
-    public function index(BudgetService $service): Response
+    public function index(BudgetService $service, BudgetForecastService $forecastService): Response
     {
         $now = Carbon::now();
 
@@ -27,8 +28,9 @@ class BudgetController extends Controller
             ->filter(fn (Budget $budget) => $budget->period_type->value === 'yearly'
                 ? $budget->period_start->isSameYear($now)
                 : $budget->period_start->isSameMonth($now))
-            ->map(function (Budget $budget) use ($service) {
+            ->map(function (Budget $budget) use ($service, $forecastService) {
                 $progress = $service->progress($budget);
+                $forecast = $forecastService->summary($budget);
 
                 return [
                     'id' => $budget->id,
@@ -40,12 +42,16 @@ class BudgetController extends Controller
                     ],
                     'currency' => $budget->currency,
                     'amount' => $budget->amount->toFloat(),
+                    'allocatedAmount' => $budget->allocated_amount?->toFloat(),
                     'periodType' => $budget->period_type->value,
                     'periodTypeLabel' => $budget->period_type->label(),
                     'spent' => $progress['spent']->toFloat(),
                     'remaining' => $progress['remaining']->toFloat(),
+                    'projected' => $forecast['projected']->toFloat(),
+                    'effectiveRemaining' => $forecast['effectiveRemaining']->toFloat(),
                     'percentage' => $progress['percentage'],
                     'status' => $progress['status'],
+                    'forecastCount' => $budget->forecasts()->where('is_anticipated', true)->count(),
                 ];
             })
             ->values();
