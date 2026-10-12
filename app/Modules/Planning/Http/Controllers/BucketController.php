@@ -4,11 +4,11 @@ namespace App\Modules\Planning\Http\Controllers;
 
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Enums\CategoryType;
+use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
-use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Http\Requests\Buckets\AdjustBucketFundsRequest;
 use App\Modules\Planning\Http\Requests\Buckets\MoveBucketFundsRequest;
 use App\Modules\Planning\Http\Requests\Buckets\StoreBucketRequest;
@@ -21,6 +21,7 @@ use App\Modules\Planning\Services\BucketService;
 use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Support\Money;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -67,6 +68,7 @@ class BucketController extends Controller
                     ->map(fn (int $id) => ['id' => $id, 'name' => $accountNames->get($id, '?')])->values(),
                 'isDefault' => $bucket->is_default,
                 'balance' => $funds->balance($bucket)->toFloat(),
+                'openingBalance' => $funds->openingBalance($bucket)->toFloat(),
                 'available' => $funds->available($bucket)->toFloat(),
                 'hasFunding' => $funds->hasFunding($bucket),
                 'tracksLimit' => $bucket->tracksLimit(),
@@ -146,13 +148,60 @@ class BucketController extends Controller
     {
         $amount = Money::of($request->validated('amount'));
 
-        if ($amount->isNegative() && $funds->available($bucket)->lessThan($amount->abs())) {
+        if ($amount->isNegative() && $funds->balance($bucket)->lessThan($amount->abs())) {
             return back()->withErrors(['amount' => __('buckets.not_enough_funds')]);
         }
 
         $funds->credit($bucket, $amount, AllocationSource::Adjustment, null, null, $request->validated('description'));
 
         return back()->with('success', __('buckets.adjusted'));
+    }
+
+    public function reset(Bucket $bucket, BucketLedger $funds): RedirectResponse
+    {
+        $this->authorize('update', $bucket);
+
+        $balance = $funds->balance($bucket);
+        if (! $balance->isZero()) {
+            $funds->credit($bucket, $balance->negate(), AllocationSource::Adjustment, null, null, __('buckets.reset_note'));
+        }
+
+        return back()->with('success', __('buckets.reset'));
+    }
+
+    public function allocations(Bucket $bucket, BucketLedger $funds): JsonResponse
+    {
+        $this->authorize('view', $bucket);
+
+        return response()->json([
+            'allocations' => Allocation::where('bucket_id', $bucket->id)
+                ->orderByDesc('date')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn (Allocation $allocation) => [
+                    'id' => $allocation->id,
+                    'amount' => $allocation->amount->toFloat(),
+                    'date' => $allocation->date->toDateString(),
+                    'source' => $allocation->source->value,
+                    'sourceLabel' => $allocation->source->label(),
+                    'description' => $allocation->description,
+                    'deletable' => $funds->isRemovable($allocation),
+                ])->values(),
+        ]);
+    }
+
+    public function destroyAllocation(Bucket $bucket, Allocation $allocation, BucketLedger $funds): RedirectResponse
+    {
+        $this->authorize('update', $bucket);
+        abort_unless($allocation->bucket_id === $bucket->id, 404);
+
+        if (! $funds->isRemovable($allocation)) {
+            return back()->with('error', __('buckets.allocation_locked'));
+        }
+
+        $funds->remove($allocation);
+
+        return back()->with('success', __('buckets.allocation_removed'));
     }
 
     /**

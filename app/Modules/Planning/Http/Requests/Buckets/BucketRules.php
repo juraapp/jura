@@ -65,6 +65,7 @@ trait BucketRules
             ],
             'allowed_account_ids' => ['nullable', 'array'],
             'allowed_account_ids.*' => ['integer', Rule::exists('accounts', 'id')->where('user_id', $userId)],
+            'opening_balance' => ['nullable', 'numeric', 'min:0'],
             'is_default' => ['nullable', 'boolean'],
         ];
     }
