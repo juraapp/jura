@@ -2,10 +2,10 @@
 
 namespace App\Modules\Ledger\Services;
 
+use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\Balances;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Account;
-use App\Modules\Identity\Models\User;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;

@@ -2,8 +2,8 @@
 
 namespace App\Modules\Planning\Policies;
 
-use App\Modules\Planning\Models\Budget;
 use App\Modules\Identity\Models\User;
+use App\Modules\Planning\Models\Budget;
 
 class BudgetPolicy
 {

@@ -3,7 +3,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { update } from '@/actions/App/Http/Controllers/ProfileController';
+import { update } from '@/actions/App/Modules/Identity/Http/Controllers/ProfileController';
 import { send } from '@/routes/verification';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 

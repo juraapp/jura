@@ -2,12 +2,12 @@
 
 namespace App\Modules\Notifications\Listeners;
 
+use App\Modules\Ledger\Contracts\Balances;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Ledger\Models\Transaction;
-use App\Modules\Ledger\Contracts\Balances;
-use App\Modules\Shared\Support\Money;
 use App\Modules\Notifications\Notifications\LowAccountBalance;
+use App\Modules\Shared\Support\Money;
 
 /**
  * Flags an account as "low" when its balance can't cover ~3 days of the

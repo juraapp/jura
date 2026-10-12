@@ -13,7 +13,7 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
-import { store, update, destroy } from '@/actions/App/Http/Controllers/CategoryController';
+import { store, update, destroy } from '@/actions/App/Modules/Ledger/Http/Controllers/CategoryController';
 
 defineProps({
     expenseCategories: { type: Array, required: true },

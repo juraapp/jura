@@ -12,7 +12,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import { useTransactionModal } from '@/composables/useTransactionModal';
-import { destroy } from '@/actions/App/Http/Controllers/TransactionController';
+import { destroy } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
 
 const props = defineProps({
     typeFilter: { type: String, required: true },

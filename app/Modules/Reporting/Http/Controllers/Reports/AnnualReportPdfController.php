@@ -2,8 +2,8 @@
 
 namespace App\Modules\Reporting\Http\Controllers\Reports;
 
-use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Reporting\Services\ReportService;
+use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;

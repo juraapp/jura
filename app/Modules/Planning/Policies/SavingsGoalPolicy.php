@@ -2,8 +2,8 @@
 
 namespace App\Modules\Planning\Policies;
 
-use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Identity\Models\User;
+use App\Modules\Planning\Models\SavingsGoal;
 
 class SavingsGoalPolicy
 {

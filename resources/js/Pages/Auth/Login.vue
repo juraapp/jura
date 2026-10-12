@@ -5,7 +5,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { store } from '@/actions/App/Http/Controllers/Auth/AuthenticatedSessionController';
+import { store } from '@/actions/App/Modules/Identity/Http/Controllers/Auth/AuthenticatedSessionController';
 import { request } from '@/routes/password';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 

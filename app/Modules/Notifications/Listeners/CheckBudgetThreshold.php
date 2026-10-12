@@ -3,8 +3,8 @@
 namespace App\Modules\Notifications\Listeners;
 
 use App\Modules\Ledger\Events\TransactionsMutated;
-use App\Modules\Planning\Contracts\BudgetProgress;
 use App\Modules\Notifications\Notifications\BudgetThresholdReached;
+use App\Modules\Planning\Contracts\BudgetProgress;
 use Illuminate\Support\Carbon;
 
 /**

@@ -58,10 +58,10 @@ For anything rendered from a `v-for` (dropdown per row, etc.), prefer a Vue-nati
 
 ## Wayfinder action helpers
 
-Never hardcode a URL. Import the generated helper and pass it to `useForm().submit()` / `router.get()`/`.delete()` / a plain `<a :href>`:
+Action helpers are generated from each controller's full class name, so the import path includes its module (`@/actions/App/Modules/<Module>/Http/Controllers/<Name>Controller`). Moving or renaming a controller means regenerating (`vendor/bin/sail artisan wayfinder:generate --with-form`) and updating imports; `npm run build` fails loudly if one is stale. Never hardcode a URL. Import the generated helper and pass it to `useForm().submit()` / `router.get()`/`.delete()` / a plain `<a :href>`:
 
 ```js
-import { store, update, destroy } from '@/actions/App/Http/Controllers/BudgetController';
+import { store, update, destroy } from '@/actions/App/Modules/Planning/Http/Controllers/BudgetController';
 import { index as accountsIndex } from '@/routes/accounts';
 
 form.submit(editing.value ? update(editing.value.id) : store(), { preserveScroll: true });

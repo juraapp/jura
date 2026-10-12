@@ -2,8 +2,8 @@
 
 namespace App\Modules\Ledger\Events;
 
-use App\Modules\Ledger\Models\Account;
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Models\Account;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Support\Collection;
 

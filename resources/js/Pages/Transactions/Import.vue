@@ -7,7 +7,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { withCsrfHeader } from '@/csrf';
-import { parse as parseImport, store as storeImport } from '@/actions/App/Http/Controllers/TransactionImportController';
+import { parse as parseImport, store as storeImport } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionImportController';
 import { index as transactionsIndex } from '@/routes/transactions';
 import { template as importTemplate } from '@/routes/transactions/import';
 

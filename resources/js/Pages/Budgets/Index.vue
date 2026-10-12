@@ -14,7 +14,7 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
-import { store, update, destroy } from '@/actions/App/Http/Controllers/BudgetController';
+import { store, update, destroy } from '@/actions/App/Modules/Planning/Http/Controllers/BudgetController';
 import { index as forecastsIndex } from '@/routes/budget-forecasts';
 
 defineProps({

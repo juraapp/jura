@@ -2,9 +2,9 @@
 
 namespace App\Modules\Reporting\Http\Controllers\Reports;
 
-use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Reporting\Services\InsightService;
 use App\Modules\Reporting\Services\ReportService;
+use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Spatie\LaravelPdf\Facades\Pdf;
