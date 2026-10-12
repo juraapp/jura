@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
@@ -11,6 +12,7 @@ import { buckets as bucketsReport } from '@/routes/reports';
 import { useFormat } from '@/composables/useFormat';
 
 const format = useFormat();
+const { t } = useI18n();
 
 const props = defineProps({
     currencies: { type: Array, required: true },
@@ -28,9 +30,9 @@ const changeView = (value) => {
 };
 
 const viewHints = {
-    conservative: 'Projected with confirmed income only.',
-    expected: 'Projected with confirmed and expected income.',
-    optimistic: 'Projected with all planned income.',
+    conservative: t('ui.reports_buckets.hint_conservative'),
+    expected: t('ui.reports_buckets.hint_expected'),
+    optimistic: t('ui.reports_buckets.hint_optimistic'),
 };
 
 const balanceOptions = (currency) => ({
@@ -61,29 +63,29 @@ const targetPercent = (bucket) => (bucket.cap ? Math.max(0, Math.min(100, (bucke
 </script>
 
 <template>
-    <Head title="Buckets report" />
+    <Head :title="$t('ui.reports_buckets.title')" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Buckets report</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.reports_buckets.title') }}</h2>
         </template>
 
         <div class="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
             <EmptyState
                 v-if="currencies.length === 0"
                 icon="chart-pie"
-                title="No buckets yet"
-                description="Create buckets to set money aside, and this report will show how they are funded and where they are heading."
+                :title="$t('ui.reports_buckets.empty_title')"
+                :description="$t('ui.reports_buckets.empty_hint')"
             >
                 <template #action>
-                    <Link :href="bucketsIndex.url()" class="text-sm font-semibold text-primary-600 hover:underline">Go to Buckets</Link>
+                    <Link :href="bucketsIndex.url()" class="text-sm font-semibold text-primary-600 hover:underline">{{ $t('ui.reports_buckets.go') }}</Link>
                 </template>
             </EmptyState>
 
             <template v-else>
                 <div>
                     <SegmentedControl :model-value="view" :options="views" @update:model-value="changeView" />
-                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ viewHints[view] }} Applies to the projected balances below.</p>
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ viewHints[view] }} {{ $t('ui.reports_buckets.applies') }}</p>
                 </div>
 
                 <section v-for="currency in currencies" :key="currency.currency" class="space-y-4">
@@ -91,19 +93,19 @@ const targetPercent = (bucket) => (bucket.cap ? Math.max(0, Math.min(100, (bucke
 
                     <div class="grid gap-4 lg:grid-cols-2">
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                            <h4 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Available funds today</h4>
+                            <h4 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $t('ui.reports_buckets.available_today') }}</h4>
                             <apexchart
                                 :key="`bal-${currency.currency}-${isDark}`"
                                 type="bar"
                                 :height="Math.max(180, currency.buckets.length * 46)"
                                 :options="balanceOptions(currency)"
-                                :series="[{ name: 'Available', data: currency.buckets.map((bucket) => bucket.available) }]"
+                                :series="[{ name: t('ui.reports_buckets.available'), data: currency.buckets.map((bucket) => bucket.available) }]"
                             />
                         </div>
 
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                            <h4 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Money in and out, by month</h4>
-                            <p v-if="currency.history.series.length === 0" class="py-12 text-center text-sm text-gray-400">No movements in the last 6 months.</p>
+                            <h4 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $t('ui.reports_buckets.in_out') }}</h4>
+                            <p v-if="currency.history.series.length === 0" class="py-12 text-center text-sm text-gray-400">{{ $t('ui.reports_buckets.no_movements') }}</p>
                             <apexchart
                                 v-else
                                 :key="`hist-${currency.currency}-${isDark}`"
@@ -119,20 +121,20 @@ const targetPercent = (bucket) => (bucket.cap ? Math.max(0, Math.min(100, (bucke
                         <table class="min-w-full text-sm">
                             <thead>
                                 <tr class="text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                    <th class="px-4 py-3 font-semibold">Bucket</th>
-                                    <th class="px-4 py-3 text-right font-semibold">Available now</th>
-                                    <th class="px-4 py-3 text-right font-semibold">Target</th>
-                                    <th class="px-4 py-3 text-right font-semibold">In 12 months (projected)</th>
-                                    <th class="px-4 py-3 text-right font-semibold">Change</th>
+                                    <th class="px-4 py-3 font-semibold">{{ $t('ui.reports_buckets.bucket') }}</th>
+                                    <th class="px-4 py-3 text-right font-semibold">{{ $t('ui.reports_buckets.available_now') }}</th>
+                                    <th class="px-4 py-3 text-right font-semibold">{{ $t('ui.reports_buckets.target') }}</th>
+                                    <th class="px-4 py-3 text-right font-semibold">{{ $t('ui.reports_buckets.in_12') }}</th>
+                                    <th class="px-4 py-3 text-right font-semibold">{{ $t('ui.reports_buckets.change') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 tabular-nums dark:divide-gray-700">
                                 <tr v-for="bucket in currency.buckets" :key="bucket.id" class="text-gray-700 dark:text-gray-200">
-                                    <td class="px-4 py-2 font-medium">{{ bucket.name }}<span v-if="bucket.isDefault" class="ml-1.5 rounded-full bg-primary-50 px-1.5 py-0.5 text-xs text-primary-700 dark:bg-primary-500/10 dark:text-primary-400">Default</span></td>
+                                    <td class="px-4 py-2 font-medium">{{ bucket.name }}<span v-if="bucket.isDefault" class="ml-1.5 rounded-full bg-primary-50 px-1.5 py-0.5 text-xs text-primary-700 dark:bg-primary-500/10 dark:text-primary-400">{{ $t('ui.reports_buckets.default') }}</span></td>
                                     <td class="px-4 py-2 text-right"><Money :amount="bucket.available" :currency="currency.currency" /></td>
                                     <td class="px-4 py-2 text-right">
                                         <template v-if="bucket.cap && bucket.kind === 'savings'"><Money :amount="bucket.cap" :currency="currency.currency" /> <span class="text-xs text-gray-400">({{ format.number(targetPercent(bucket), 0) }}%)</span></template>
-                                        <span v-else-if="bucket.cap" class="text-xs text-gray-400">limit <Money :amount="bucket.cap" :currency="currency.currency" /> per cycle</span>
+                                        <span v-else-if="bucket.cap" class="text-xs text-gray-400">{{ $t('ui.reports_buckets.limit_per_cycle', { amount: format.money(bucket.cap, currency.currency) }) }}</span>
                                         <span v-else class="text-gray-300">-</span>
                                     </td>
                                     <template v-for="row in currency.projected.filter((candidate) => candidate.id === bucket.id)" :key="row.id">
