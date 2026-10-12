@@ -3,7 +3,7 @@
 ## Pages vs Components vs Layouts
 
 - **`Pages/`** — one file per `Inertia::render('X')` target, same path (`Pages/Accounts/Index.vue` ↔ `Inertia::render('Accounts/Index', ...)`). A Page always wraps its content in `<AuthenticatedLayout>` (or `<GuestLayout>` for auth screens) and receives its data exclusively via `defineProps()` — never fetches its own initial data.
-- **`Components/`** — anything reused across ≥2 Pages, or a self-contained UI primitive (`Modal`, `ModalForm`, `InputLabel`, `TextInput`, `InputError`, `PrimaryButton`/`SecondaryButton`/`DangerButton`, `EmptyState`, `StatCard`, `Money`, `CategoryIcon`, `DynamicIcon`, `Pagination`). Check here before writing a new one — most CRUD pages are built almost entirely out of existing components (see any `Pages/*/Index.vue` for the pattern: `ModalForm` for create/edit, a plain `Modal` for delete confirmation, `EmptyState` for the zero-rows case).
+- **`Components/`** — anything reused across ≥2 Pages, or a self-contained UI primitive (`Modal`, `ModalForm`, `InputLabel`, `TextInput`, `InputError`, `PrimaryButton`/`SecondaryButton`/`DangerButton`, `EmptyState`, `StatCard`, `Money`, `CategoryIcon`, `DynamicIcon`, `Pagination`, `SelectInput`, `SegmentedControl`). Check here before writing a new one — most CRUD pages are built almost entirely out of existing components (see any `Pages/*/Index.vue` for the pattern: `ModalForm` for create/edit, a plain `Modal` for delete confirmation, `EmptyState` for the zero-rows case).
 - **`Layouts/`** — `AuthenticatedLayout.vue` (sidebar + topbar + toast container + the global transaction modal) and `GuestLayout.vue`. A Page picks one; layouts never know about a specific Page's data.
 
 ## The established CRUD-page shape
