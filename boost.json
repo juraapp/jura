@@ -10,8 +10,9 @@
     "skills": [
         "infer-conventions",
         "laravel-best-practices",
-        "livewire-development",
-        "volt-development",
+        "testing-best-practices",
+        "wayfinder-development",
+        "inertia-vue-development",
         "tailwindcss-development"
     ]
 }
