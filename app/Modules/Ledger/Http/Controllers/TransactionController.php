@@ -52,14 +52,10 @@ class TransactionController extends Controller
 
         $transactions = $query->paginate(15)->withQueryString();
 
-        $transferDestinations = collect();
-        if ($type === 'transfer') {
-            $transferDestinations = Transaction::whereIn('transfer_group_id', $transactions->pluck('transfer_group_id'))
-                ->where('type', 'transfer_in')
-                ->with('account')
-                ->get()
-                ->keyBy('transfer_group_id');
-        }
+        $counterparts = Transaction::whereIn('transfer_group_id', $transactions->pluck('transfer_group_id')->filter())
+            ->with('account:id,name')
+            ->get()
+            ->groupBy('transfer_group_id');
 
         $transactions->through(fn (Transaction $transaction) => [
             'id' => $transaction->id,
@@ -80,7 +76,8 @@ class TransactionController extends Controller
                 'icon' => $transaction->category->icon,
                 'color' => $transaction->category->color,
             ] : null,
-            'transferDestinationAccount' => $transferDestinations->get($transaction->transfer_group_id)?->account->name,
+            'counterpartAccount' => $counterparts->get($transaction->transfer_group_id)
+                ?->firstWhere('id', '!=', $transaction->id)?->account?->name,
         ]);
 
         return Inertia::render('Transactions/Index', [

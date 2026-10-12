@@ -67,6 +67,22 @@ class TransactionsTest extends TestCase
         );
     }
 
+    public function test_each_transfer_leg_names_the_account_on_the_other_side(): void
+    {
+        $user = User::factory()->create();
+        $source = Account::factory()->for($user)->create(['name' => 'Wallet']);
+        $destination = Account::factory()->for($user)->create(['name' => 'Savings']);
+        $groupId = (string) Str::uuid();
+        $out = Transaction::factory()->for($user)->for($source)->transferOut()->create(['transfer_group_id' => $groupId]);
+        $in = Transaction::factory()->for($user)->for($destination)->transferIn()->create(['transfer_group_id' => $groupId]);
+
+        $this->actingAs($user)->get('/finances/transactions')->assertInertia(fn (Assert $page) => $page
+            ->has('transactions.data', 2)
+            ->where('transactions.data', fn ($rows) => collect($rows)->firstWhere('id', $out->id)['counterpartAccount'] === 'Savings'
+                && collect($rows)->firstWhere('id', $in->id)['counterpartAccount'] === 'Wallet')
+        );
+    }
+
     public function test_index_can_filter_by_search_term(): void
     {
         $user = User::factory()->create();
