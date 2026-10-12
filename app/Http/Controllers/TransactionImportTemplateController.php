@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TransactionType;
+use App\Modules\Shared\Http\Controllers\Controller;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransactionImportTemplateController extends Controller

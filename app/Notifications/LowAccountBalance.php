@@ -3,7 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Account;
-use App\Support\Money;
+use App\Modules\Shared\Support\Money;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 

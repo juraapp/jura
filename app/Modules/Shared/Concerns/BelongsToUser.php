@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Concerns;
+namespace App\Modules\Shared\Concerns;
 
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;

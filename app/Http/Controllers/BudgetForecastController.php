@@ -7,8 +7,8 @@ use App\Http\Requests\BudgetForecasts\UpdateBudgetForecastRequest;
 use App\Models\Budget;
 use App\Models\BudgetForecast;
 use App\Models\Category;
+use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 

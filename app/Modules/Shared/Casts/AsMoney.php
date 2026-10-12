@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Casts;
+namespace App\Modules\Shared\Casts;
 
-use App\Support\Money;
+use App\Modules\Shared\Support\Money;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 

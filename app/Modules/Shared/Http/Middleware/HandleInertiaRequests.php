@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Middleware;
+namespace App\Modules\Shared\Http\Middleware;
 
 use App\Services\BalanceCalculator;
 use Illuminate\Http\Request;

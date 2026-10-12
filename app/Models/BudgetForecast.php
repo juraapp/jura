@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Casts\AsMoney;
-use App\Models\Concerns\BelongsToUser;
+use App\Modules\Shared\Casts\AsMoney;
+use App\Modules\Shared\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

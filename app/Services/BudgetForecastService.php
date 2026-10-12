@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Budget;
-use App\Support\Money;
+use App\Modules\Shared\Support\Money;
 
 class BudgetForecastService
 {
