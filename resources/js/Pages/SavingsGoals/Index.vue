@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
@@ -13,17 +13,23 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
-import { store, update, destroy, contribute, restore, forceDestroy } from '@/actions/App/Modules/Planning/Http/Controllers/SavingsGoalController';
+import { store, update, destroy, contribute, restore, forceDestroy, bulkDestroy } from '@/actions/App/Modules/Planning/Http/Controllers/SavingsGoalController';
 import { useFormat } from '@/composables/useFormat';
+import BulkCheckbox from '@/Components/BulkCheckbox.vue';
+import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
+import { useBulkSelection } from '@/composables/useBulkSelection';
 
 const format = useFormat();
 
-defineProps({
+const props = defineProps({
     goals: { type: Array, required: true },
     currencies: { type: Array, required: true },
     iconChoices: { type: Array, required: true },
     trashedGoals: { type: Array, default: () => [] },
 });
+
+const bulk = useBulkSelection(() => props.goals);
+watch(() => props.goals, () => bulk.clear());
 
 const page = usePage();
 const showModal = ref(false);
@@ -154,7 +160,12 @@ const formatDate = (date) => format.date(date);
                 </template>
             </EmptyState>
 
-            <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div v-else>
+            <div class="mb-3 space-y-2">
+                <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> Select all</label>
+                <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" noun="goals" note="Deleted goals move to the Deleted goals list below, where you can restore them." />
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div
                     v-for="goal in goals"
                     :key="goal.id"
@@ -231,6 +242,7 @@ const formatDate = (date) => format.date(date);
                         Record contribution
                     </button>
                 </div>
+            </div>
             </div>
                     <section v-if="trashedGoals.length" class="mt-8">
                 <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Deleted goals</h3>

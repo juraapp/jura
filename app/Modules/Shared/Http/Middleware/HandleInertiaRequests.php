@@ -46,6 +46,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'warning' => fn () => $request->session()->get('warning'),
+                'undo' => fn () => $request->session()->get('undo'),
             ],
             'netWorth' => Inertia::defer(function () use ($request) {
                 if (! $request->user()) {

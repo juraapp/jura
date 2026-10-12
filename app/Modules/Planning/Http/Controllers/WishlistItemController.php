@@ -16,6 +16,7 @@ use App\Modules\Planning\Models\WishlistItem;
 use App\Modules\Planning\Services\BucketLedger;
 use App\Modules\Planning\Services\WishlistService;
 use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -84,6 +85,19 @@ class WishlistItemController extends Controller
         $wishlistItem->delete();
 
         return back()->with('success', __('wishlist.deleted'));
+    }
+
+    public function bulkDestroy(BulkIdsRequest $request): RedirectResponse
+    {
+        $count = 0;
+
+        foreach (WishlistItem::whereIn('id', $request->validated('ids'))->get() as $item) {
+            $this->authorize('delete', $item);
+            $item->delete();
+            $count++;
+        }
+
+        return back()->with('success', __('messages.bulk.deleted', ['count' => $count]));
     }
 
     public function purchase(PurchaseWishlistItemRequest $request, WishlistItem $wishlistItem, WishlistService $service): RedirectResponse

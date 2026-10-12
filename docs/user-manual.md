@@ -87,6 +87,18 @@ an optional **time** (it defaults to now and can be cleared), an optional descri
 - Within a day, transactions are listed latest time first; ones without a time come last. The time is shown in the format
   you chose in Preferences (12- or 24-hour).
 
+## Selecting many rows at once
+
+Long lists (transactions, planned events, wish list, recurring expenses, savings goals, buckets) have a checkbox on
+every row and a **Select all** box. Selecting rows opens a bar with **Delete** and **Clear**.
+
+- On **Transactions** the bar also offers **Change category / account** for the selected rows (transfers are never
+  changed, and a category only applies to transactions of the same kind), and, once you tick the whole page, **Select
+  all N that match** to act on every row your filters match, not just this page.
+- After deleting transactions a toast offers **Undo**; deleted transactions also wait in **Settings → Trash**.
+- Deleting planned events removes only the chosen occurrences of a repeating event. Deleting buckets moves their money
+  to the default bucket. Deleted goals go to **Deleted goals** where they can be restored.
+
 ## Importing from CSV
 
 Menu: **Finances → Import CSV**.

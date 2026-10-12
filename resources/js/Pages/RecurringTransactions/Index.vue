@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
@@ -14,8 +14,11 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
-import { store, update, destroy, toggleActive } from '@/actions/App/Modules/Planning/Http/Controllers/RecurringTransactionController';
+import { store, update, destroy, toggleActive, bulkDestroy } from '@/actions/App/Modules/Planning/Http/Controllers/RecurringTransactionController';
 import { useFormat } from '@/composables/useFormat';
+import BulkCheckbox from '@/Components/BulkCheckbox.vue';
+import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
+import { useBulkSelection } from '@/composables/useBulkSelection';
 
 const format = useFormat();
 
@@ -26,6 +29,9 @@ const props = defineProps({
     incomeCategories: { type: Array, required: true },
     frequencies: { type: Array, required: true },
 });
+
+const bulk = useBulkSelection(() => props.recurrences);
+watch(() => props.recurrences, () => bulk.clear());
 
 const showModal = ref(false);
 const editingRecurring = ref(null);
@@ -133,10 +139,13 @@ const formatDate = (date) => format.date(date);
                 </template>
             </EmptyState>
 
-            <div v-else class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div v-else>
+            <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" noun="recurring transactions" />
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-900/40">
                         <tr>
+                            <th class="w-10 px-4 py-3"><BulkCheckbox :bulk="bulk" page /></th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Frequency</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Next payment</th>
@@ -151,6 +160,7 @@ const formatDate = (date) => format.date(date);
                             class="hover:bg-gray-50 dark:hover:bg-gray-700/40"
                             :class="{ 'opacity-50': !recurring.isActive }"
                         >
+                            <td class="w-10 px-4 py-3"><BulkCheckbox :bulk="bulk" :id="recurring.id" /></td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
                                     <CategoryIcon :category="recurring.category" size="h-7 w-7" />
@@ -197,6 +207,7 @@ const formatDate = (date) => format.date(date);
                         </tr>
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
 

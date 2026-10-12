@@ -20,6 +20,7 @@ use App\Modules\Planning\Services\BucketManager;
 use App\Modules\Planning\Services\BucketService;
 use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -128,6 +129,19 @@ class BucketController extends Controller
         $manager->delete($bucket);
 
         return back()->with('success', __('buckets.deleted'));
+    }
+
+    public function bulkDestroy(BulkIdsRequest $request, BucketManager $manager): RedirectResponse
+    {
+        $count = 0;
+
+        foreach (Bucket::whereIn('id', $request->validated('ids'))->get() as $item) {
+            $this->authorize('delete', $item);
+            $manager->delete($item);
+            $count++;
+        }
+
+        return back()->with('success', __('messages.bulk.deleted', ['count' => $count]));
     }
 
     public function move(MoveBucketFundsRequest $request, Bucket $bucket, BucketLedger $funds): RedirectResponse

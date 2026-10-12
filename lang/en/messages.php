@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'bulk' => [
+        'deleted' => ':count item(s) deleted.',
+    ],
+
     'csv' => [
         'date' => 'Date',
         'type' => 'Type',

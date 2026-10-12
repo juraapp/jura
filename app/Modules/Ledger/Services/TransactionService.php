@@ -9,6 +9,7 @@ use App\Modules\Ledger\Events\IncomeRecorded;
 use App\Modules\Ledger\Events\IncomeRemoved;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Ledger\Models\Account;
+use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Collection;
@@ -186,6 +187,41 @@ class TransactionService implements RecordsTransactions
 
             $this->announce($transaction->user, $affectedAccounts);
         });
+    }
+
+    /**
+     * Moves a simple transaction to another account and/or category. Transfers, and a
+     * category of the wrong kind, are left alone. Returns whether anything changed.
+     */
+    public function reassign(Transaction $transaction, ?int $accountId, ?Category $category): bool
+    {
+        if ($transaction->type->isTransfer()) {
+            return false;
+        }
+
+        if ($category !== null && $category->type->value !== $transaction->type->value) {
+            $category = null;
+        }
+
+        $newAccountId = $accountId ?? $transaction->account_id;
+        $newCategoryId = $category?->id ?? $transaction->category_id;
+
+        if ($newAccountId === $transaction->account_id && $newCategoryId === $transaction->category_id) {
+            return false;
+        }
+
+        $this->updateSimple($transaction, [
+            'account_id' => $newAccountId,
+            'category_id' => $newCategoryId,
+            'amount' => $transaction->amount->toDecimalString(),
+            'date' => $transaction->date->toDateString(),
+            'time' => $transaction->time,
+            'description' => $transaction->description,
+            'notes' => $transaction->notes,
+            'payment_method' => $transaction->payment_method?->value,
+        ]);
+
+        return true;
     }
 
     /**
