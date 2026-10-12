@@ -24,8 +24,8 @@ defineProps({
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <EmptyState
                 icon="cog"
-                title="This feature is under construction"
-                description="We're building it in a later phase of the roadmap."
+                :title="$t('ui.common.under_construction')"
+                :description="$t('ui.common.under_construction_hint')"
             />
         </div>
     </AuthenticatedLayout>

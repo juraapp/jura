@@ -38,7 +38,7 @@ defineEmits(['close']);
                 @click="$emit('close')"
             >
                 <DynamicIcon name="x-mark" class="h-5 w-5" />
-                <span class="sr-only">Close</span>
+                <span class="sr-only">{{ $t('ui.common.close') }}</span>
             </button>
         </div>
 

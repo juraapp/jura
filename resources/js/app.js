@@ -31,6 +31,9 @@ createInertiaApp({
             locale,
             fallbackLocale: 'en',
             messages: { [locale]: messages },
+            // A missing key renders as the key itself without warning spam in production.
+            missingWarn: import.meta.env.DEV,
+            fallbackWarn: false,
         });
 
         return createApp({ render: () => h(App, props) })
