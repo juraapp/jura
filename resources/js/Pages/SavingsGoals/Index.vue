@@ -211,7 +211,7 @@ const formatDate = (date) => format.date(date);
                                 <Money :amount="goal.saved" :currency="goal.currency" />
                             </span>
                             <span class="text-gray-400">
-                                {{ $t('ui.savings_goals.of') }} <Money :amount="goal.targetAmount" :currency="goal.currency" />
+                                {{ $t('ui.common.of') }} <Money :amount="goal.targetAmount" :currency="goal.currency" />
                             </span>
                         </div>
                         <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">

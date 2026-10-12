@@ -10,7 +10,6 @@ return [
     'noun' => 'metas',
     'bulk_note' => 'Las metas eliminadas pasan a la lista de metas eliminadas, donde puedes restaurarlas.',
     'target' => 'Meta: {date}',
-    'of' => 'de',
     'completed' => '¡Meta cumplida!',
     'behind' => 'Atrasada',
     'on_track' => 'Va bien',

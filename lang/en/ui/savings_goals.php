@@ -10,7 +10,6 @@ return [
     'noun' => 'goals',
     'bulk_note' => 'Deleted goals move to the Deleted goals list below, where you can restore them.',
     'target' => 'Target: {date}',
-    'of' => 'of',
     'completed' => 'Goal completed!',
     'behind' => 'Behind schedule',
     'on_track' => 'On track',

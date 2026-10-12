@@ -6,6 +6,7 @@ return [
     'close' => 'Close',
     'delete' => 'Delete',
     'delete_permanently' => 'Delete permanently',
+    'of' => 'of',
     'loading' => 'Loading…',
     'restore' => 'Restore',
     'undo' => 'Undo',
