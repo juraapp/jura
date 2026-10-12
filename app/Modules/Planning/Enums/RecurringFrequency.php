@@ -25,4 +25,18 @@ enum RecurringFrequency: string
             self::Yearly => $date->copy()->addYearNoOverflow(),
         };
     }
+
+    /**
+     * The date of the Nth occurrence after a start date, computed from the start
+     * (not by chaining) so month-end dates do not drift (Jan 31 -> Feb 28 -> Mar 31).
+     */
+    public function occurrence(Carbon $start, int $steps): Carbon
+    {
+        return match ($this) {
+            self::Weekly => $start->copy()->addWeeks($steps),
+            self::Biweekly => $start->copy()->addWeeks(2 * $steps),
+            self::Monthly => $start->copy()->addMonthsNoOverflow($steps),
+            self::Yearly => $start->copy()->addYearsNoOverflow($steps),
+        };
+    }
 }
