@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
@@ -35,6 +36,7 @@ import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
 import { useBulkSelection } from '@/composables/useBulkSelection';
 
 const format = useFormat();
+const { t } = useI18n();
 
 const props = defineProps({
     events: { type: Array, required: true },
@@ -60,17 +62,17 @@ const palette = () => CHART_PALETTE[isDark.value ? 'dark' : 'light'];
 const today = new Date().toISOString().slice(0, 10);
 
 const viewHints = {
-    conservative: 'Only confirmed income counts. Expenses always count.',
-    expected: 'Confirmed and expected income count.',
-    optimistic: 'All planned income counts, even speculative.',
+    conservative: t('ui.cash_flow.hint_conservative'),
+    expected: t('ui.cash_flow.hint_expected'),
+    optimistic: t('ui.cash_flow.hint_optimistic'),
 };
 
 const changeView = (value) => {
     router.get(plannedEventsIndex.url({ query: { view: value, months: props.months } }), {}, { preserveScroll: true, preserveState: true });
 };
 
-const monthLabel = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-const shortMonth = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+const monthLabel = (month) => format.month(month);
+const shortMonth = (month) => format.month(month, { short: true });
 const formatDate = (date) => format.date(date, { year: false });
 
 const groupedEvents = computed(() => {
@@ -106,9 +108,9 @@ const chartOptions = (currency) => ({
 });
 const hasInterest = (currency) => currency.months.some((m) => m.interest > 0);
 const chartSeries = (currency) => [
-    { name: 'Planned income', type: 'column', data: currency.months.map((m) => m.income) },
-    { name: 'Planned expenses', type: 'column', data: currency.months.map((m) => m.expense) },
-    { name: 'Projected balance', type: 'line', data: currency.months.map((m) => m.closing) },
+    { name: t('ui.cash_flow.s_income'), type: 'column', data: currency.months.map((m) => m.income) },
+    { name: t('ui.cash_flow.s_expenses'), type: 'column', data: currency.months.map((m) => m.expense) },
+    { name: t('ui.cash_flow.s_balance'), type: 'line', data: currency.months.map((m) => m.closing) },
 ];
 
 /* ---- create / edit ---- */
@@ -219,20 +221,20 @@ const deleteEvent = () => {
 </script>
 
 <template>
-    <Head title="Cash flow" />
+    <Head :title="$t('ui.cash_flow.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Cash flow</h2>
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.cash_flow.title') }}</h2>
                 <div class="flex items-center gap-2">
                     <SecondaryButton type="button" @click="openCreateModal('income')">
                         <DynamicIcon name="arrow-up-circle" class="mr-1.5 h-4 w-4" />
-                        Expect income
+                        {{ $t('ui.cash_flow.expect_income') }}
                     </SecondaryButton>
                     <PrimaryButton type="button" @click="openCreateModal('expense')">
                         <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                        Plan an event
+                        {{ $t('ui.cash_flow.plan_event') }}
                     </PrimaryButton>
                 </div>
             </div>
@@ -244,17 +246,17 @@ const deleteEvent = () => {
                     <SegmentedControl :model-value="view" :options="views" @update:model-value="changeView" />
                     <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ viewHints[view] }}</p>
                 </div>
-                <p class="text-xs text-gray-400">Projected figures are estimates. They never change your real balances.</p>
+                <p class="text-xs text-gray-400">{{ $t('ui.cash_flow.estimates') }}</p>
             </div>
 
             <section v-for="currency in projection" :key="currency.currency" class="space-y-4">
                 <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                            Projected balance, {{ currency.currency }}
+                            {{ $t('ui.cash_flow.projected_balance', { currency: currency.currency }) }}
                         </h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Today: <Money :amount="currency.opening" :currency="currency.currency" />
+                            {{ $t('ui.cash_flow.today') }} <Money :amount="currency.opening" :currency="currency.currency" />
                         </p>
                     </div>
                     <apexchart
@@ -269,12 +271,12 @@ const deleteEvent = () => {
                         <table class="min-w-full text-sm">
                             <thead>
                                 <tr class="text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                    <th class="py-2 pr-4 font-semibold">Month</th>
-                                    <th class="px-4 py-2 text-right font-semibold">Income</th>
-                                    <th class="px-4 py-2 text-right font-semibold">Expenses</th>
-                                    <th v-if="hasInterest(currency)" class="px-4 py-2 text-right font-semibold" title="Projected interest from accounts with a yield rate">Interest</th>
-                                    <th class="px-4 py-2 text-right font-semibold">Net</th>
-                                    <th class="py-2 pl-4 text-right font-semibold">Balance</th>
+                                    <th class="py-2 pr-4 font-semibold">{{ $t('ui.cash_flow.month') }}</th>
+                                    <th class="px-4 py-2 text-right font-semibold">{{ $t('ui.cash_flow.income') }}</th>
+                                    <th class="px-4 py-2 text-right font-semibold">{{ $t('ui.cash_flow.expenses') }}</th>
+                                    <th v-if="hasInterest(currency)" class="px-4 py-2 text-right font-semibold" :title="$t('ui.cash_flow.interest_hint')">{{ $t('ui.cash_flow.interest') }}</th>
+                                    <th class="px-4 py-2 text-right font-semibold">{{ $t('ui.cash_flow.net') }}</th>
+                                    <th class="py-2 pl-4 text-right font-semibold">{{ $t('ui.cash_flow.balance') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -295,25 +297,25 @@ const deleteEvent = () => {
             </section>
 
             <section>
-                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Planned events</h3>
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.cash_flow.planned_events') }}</h3>
 
                 <EmptyState
                     v-if="events.length === 0"
                     icon="calendar"
-                    title="Plan your money before it moves"
-                    description="Add the paychecks, invoices and big purchases you know about. Dates and amounts can be irregular, and you can mark them as confirmed, expected or speculative."
+                    :title="$t('ui.cash_flow.empty_title')"
+                    :description="$t('ui.cash_flow.empty_hint')"
                 >
                     <template #action>
                         <PrimaryButton type="button" @click="openCreateModal('income')">
                             <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                            Add my first planned event
+                            {{ $t('ui.cash_flow.add_first') }}
                         </PrimaryButton>
                     </template>
                 </EmptyState>
 
                 <div v-else class="space-y-6">
-                    <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> Select all</label>
-                    <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" noun="planned events" note="Deleting an occurrence of a repeating event removes only that one; the rest of the series stays." />
+                    <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> {{ $t('ui.cash_flow.select_all') }}</label>
+                    <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" :noun="$t('ui.cash_flow.noun')" :note="$t('ui.cash_flow.bulk_note')" />
                     <div v-for="group in groupedEvents" :key="group.month">
                         <h4 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ monthLabel(group.month) }}</h4>
                         <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
@@ -324,10 +326,10 @@ const deleteEvent = () => {
                                 :class="{ 'opacity-60': event.status !== 'planned' }"
                             >
                                 <div class="flex flex-wrap items-center gap-3">
-                                    <BulkCheckbox :bulk="bulk" :id="event.id" :label="`Select ${event.description}`" />
+                                    <BulkCheckbox :bulk="bulk" :id="event.id" :label="$t('ui.cash_flow.select_one', { name: event.description })" />
                                     <div class="w-14 shrink-0 text-center">
                                         <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatDate(event.date) }}</p>
-                                        <p v-if="isOverdue(event)" class="text-[10px] font-semibold uppercase text-red-600 dark:text-red-400">Overdue</p>
+                                        <p v-if="isOverdue(event)" class="text-[10px] font-semibold uppercase text-red-600 dark:text-red-400">{{ $t('ui.cash_flow.overdue') }}</p>
                                     </div>
 
                                     <CategoryIcon v-if="event.category" :category="event.category" size="h-8 w-8" />
@@ -338,8 +340,8 @@ const deleteEvent = () => {
                                     <div class="min-w-0 flex-1">
                                         <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
                                             {{ event.description }}
-                                            <span v-if="event.seriesId" class="ml-1 text-xs font-normal text-gray-400" title="Repeats">
-                                                <DynamicIcon name="arrow-path" class="inline h-3 w-3" /> repeats
+                                            <span v-if="event.seriesId" class="ml-1 text-xs font-normal text-gray-400" :title="$t('ui.cash_flow.repeats_tip')">
+                                                <DynamicIcon name="arrow-path" class="inline h-3 w-3" /> {{ $t('ui.cash_flow.repeats') }}
                                             </span>
                                         </p>
                                         <p class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
@@ -357,24 +359,24 @@ const deleteEvent = () => {
                                     </p>
 
                                     <div v-if="event.status === 'planned'" class="flex items-center gap-1">
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" title="Mark as done (records the transaction)" @click="openRealize(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" :title="$t('ui.cash_flow.mark_done')" @click="openRealize(event)">
                                             <DynamicIcon name="check-circle" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" title="Skip" @click="skipEvent(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.skip')" @click="skipEvent(event)">
                                             <DynamicIcon name="forward" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" title="Edit" @click="openEditModal(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.edit')" @click="openEditModal(event)">
                                             <DynamicIcon name="pencil" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" title="Delete" @click="askDelete(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="askDelete(event)">
                                             <DynamicIcon name="trash" class="h-4 w-4" />
                                         </button>
                                     </div>
                                     <div v-else-if="event.status === 'skipped'" class="flex items-center gap-1">
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" title="Reopen (plan it again)" @click="reopenEvent(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.reopen')" @click="reopenEvent(event)">
                                             <DynamicIcon name="arrow-path" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" title="Delete" @click="askDelete(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="askDelete(event)">
                                             <DynamicIcon name="trash" class="h-4 w-4" />
                                         </button>
                                     </div>
@@ -385,12 +387,12 @@ const deleteEvent = () => {
                                     class="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-primary-50 px-3 py-2 text-xs text-primary-800 dark:bg-primary-500/10 dark:text-primary-300"
                                 >
                                     <span>
-                                        Looks done: {{ event.suggestedMatch.description || 'a transaction' }}
+                                        {{ $t('ui.cash_flow.looks_done', { description: event.suggestedMatch.description || $t('ui.cash_flow.a_transaction') }) }}
                                         (<Money :amount="event.suggestedMatch.amount" :currency="event.currency" />, {{ formatDate(event.suggestedMatch.date) }}, {{ event.suggestedMatch.account }})
                                     </span>
                                     <button type="button" class="inline-flex items-center gap-1 font-semibold hover:underline" @click="linkMatch(event)">
                                         <DynamicIcon name="link" class="h-3.5 w-3.5" />
-                                        Yes, link it
+                                        {{ $t('ui.cash_flow.link_it') }}
                                     </button>
                                 </div>
                             </li>
@@ -400,11 +402,11 @@ const deleteEvent = () => {
             </section>
         </div>
 
-        <ModalForm :show="showModal" :title="editingEvent ? 'Edit planned event' : 'New planned event'" @close="closeModal">
+        <ModalForm :show="showModal" :title="editingEvent ? $t('ui.cash_flow.edit_event') : $t('ui.cash_flow.new_event')" @close="closeModal">
             <form id="planned-event-form" class="space-y-4" @submit.prevent="submit">
                 <div class="flex gap-2">
                     <button
-                        v-for="option in [{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]"
+                        v-for="option in [{ value: 'expense', label: t('ui.cash_flow.expense') }, { value: 'income', label: t('ui.cash_flow.income_one') }]"
                         :key="option.value"
                         type="button"
                         class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium"
@@ -418,26 +420,26 @@ const deleteEvent = () => {
                 </div>
 
                 <div>
-                    <InputLabel for="description" value="What is it?" />
-                    <TextInput id="description" v-model="form.description" type="text" class="mt-1 block w-full" placeholder="Client payment, rent, new laptop..." />
+                    <InputLabel for="description" :value="$t('ui.cash_flow.what')" />
+                    <TextInput id="description" v-model="form.description" type="text" class="mt-1 block w-full" :placeholder="$t('ui.cash_flow.what_placeholder')" />
                     <InputError class="mt-1" :message="form.errors.description" />
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <InputLabel for="amount" value="Amount" />
+                        <InputLabel for="amount" :value="$t('ui.cash_flow.amount')" />
                         <TextInput id="amount" v-model="form.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                         <InputError class="mt-1" :message="form.errors.amount" />
                     </div>
                     <div>
-                        <InputLabel for="date" value="Date" />
+                        <InputLabel for="date" :value="$t('ui.cash_flow.date')" />
                         <TextInput id="date" v-model="form.date" type="date" class="mt-1 block w-full" :disabled="editingEvent && editingEvent.seriesId && form.scope === 'future'" />
                         <InputError class="mt-1" :message="form.errors.date" />
                     </div>
                 </div>
 
                 <div>
-                    <InputLabel for="certainty" value="How sure are you?" />
+                    <InputLabel for="certainty" :value="$t('ui.cash_flow.how_sure')" />
                     <SelectInput id="certainty" v-model="form.certainty">
                         <option v-for="certainty in certainties" :key="certainty.value" :value="certainty.value">{{ certainty.label }}</option>
                     </SelectInput>
@@ -445,21 +447,21 @@ const deleteEvent = () => {
                 </div>
 
                 <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700">
-                    <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200">More options</summary>
+                    <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200">{{ $t('ui.cash_flow.more') }}</summary>
                     <div class="mt-3 space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <InputLabel for="account_id" value="Account (optional)" />
+                                <InputLabel for="account_id" :value="$t('ui.cash_flow.account_opt')" />
                                 <SelectInput id="account_id" v-model="form.account_id">
-                                    <option value="">Any account</option>
+                                    <option value="">{{ $t('ui.cash_flow.any_account') }}</option>
                                     <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
                                 </SelectInput>
                                 <InputError class="mt-1" :message="form.errors.account_id" />
                             </div>
                             <div>
-                                <InputLabel for="category_id" value="Category (optional)" />
+                                <InputLabel for="category_id" :value="$t('ui.cash_flow.category_opt')" />
                                 <SelectInput id="category_id" v-model="form.category_id">
-                                    <option value="">None yet</option>
+                                    <option value="">{{ $t('ui.cash_flow.none_yet') }}</option>
                                     <option v-for="category in categoriesForType" :key="category.id" :value="category.id">{{ category.name }}</option>
                                 </SelectInput>
                                 <InputError class="mt-1" :message="form.errors.category_id" />
@@ -468,23 +470,23 @@ const deleteEvent = () => {
 
                         <div v-if="!editingEvent" class="grid grid-cols-2 gap-4">
                             <div>
-                                <InputLabel for="frequency" value="Repeats" />
+                                <InputLabel for="frequency" :value="$t('ui.cash_flow.repeats_label')" />
                                 <SelectInput id="frequency" v-model="form.frequency">
-                                    <option value="">Does not repeat</option>
+                                    <option value="">{{ $t('ui.cash_flow.no_repeat') }}</option>
                                     <option v-for="frequency in frequencies" :key="frequency.value" :value="frequency.value">{{ frequency.label }}</option>
                                 </SelectInput>
                             </div>
                             <div>
-                                <InputLabel for="ends_on" value="Until (optional)" />
+                                <InputLabel for="ends_on" :value="$t('ui.cash_flow.until')" />
                                 <TextInput id="ends_on" v-model="form.ends_on" type="date" class="mt-1 block w-full" :disabled="!form.frequency" />
                                 <InputError class="mt-1" :message="form.errors.ends_on" />
                             </div>
                         </div>
 
                         <div v-if="form.type === 'income' && buckets.length && !(editingEvent && editingEvent.seriesId)">
-                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Where should this income go? (optional)</p>
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('ui.cash_flow.where_income') }}</p>
                             <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
-                                By default your buckets fill by their own rules. Enter amounts here to decide for this income only; the rest goes to your default bucket.
+                                {{ $t('ui.cash_flow.where_income_hint') }}
                             </p>
                             <div v-for="bucket in buckets" :key="bucket.id" class="mb-1.5 flex items-center justify-between gap-3">
                                 <span class="text-sm text-gray-700 dark:text-gray-200">{{ bucket.name }} <span class="text-xs text-gray-400">{{ bucket.currency }}</span></span>
@@ -494,93 +496,93 @@ const deleteEvent = () => {
                         </div>
 
                         <div>
-                            <InputLabel for="notes" value="Notes" />
+                            <InputLabel for="notes" :value="$t('ui.cash_flow.notes')" />
                             <TextInput id="notes" v-model="form.notes" type="text" class="mt-1 block w-full" />
                         </div>
                     </div>
                 </details>
 
                 <fieldset v-if="editingEvent && editingEvent.seriesId" class="space-y-2 rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-gray-900/40">
-                    <legend class="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">This event repeats</legend>
+                    <legend class="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $t('ui.cash_flow.this_repeats') }}</legend>
                     <label class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-                        <input v-model="form.scope" type="radio" value="this" class="text-primary-600" /> Only this one
+                        <input v-model="form.scope" type="radio" value="this" class="text-primary-600" /> {{ $t('ui.cash_flow.only_this') }}
                     </label>
                     <label class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-                        <input v-model="form.scope" type="radio" value="future" class="text-primary-600" /> This and all future ones
+                        <input v-model="form.scope" type="radio" value="future" class="text-primary-600" /> {{ $t('ui.cash_flow.this_future') }}
                     </label>
                 </fieldset>
             </form>
 
             <template #footer>
-                <SecondaryButton type="button" @click="closeModal">Cancel</SecondaryButton>
-                <PrimaryButton form="planned-event-form" type="submit" :disabled="form.processing">Save</PrimaryButton>
+                <SecondaryButton type="button" @click="closeModal">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                <PrimaryButton form="planned-event-form" type="submit" :disabled="form.processing">{{ $t('ui.cash_flow.save') }}</PrimaryButton>
             </template>
         </ModalForm>
 
         <ModalForm
             :show="realizing !== null"
-            title="Mark as done"
-            description="This records a real transaction. You can adjust the details first."
+            :title="$t('ui.cash_flow.done_title')"
+            :description="$t('ui.cash_flow.done_hint')"
             @close="realizing = null"
         >
             <form id="realize-form" class="space-y-4" @submit.prevent="submitRealize">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <InputLabel for="r_amount" value="Amount" />
+                        <InputLabel for="r_amount" :value="$t('ui.cash_flow.amount')" />
                         <TextInput id="r_amount" v-model="realizeForm.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                         <InputError class="mt-1" :message="realizeForm.errors.amount" />
                     </div>
                     <div>
-                        <InputLabel for="r_date" value="Date" />
+                        <InputLabel for="r_date" :value="$t('ui.cash_flow.date')" />
                         <TextInput id="r_date" v-model="realizeForm.date" type="date" class="mt-1 block w-full" />
                         <InputError class="mt-1" :message="realizeForm.errors.date" />
                     </div>
                 </div>
                 <div>
-                    <InputLabel for="r_account" value="Account" />
+                    <InputLabel for="r_account" :value="$t('ui.cash_flow.account')" />
                     <SelectInput id="r_account" v-model="realizeForm.account_id">
-                        <option value="">Select an account</option>
+                        <option value="">{{ $t('ui.cash_flow.select_account') }}</option>
                         <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
                     </SelectInput>
                     <InputError class="mt-1" :message="realizeForm.errors.account_id" />
                 </div>
                 <div>
-                    <InputLabel for="r_category" value="Category" />
+                    <InputLabel for="r_category" :value="$t('ui.cash_flow.category')" />
                     <SelectInput id="r_category" v-model="realizeForm.category_id">
-                        <option value="">Select a category</option>
+                        <option value="">{{ $t('ui.cash_flow.select_category') }}</option>
                         <option v-for="category in realizeCategories" :key="category.id" :value="category.id">{{ category.name }}</option>
                     </SelectInput>
                     <InputError class="mt-1" :message="realizeForm.errors.category_id" />
                 </div>
                 <div>
-                    <InputLabel for="r_description" value="Description" />
+                    <InputLabel for="r_description" :value="$t('ui.cash_flow.description')" />
                     <TextInput id="r_description" v-model="realizeForm.description" type="text" class="mt-1 block w-full" />
                 </div>
             </form>
 
             <template #footer>
-                <SecondaryButton type="button" @click="realizing = null">Cancel</SecondaryButton>
-                <PrimaryButton form="realize-form" type="submit" :disabled="realizeForm.processing">Record it</PrimaryButton>
+                <SecondaryButton type="button" @click="realizing = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                <PrimaryButton form="realize-form" type="submit" :disabled="realizeForm.processing">{{ $t('ui.cash_flow.record') }}</PrimaryButton>
             </template>
         </ModalForm>
 
         <Modal :show="confirmingDelete !== null" @close="confirmingDelete = null">
             <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Delete this planned event?</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.cash_flow.delete_title') }}</h2>
 
                 <fieldset v-if="confirmingDelete && confirmingDelete.seriesId" class="mt-3 space-y-2 text-sm">
                     <label class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-                        <input v-model="deleteScope" type="radio" value="this" class="text-primary-600" /> Only this one
+                        <input v-model="deleteScope" type="radio" value="this" class="text-primary-600" /> {{ $t('ui.cash_flow.only_this') }}
                     </label>
                     <label class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-                        <input v-model="deleteScope" type="radio" value="future" class="text-primary-600" /> This and all future ones
+                        <input v-model="deleteScope" type="radio" value="future" class="text-primary-600" /> {{ $t('ui.cash_flow.this_future') }}
                     </label>
                 </fieldset>
-                <p v-else class="mt-1 text-sm text-gray-600 dark:text-gray-400">This action cannot be undone.</p>
+                <p v-else class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ $t('ui.common.cannot_be_undone') }}</p>
 
                 <div class="mt-6 flex justify-end gap-3">
-                    <SecondaryButton type="button" @click="confirmingDelete = null">Cancel</SecondaryButton>
-                    <DangerButton type="button" @click="deleteEvent">Delete</DangerButton>
+                    <SecondaryButton type="button" @click="confirmingDelete = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <DangerButton type="button" @click="deleteEvent">{{ $t('ui.common.delete') }}</DangerButton>
                 </div>
             </div>
         </Modal>
