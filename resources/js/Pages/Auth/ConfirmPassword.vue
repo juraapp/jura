@@ -20,16 +20,15 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Confirm Password" />
+        <Head :title="$t('ui.auth.confirm.title')" />
 
         <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            This is a secure area of the application. Please confirm your
-            password before continuing.
+            {{ $t('ui.auth.confirm.text') }}
         </div>
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" :value="$t('ui.auth.password')" />
                 <TextInput
                     id="password"
                     type="password"
@@ -48,7 +47,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Confirm
+                    {{ $t('ui.auth.confirm.button') }}
                 </PrimaryButton>
             </div>
         </form>
