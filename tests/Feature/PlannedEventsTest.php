@@ -210,7 +210,7 @@ class PlannedEventsTest extends TestCase
         $this->assertSame('777.00', PlannedEventSeries::firstOrFail()->amount->toDecimalString());
     }
 
-    public function test_deleting_one_series_occurrence_skips_it_and_keeps_the_series(): void
+    public function test_deleting_one_series_occurrence_removes_it_for_good_and_keeps_the_series(): void
     {
         [$user, $events] = $this->userWithMonthlySeries();
 
@@ -219,8 +219,62 @@ class PlannedEventsTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertSame(4, PlannedEvent::count());
-        $this->assertSame(PlannedEventStatus::Skipped, $events[1]->fresh()->status);
+        $this->assertSame(3, PlannedEvent::count());
+        $this->assertDatabaseMissing('planned_events', ['id' => $events[1]->id]);
+        $this->assertSame([$events[1]->date->toDateString()], PlannedEventSeries::firstOrFail()->excluded_dates);
+    }
+
+    public function test_a_deleted_occurrence_is_not_recreated_when_the_series_is_extended(): void
+    {
+        $user = User::factory()->create();
+        $series = PlannedEventSeries::factory()->for($user)->create([
+            'starts_on' => Carbon::now()->toDateString(),
+            'ends_on' => null,
+        ]);
+        $this->artisan('planning:extend-series')->assertSuccessful();
+        $events = $series->events()->orderBy('date')->get();
+        $first = $events->first();
+        $last = $events->last();
+
+        foreach ([$first, $last] as $event) {
+            $this->actingAs($user)->delete("/planning/cash-flow/{$event->id}", ['scope' => 'this'])->assertRedirect();
+        }
+        $this->artisan('planning:extend-series')->assertSuccessful();
+
+        $dates = $series->events()->pluck('date')->map->toDateString();
+        $this->assertFalse($dates->contains($first->date->toDateString()));
+        $this->assertFalse($dates->contains($last->date->toDateString()));
+    }
+
+    public function test_a_skipped_event_can_be_reopened(): void
+    {
+        $user = User::factory()->create();
+        $event = PlannedEvent::factory()->for($user)->status(PlannedEventStatus::Skipped)->create();
+
+        $this->actingAs($user)->post("/planning/cash-flow/{$event->id}/reopen")->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSame(PlannedEventStatus::Planned, $event->fresh()->status);
+    }
+
+    public function test_only_skipped_events_of_the_owner_can_be_reopened(): void
+    {
+        $user = User::factory()->create();
+        $planned = PlannedEvent::factory()->for($user)->create();
+        $foreign = PlannedEvent::factory()->for(User::factory())->status(PlannedEventStatus::Skipped)->create();
+
+        $this->actingAs($user)->post("/planning/cash-flow/{$planned->id}/reopen")->assertRedirect()->assertSessionHas('error');
+        $this->actingAs($user)->post("/planning/cash-flow/{$foreign->id}/reopen")->assertNotFound();
+        $this->assertSame(PlannedEventStatus::Skipped, $foreign->fresh()->status);
+    }
+
+    public function test_a_skipped_occurrence_can_be_deleted_for_good(): void
+    {
+        [$user, $events] = $this->userWithMonthlySeries();
+        $events[1]->update(['status' => PlannedEventStatus::Skipped]);
+
+        $this->actingAs($user)->delete("/planning/cash-flow/{$events[1]->id}", ['scope' => 'this'])->assertRedirect();
+
+        $this->assertDatabaseMissing('planned_events', ['id' => $events[1]->id]);
     }
 
     public function test_deleting_future_occurrences_trims_the_series(): void

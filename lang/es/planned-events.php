@@ -7,6 +7,8 @@ return [
     'deleted' => 'Evento planeado eliminado.',
     'realized' => 'Listo. Se registró la transacción.',
     'skipped' => 'Evento planeado omitido.',
+    'reopened' => 'Evento planificado reabierto.',
+    'not_skipped' => 'Solo se pueden reabrir los eventos planificados omitidos.',
     'linked' => 'Vinculado a la transacción existente.',
     'already_closed' => 'Este evento planeado ya está cerrado.',
     'account_required' => 'Elige una cuenta para registrar esta transacción.',

@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'type', 'description', 'amount', 'currency', 'account_id', 'category_id',
-    'certainty', 'frequency', 'starts_on', 'ends_on',
+    'certainty', 'frequency', 'starts_on', 'ends_on', 'excluded_dates',
 ])]
 class PlannedEventSeries extends Model
 {
@@ -34,6 +34,7 @@ class PlannedEventSeries extends Model
             'frequency' => RecurringFrequency::class,
             'starts_on' => 'date',
             'ends_on' => 'date',
+            'excluded_dates' => 'array',
         ];
     }
 

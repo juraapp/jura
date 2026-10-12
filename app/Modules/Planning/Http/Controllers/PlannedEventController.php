@@ -133,6 +133,19 @@ class PlannedEventController extends Controller
         return back()->with('success', __('planned-events.skipped'));
     }
 
+    public function reopen(PlannedEvent $plannedEvent, PlannedEventService $service): RedirectResponse
+    {
+        $this->authorize('update', $plannedEvent);
+
+        if ($plannedEvent->status !== PlannedEventStatus::Skipped) {
+            return back()->with('error', __('planned-events.not_skipped'));
+        }
+
+        $service->reopen($plannedEvent);
+
+        return back()->with('success', __('planned-events.reopened'));
+    }
+
     public function link(LinkPlannedEventRequest $request, PlannedEvent $plannedEvent, PlannedEventService $service): RedirectResponse
     {
         if ($plannedEvent->status !== PlannedEventStatus::Planned) {
