@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Modules\Notifications\Console\Commands;
 
 use App\Modules\Planning\Models\RecurringTransaction;
-use App\Notifications\UpcomingRecurringPayment;
+use App\Modules\Notifications\Notifications\UpcomingRecurringPayment;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;

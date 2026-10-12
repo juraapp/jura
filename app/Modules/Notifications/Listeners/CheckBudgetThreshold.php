@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Listeners;
+namespace App\Modules\Notifications\Listeners;
 
 use App\Modules\Ledger\Events\TransactionsMutated;
-use App\Modules\Planning\Services\BudgetService;
-use App\Notifications\BudgetThresholdReached;
+use App\Modules\Planning\Contracts\BudgetProgress;
+use App\Modules\Notifications\Notifications\BudgetThresholdReached;
 use Illuminate\Support\Carbon;
 
 /**
@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
  */
 class CheckBudgetThreshold
 {
-    public function __construct(private readonly BudgetService $budgets) {}
+    public function __construct(private readonly BudgetProgress $budgets) {}
 
     public function handle(TransactionsMutated $event): void
     {

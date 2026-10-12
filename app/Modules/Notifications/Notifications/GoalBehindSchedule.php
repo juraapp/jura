@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Notifications;
+namespace App\Modules\Notifications\Notifications;
 
 use App\Modules\Planning\Models\SavingsGoal;
 use Illuminate\Bus\Queueable;

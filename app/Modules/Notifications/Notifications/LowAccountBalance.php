@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Notifications;
+namespace App\Modules\Notifications\Notifications;
 
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Shared\Support\Money;
