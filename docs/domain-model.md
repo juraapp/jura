@@ -2,7 +2,7 @@
 
 ## Models
 
-Models live in modules: `Ledger` (Account, Category, Transaction), `Planning` (Bucket, Allocation, PlannedEvent, PlannedEventSeries, SavingsGoal, SavingsGoalContribution, RecurringTransaction), `Identity` (User). See `architecture.md` for the boundary rules.
+Models live in modules: `Ledger` (Account, Category, Transaction), `Planning` (Bucket, Allocation, Project, WishlistItem, PlannedEvent, PlannedEventSeries, SavingsGoal, SavingsGoalContribution, RecurringTransaction), `Identity` (User). See `architecture.md` for the boundary rules.
 
 | Model | Notes |
 |---|---|
@@ -14,6 +14,7 @@ Models live in modules: `Ledger` (Account, Category, Transaction), `Planning` (B
 | `SavingsGoal` | Target amount + optional target date. `status`: active/completed/archived. Soft-deletes. Has many `SavingsGoalContribution`; recording a contribution that reaches the target auto-flips status to completed. |
 | `SavingsGoalContribution` | Belongs to a `SavingsGoal`; optionally linked to the `Transaction` it came from (`linked_transaction_id`, nullable). |
 | `RecurringTransaction` | Template for auto-generated transactions (weekly/biweekly/monthly/yearly). `is_active` toggles without deleting. |
+| `Project` / `WishlistItem` | A `Project` (project/hobby/category/other) groups wish-list items. A `WishlistItem` has a price, `importance` 1-5, optional `desired_by`, `bucket_id` (a savings bucket of the same currency), `allowed_account_ids`, and a `status` (wanted/purchased/dropped). Purchasing records a real expense through `RecordsTransactions::record` plus a negative `spend` `Allocation` (capped to the bucket's available funds) and stores both ids so the purchase can be undone together (`WishlistService`). |
 | `PlannedEvent` | A projected income or expense on a future date (`planned`/`realized`/`skipped`) with a `certainty` (confirmed/expected/speculative). **Never touches balances.** Realizing one records a real `Transaction` through `Ledger\Contracts\RecordsTransactions` and stores its id in `realized_transaction_id`. Optionally part of a `PlannedEventSeries` (a repeating rule that materializes occurrences up to 12 months ahead; extended daily by `planning:extend-series`). Replaces the old `BudgetForecast`. |
 | `Transaction` | `type`: income / expense / transfer_out / transfer_in. A transfer is always **two rows** sharing a `transfer_group_id` (see `TransactionService::createTransfer`) — never a single row with a "to account" column. `category_id` is null only for transfer rows. Soft-deletes. |
 

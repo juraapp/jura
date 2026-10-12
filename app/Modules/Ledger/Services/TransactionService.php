@@ -42,6 +42,15 @@ class TransactionService implements RecordsTransactions
         };
     }
 
+    public function forget(User $user, int $transactionId): void
+    {
+        $transaction = Transaction::forUser($user)->find($transactionId);
+
+        if ($transaction !== null) {
+            $this->delete($transaction);
+        }
+    }
+
     public function recordRecurring(User $user, TransactionType $type, array $data, int $recurringTransactionId): void
     {
         $transaction = $type === TransactionType::Income

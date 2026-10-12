@@ -7,7 +7,7 @@
 ```
 lang/en/   accounts.php  buckets.php  categories.php  enums.php  insights.php
            messages.php  notifications.php  pdf.php  preferences.php
-           planned-events.php  recurring-transactions.php  savings-goals.php  transactions.php
+           planned-events.php  recurring-transactions.php  savings-goals.php  transactions.php  wishlist.php
 lang/es/   (mirrors lang/en/ exactly, same keys)
 ```
 
