@@ -202,7 +202,7 @@ const deleteBucket = () => {
                                 <p class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
                                     <span>{{ bucket.kindLabel }}</span>
                                     <span v-if="bucket.cycleLabel">&middot; {{ bucket.cycleLabel }}</span>
-                                    <span class="rounded-full bg-gray-100 px-1.5 py-0.5 font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-300" title="Filling priority (lower fills first)">#{{ bucket.priority }}</span>
+                                    <span class="rounded-full bg-gray-100 px-1.5 py-0.5 font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-300" title="Filling priority (P0 fills first)">P{{ bucket.priority }}</span>
                                     <span v-if="bucket.isDefault" class="rounded-full bg-primary-50 px-1.5 py-0.5 font-medium text-primary-700 dark:bg-primary-500/10 dark:text-primary-400" title="Receives income that no rule claims">Default</span>
                                 </p>
                             </div>
@@ -360,8 +360,8 @@ const deleteBucket = () => {
                         <p v-if="form.fill_rule === 'fill_to_target'" class="text-xs text-gray-500 dark:text-gray-400">Needs a limit/target above. It refills whatever is missing.</p>
 
                         <div>
-                            <InputLabel for="priority" value="Priority (lower fills first)" />
-                            <TextInput id="priority" v-model="form.priority" type="number" min="1" max="9999" class="mt-1 block w-full" placeholder="100" />
+                            <InputLabel for="priority" value="Priority (P0 fills first)" />
+                            <TextInput id="priority" v-model="form.priority" type="number" min="0" max="9999" class="mt-1 block w-full" placeholder="100" />
                             <InputError class="mt-1" :message="form.errors.priority" />
                         </div>
 

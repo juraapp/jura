@@ -171,7 +171,7 @@ income arrives:
 - **Fixed amount**: for example 150,000 from every income.
 - **Fill up to its target**: tops up whatever is missing.
 
-Buckets are offered each income in **priority order** (lower number first), so the important ones are filled before
+Buckets are offered each income in **priority order** (P0 first, then P1, and so on), so the important ones are filled before
 the rest. A bucket with a target stops filling once the target is reached. Whatever no bucket claims goes to the
 **default bucket** (called *Unallocated* until you pick your own). Filling happens by itself, but **only once at least
 one bucket has a fill rule**; with no rules, nothing is allocated. If you edit or delete an income, its fills are

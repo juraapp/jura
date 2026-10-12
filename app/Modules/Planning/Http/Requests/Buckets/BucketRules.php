@@ -35,7 +35,7 @@ trait BucketRules
             'kind' => ['required', Rule::enum(BucketKind::class)],
             'name' => [Rule::requiredIf(fn () => ! $spending()), 'nullable', 'string', 'max:100'],
             'currency' => ['required', 'string', 'size:3'],
-            'priority' => ['nullable', 'integer', 'min:1', 'max:9999'],
+            'priority' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'category_id' => [
                 Rule::requiredIf($spending),
                 'nullable',
