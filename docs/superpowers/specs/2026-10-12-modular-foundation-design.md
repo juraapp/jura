@@ -34,7 +34,8 @@ Contracts/ Database/Factories/` (only the folders that have content), namespace 
 
 ## What does not move
 - URLs, route names and route files (`routes/web.php` stays; controllers are re-imported). Wayfinder
-  output is unaffected.
+  action paths DO change, because they derive from the controller class name; the Vue imports under
+  `resources/js` were updated to `@/actions/App/Modules/<Module>/Http/Controllers/...`.
 - Database tables and migration files. Ownership of each table is documented in `docs/domain-model.md`.
 - `resources/js`. Page folders already follow domains.
 - Tests stay in `tests/Feature` (they are HTTP-level). Add `tests/Architecture`.

@@ -8,7 +8,7 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { useTransactionModal } from '@/composables/useTransactionModal';
-import { store, update, formOptions, editData } from '@/actions/App/Http/Controllers/TransactionController';
+import { store, update, formOptions, editData } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
 
 const { isOpen, editingTransaction, defaultType, close } = useTransactionModal();
 

@@ -2,8 +2,8 @@
 
 namespace App\Modules\Ledger\Models;
 
-use App\Modules\Ledger\Enums\CategoryType;
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Enums\CategoryType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

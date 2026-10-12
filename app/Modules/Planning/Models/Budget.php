@@ -2,8 +2,8 @@
 
 namespace App\Modules\Planning\Models;
 
-use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Ledger\Models\Category;
+use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Shared\Casts\AsMoney;
 use App\Modules\Shared\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

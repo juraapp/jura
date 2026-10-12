@@ -2,8 +2,8 @@
 
 namespace App\Modules\Planning\Policies;
 
-use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Identity\Models\User;
+use App\Modules\Planning\Models\RecurringTransaction;
 
 class RecurringTransactionPolicy
 {

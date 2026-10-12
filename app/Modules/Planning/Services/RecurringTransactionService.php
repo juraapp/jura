@@ -2,8 +2,8 @@
 
 namespace App\Modules\Planning\Services;
 
-use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
+use App\Modules\Planning\Models\RecurringTransaction;
 use Illuminate\Support\Facades\DB;
 
 /**

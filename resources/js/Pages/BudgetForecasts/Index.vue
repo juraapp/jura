@@ -15,7 +15,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import { index as budgetsIndex } from '@/routes/budgets';
-import { store, update, destroy } from '@/actions/App/Http/Controllers/BudgetForecastController';
+import { store, update, destroy } from '@/actions/App/Modules/Planning/Http/Controllers/BudgetForecastController';
 
 const props = defineProps({
     budget: { type: Object, required: true },

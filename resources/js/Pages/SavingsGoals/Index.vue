@@ -13,7 +13,7 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
-import { store, update, destroy, contribute } from '@/actions/App/Http/Controllers/SavingsGoalController';
+import { store, update, destroy, contribute } from '@/actions/App/Modules/Planning/Http/Controllers/SavingsGoalController';
 
 defineProps({
     goals: { type: Array, required: true },

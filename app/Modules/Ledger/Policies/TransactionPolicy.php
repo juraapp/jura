@@ -2,8 +2,8 @@
 
 namespace App\Modules\Ledger\Policies;
 
-use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Models\Transaction;
 
 class TransactionPolicy
 {

@@ -14,7 +14,7 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
-import { store, update, destroy, toggleActive } from '@/actions/App/Http/Controllers/RecurringTransactionController';
+import { store, update, destroy, toggleActive } from '@/actions/App/Modules/Planning/Http/Controllers/RecurringTransactionController';
 
 const props = defineProps({
     recurrences: { type: Array, required: true },

@@ -2,11 +2,11 @@
 
 namespace App\Modules\Planning\Models;
 
-use App\Modules\Planning\Enums\RecurringFrequency;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Enums\RecurringFrequency;
 use App\Modules\Shared\Casts\AsMoney;
 use App\Modules\Shared\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

@@ -3,7 +3,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { update } from '@/actions/App/Http/Controllers/Auth/PasswordController';
+import { update } from '@/actions/App/Modules/Identity/Http/Controllers/Auth/PasswordController';
 import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 

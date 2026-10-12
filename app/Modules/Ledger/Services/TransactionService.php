@@ -2,12 +2,12 @@
 
 namespace App\Modules\Ledger\Services;
 
+use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Transaction;
-use App\Modules\Identity\Models\User;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;

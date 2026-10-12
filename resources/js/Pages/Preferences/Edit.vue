@@ -4,7 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import { update } from '@/actions/App/Http/Controllers/PreferenceController';
+import { update } from '@/actions/App/Modules/Identity/Http/Controllers/PreferenceController';
 
 defineProps({
     currencies: { type: Array, required: true },
