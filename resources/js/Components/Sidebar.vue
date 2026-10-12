@@ -8,6 +8,7 @@ import { index as accountsIndex } from '@/routes/accounts';
 import { index as bucketsIndex } from '@/routes/buckets';
 import { index as plannedEventsIndex } from '@/routes/planned-events';
 import { index as wishlistIndex } from '@/routes/wishlist';
+import { index as plannerIndex } from '@/routes/planner';
 import { index as categoriesIndex } from '@/routes/categories';
 import { index as dataExportIndex } from '@/routes/data-export';
 import { index as expensesIndex } from '@/routes/expenses';
@@ -52,6 +53,7 @@ const sections = [
             { label: 'Cash flow', route: plannedEventsIndex, icon: 'calendar' },
             { label: 'Buckets', route: bucketsIndex, icon: 'chart-pie' },
             { label: 'Wish list', route: wishlistIndex, icon: 'flag' },
+            { label: 'Planner', route: plannerIndex, icon: 'scale' },
             { label: 'Savings goals', route: savingsGoalsIndex, icon: 'flag' },
             { label: 'Recurring expenses', route: recurringTransactionsIndex, icon: 'arrow-path' },
         ],
