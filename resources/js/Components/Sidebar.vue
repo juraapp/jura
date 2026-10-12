@@ -5,7 +5,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import { useSidebar } from '@/composables/useSidebar';
 import { index as accountsIndex } from '@/routes/accounts';
-import { index as budgetsIndex } from '@/routes/budgets';
+import { index as bucketsIndex } from '@/routes/buckets';
 import { index as plannedEventsIndex } from '@/routes/planned-events';
 import { index as categoriesIndex } from '@/routes/categories';
 import { index as dataExportIndex } from '@/routes/data-export';
@@ -49,7 +49,7 @@ const sections = [
         title: 'Planning',
         items: [
             { label: 'Cash flow', route: plannedEventsIndex, icon: 'calendar' },
-            { label: 'Budgets', route: budgetsIndex, icon: 'chart-pie' },
+            { label: 'Buckets', route: bucketsIndex, icon: 'chart-pie' },
             { label: 'Savings goals', route: savingsGoalsIndex, icon: 'flag' },
             { label: 'Recurring expenses', route: recurringTransactionsIndex, icon: 'arrow-path' },
         ],

@@ -2,7 +2,7 @@
 
 namespace App\Modules\Notifications\Notifications;
 
-use App\Modules\Planning\Models\Budget;
+use App\Modules\Planning\Models\Bucket;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -11,7 +11,7 @@ class BudgetThresholdReached extends Notification
     use Queueable;
 
     public function __construct(
-        public readonly Budget $budget,
+        public readonly Bucket $bucket,
         public readonly float $percentage,
         public readonly bool $exceeded,
     ) {}
@@ -23,7 +23,7 @@ class BudgetThresholdReached extends Notification
 
     public function toArray(object $notifiable): array
     {
-        $category = $this->budget->category->name;
+        $category = $this->bucket->category->name;
 
         return [
             'type' => 'budget_alert',
@@ -31,8 +31,8 @@ class BudgetThresholdReached extends Notification
             'message' => $this->exceeded
                 ? __('notifications.budget_exceeded', ['category' => $category, 'percentage' => $this->percentageLabel()])
                 : __('notifications.budget_threshold', ['category' => $category, 'percentage' => $this->percentageLabel()]),
-            'budget_id' => $this->budget->id,
-            'url' => route('budgets.index'),
+            'budget_id' => $this->bucket->id,
+            'url' => route('buckets.index'),
         ];
     }
 

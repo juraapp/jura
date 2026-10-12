@@ -5,7 +5,7 @@ namespace App\Modules\Identity\Models;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
-use App\Modules\Planning\Models\Budget;
+use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Models\SavingsGoal;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -57,9 +57,9 @@ class User extends Authenticatable
         return $this->hasMany(Transaction::class);
     }
 
-    public function budgets(): HasMany
+    public function buckets(): HasMany
     {
-        return $this->hasMany(Budget::class);
+        return $this->hasMany(Bucket::class);
     }
 
     public function savingsGoals(): HasMany

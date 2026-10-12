@@ -3,12 +3,18 @@
 namespace App\Modules\Planning\Services;
 
 use App\Modules\Ledger\Contracts\LedgerQuery;
-use App\Modules\Planning\Contracts\BudgetProgress;
-use App\Modules\Planning\Models\Budget;
+use App\Modules\Planning\Contracts\BucketProgress;
+use App\Modules\Planning\Enums\BudgetPeriodType;
+use App\Modules\Planning\Models\Bucket;
 use App\Modules\Shared\Support\Money;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
-class BudgetService implements BudgetProgress
+/**
+ * Limit tracking for spending buckets: how much of the per-cycle limit the
+ * category's real spending has used.
+ */
+class BucketService implements BucketProgress
 {
     private const NEAR_LIMIT_THRESHOLD = 80.0;
 
@@ -17,14 +23,14 @@ class BudgetService implements BudgetProgress
     /**
      * @return array{spent: Money, remaining: Money, percentage: float, status: string}
      */
-    public function progress(Budget $budget): array
+    public function progress(Bucket $bucket): array
     {
-        [$start, $end] = $this->periodBounds($budget);
+        [$start, $end] = $this->periodBounds($bucket);
 
-        $spent = $this->ledger->expenseTotal($budget->category_id, $budget->currency, $start, $end);
+        $spent = $this->ledger->expenseTotal($bucket->category_id, $bucket->currency, $start, $end);
 
-        $percentage = $spent->percentageOf($budget->amount);
-        $remaining = $budget->amount->subtract($spent);
+        $percentage = $spent->percentageOf($bucket->cap_amount);
+        $remaining = $bucket->cap_amount->subtract($spent);
 
         $status = match (true) {
             $percentage >= 100 => 'exceeded',
@@ -41,12 +47,16 @@ class BudgetService implements BudgetProgress
     }
 
     /**
+     * The current cycle's first and last day (the month or year containing $at).
+     *
      * @return array{0: Carbon, 1: Carbon}
      */
-    public function periodBounds(Budget $budget): array
+    public function periodBounds(Bucket $bucket, ?CarbonInterface $at = null): array
     {
-        return $budget->period_type->value === 'yearly'
-            ? [$budget->period_start->copy()->startOfYear(), $budget->period_start->copy()->endOfYear()]
-            : [$budget->period_start->copy()->startOfMonth(), $budget->period_start->copy()->endOfMonth()];
+        $at = Carbon::instance($at ?? now());
+
+        return $bucket->cycle === BudgetPeriodType::Yearly
+            ? [$at->copy()->startOfYear(), $at->copy()->endOfYear()]
+            : [$at->copy()->startOfMonth(), $at->copy()->endOfMonth()];
     }
 }

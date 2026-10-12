@@ -2,13 +2,15 @@
 
 namespace App\Modules\Planning\Contracts;
 
-use App\Modules\Planning\Models\Budget;
+use App\Modules\Planning\Models\Bucket;
 use App\Modules\Shared\Support\Money;
 
-interface BudgetProgress
+interface BucketProgress
 {
     /**
+     * Limit progress of a spending bucket for its current cycle. Only valid when `$bucket->tracksLimit()`.
+     *
      * @return array{spent: Money, remaining: Money, percentage: float, status: string}
      */
-    public function progress(Budget $budget): array;
+    public function progress(Bucket $bucket): array;
 }

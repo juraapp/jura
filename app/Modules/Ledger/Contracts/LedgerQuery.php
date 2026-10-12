@@ -50,4 +50,9 @@ interface LedgerQuery
         array $excludeIds = [],
         float $tolerance = 0.02,
     ): Collection;
+
+    /**
+     * Name of a category the current user can see (their own or a system one), or null.
+     */
+    public function categoryName(int $categoryId): ?string;
 }
