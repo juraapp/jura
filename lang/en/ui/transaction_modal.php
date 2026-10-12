@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'edit' => 'Edit transaction',
+    'new' => 'New transaction',
+    'expense' => 'Expense',
+    'income' => 'Income',
+    'transfer' => 'Transfer',
+    'from_account' => 'From account',
+    'to_account' => 'To account',
+    'select_account' => 'Select an account',
+    'account' => 'Account',
+    'category' => 'Category',
+    'select_category' => 'Select a category',
+    'amount' => 'Amount',
+    'date' => 'Date',
+    'time' => 'Time (optional)',
+    'payment_method' => 'Payment method',
+    'unspecified' => 'Unspecified',
+    'cash' => 'Cash',
+    'debit_card' => 'Debit card',
+    'credit_card' => 'Credit card',
+    'bank_transfer' => 'Bank transfer',
+    'other' => 'Other',
+    'description' => 'Description',
+    'notes' => 'Notes',
+    'save' => 'Save',
+];

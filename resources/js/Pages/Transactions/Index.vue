@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
@@ -18,6 +19,7 @@ import { destroy, bulkDestroy, bulkUpdate } from '@/actions/App/Modules/Ledger/H
 import { useFormat } from '@/composables/useFormat';
 
 const format = useFormat();
+const { t } = useI18n();
 
 const props = defineProps({
     typeFilter: { type: String, required: true },
@@ -39,10 +41,10 @@ const filters = reactive({
 });
 
 const pageTitle = computed(() => ({
-    income: 'Incomes',
-    expense: 'Expenses',
-    transfer: 'Transfers',
-}[props.typeFilter] ?? 'Transactions'));
+    income: t('ui.transactions.incomes'),
+    expense: t('ui.transactions.expenses'),
+    transfer: t('ui.transactions.transfers'),
+}[props.typeFilter] ?? t('ui.transactions.title')));
 
 let searchDebounce = null;
 
@@ -124,7 +126,7 @@ const bulkEdit = () => {
                     <input
                         v-model="filters.q"
                         type="text"
-                        placeholder="Search description..."
+                        :placeholder="$t('ui.transactions.search')"
                         class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                         @input="onSearchInput"
                     />
@@ -135,7 +137,7 @@ const bulkEdit = () => {
                     class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     @change="applyFilters"
                 >
-                    <option value="">All accounts</option>
+                    <option value="">{{ $t('ui.transactions.all_accounts') }}</option>
                     <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
                 </select>
 
@@ -144,7 +146,7 @@ const bulkEdit = () => {
                     class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     @change="applyFilters"
                 >
-                    <option value="">All categories</option>
+                    <option value="">{{ $t('ui.transactions.all_categories') }}</option>
                     <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
                 </select>
 
@@ -165,13 +167,13 @@ const bulkEdit = () => {
             <EmptyState
                 v-if="transactions.data.length === 0"
                 icon="list-bullet"
-                title="No transactions for these filters"
-                description="Record your first movement or adjust the search filters."
+                :title="$t('ui.transactions.empty_title')"
+                :description="$t('ui.transactions.empty_hint')"
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openTransactionModal(null, 'expense')">
                         <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                        New transaction
+                        {{ $t('ui.transactions.new') }}
                     </PrimaryButton>
                 </template>
             </EmptyState>
@@ -184,8 +186,8 @@ const bulkEdit = () => {
                     @clear="bulk.clear()"
                     @select-all-matching="bulk.allMatching.value = true"
                 >
-                    <SecondaryButton type="button" @click="openBulkEdit">Change category / account</SecondaryButton>
-                    <DangerButton type="button" @click="confirmingBulkDelete = true">Delete</DangerButton>
+                    <SecondaryButton type="button" @click="openBulkEdit">{{ $t('ui.transactions.change_bulk') }}</SecondaryButton>
+                    <DangerButton type="button" @click="confirmingBulkDelete = true">{{ $t('ui.common.delete') }}</DangerButton>
                 </BulkActionBar>
 
                 <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -194,19 +196,19 @@ const bulkEdit = () => {
                             <thead class="bg-gray-50 dark:bg-gray-900/40">
                                 <tr>
                                     <th class="w-10 px-4 py-3">
-                                        <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700" aria-label="Select all on this page" :checked="bulk.allOnPageSelected.value" @change="bulk.togglePage()" />
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700" :aria-label="$t('ui.transactions.select_page')" :checked="bulk.allOnPageSelected.value" @change="bulk.togglePage()" />
                                     </th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.transactions.date') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.transactions.description') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.transactions.account') }}</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.transactions.amount') }}</th>
                                     <th class="px-4 py-3"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 <tr v-for="transaction in transactions.data" :key="transaction.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/40" :class="{ 'bg-primary-50/60 dark:bg-primary-500/5': bulk.isSelected(transaction.id) || bulk.allMatching.value }">
                                     <td class="w-10 px-4 py-3">
-                                        <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700" :aria-label="`Select ${transaction.description || 'transaction'}`" :checked="bulk.isSelected(transaction.id) || bulk.allMatching.value" @change="bulk.toggle(transaction.id)" />
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700" :aria-label="$t('ui.transactions.select_row', { name: transaction.description || $t('ui.transactions.row_fallback') })" :checked="bulk.isSelected(transaction.id) || bulk.allMatching.value" @change="bulk.toggle(transaction.id)" />
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                                         {{ formatDate(transaction.date) }}
@@ -220,11 +222,11 @@ const bulkEdit = () => {
                                             </span>
                                             <div>
                                                 <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {{ transaction.description || transaction.category?.name || 'Transfer' }}
+                                                    {{ transaction.description || transaction.category?.name || $t('ui.transactions.transfer') }}
                                                 </p>
                                                 <p class="text-xs text-gray-400">
-                                                    <template v-if="transaction.type === 'transfer_out'">Transfer out<template v-if="transaction.counterpartAccount"> &rarr; {{ transaction.counterpartAccount }}</template></template>
-                                                    <template v-else-if="transaction.type === 'transfer_in'">Transfer in<template v-if="transaction.counterpartAccount"> &larr; {{ transaction.counterpartAccount }}</template></template>
+                                                    <template v-if="transaction.type === 'transfer_out'">{{ $t('ui.transactions.transfer_out') }}<template v-if="transaction.counterpartAccount"> &rarr; {{ transaction.counterpartAccount }}</template></template>
+                                                    <template v-else-if="transaction.type === 'transfer_in'">{{ $t('ui.transactions.transfer_in') }}<template v-if="transaction.counterpartAccount"> &larr; {{ transaction.counterpartAccount }}</template></template>
                                                     <template v-else>{{ transaction.category?.name }}</template>
                                                 </p>
                                             </div>
@@ -270,49 +272,49 @@ const bulkEdit = () => {
         <Modal :show="confirmingBulkDelete" @close="confirmingBulkDelete = false">
             <div class="p-6">
                 <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    Delete {{ bulk.allMatching.value ? transactions.total : bulk.count.value }} transactions?
+                    {{ $t('ui.transactions.delete_many', { count: bulk.allMatching.value ? transactions.total : bulk.count.value }) }}
                 </h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Both sides of any transfer are deleted. Balances update right away, and you can undo or restore them from the Trash.
+                    {{ $t('ui.transactions.delete_many_hint') }}
                 </p>
                 <div class="mt-6 flex justify-end gap-3">
-                    <SecondaryButton type="button" @click="confirmingBulkDelete = false">Cancel</SecondaryButton>
-                    <DangerButton type="button" @click="bulkDelete">Delete</DangerButton>
+                    <SecondaryButton type="button" @click="confirmingBulkDelete = false">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <DangerButton type="button" @click="bulkDelete">{{ $t('ui.common.delete') }}</DangerButton>
                 </div>
             </div>
         </Modal>
 
         <Modal :show="editingBulk" @close="editingBulk = false">
             <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Change {{ bulk.allMatching.value ? transactions.total : bulk.count.value }} transactions</h2>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Leave a field empty to keep it. Transfers are never changed, and a category only applies to transactions of the same kind.</p>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.transactions.change_many', { count: bulk.allMatching.value ? transactions.total : bulk.count.value }) }}</h2>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ $t('ui.transactions.change_many_hint') }}</p>
                 <div class="mt-4 space-y-3">
                     <select v-model="bulkChanges.category_id" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        <option value="">Keep category</option>
-                        <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }} ({{ category.type }})</option>
+                        <option value="">{{ $t('ui.transactions.keep_category') }}</option>
+                        <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }} ({{ $t(`ui.transactions.${category.type}`) }})</option>
                     </select>
                     <select v-model="bulkChanges.account_id" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                        <option value="">Keep account</option>
+                        <option value="">{{ $t('ui.transactions.keep_account') }}</option>
                         <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
                     </select>
                 </div>
                 <div class="mt-6 flex justify-end gap-3">
-                    <SecondaryButton type="button" @click="editingBulk = false">Cancel</SecondaryButton>
-                    <PrimaryButton type="button" :disabled="!bulkChanges.category_id && !bulkChanges.account_id" @click="bulkEdit">Apply</PrimaryButton>
+                    <SecondaryButton type="button" @click="editingBulk = false">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <PrimaryButton type="button" :disabled="!bulkChanges.category_id && !bulkChanges.account_id" @click="bulkEdit">{{ $t('ui.transactions.apply') }}</PrimaryButton>
                 </div>
             </div>
         </Modal>
 
         <Modal :show="confirmingDeleteTransaction !== null" @close="confirmingDeleteTransaction = null">
             <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Delete this transaction?</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.transactions.delete_one') }}</h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    If this is a transfer, both movements (source and destination) will be deleted. This action cannot be undone.
+                    {{ $t('ui.transactions.delete_one_hint') }}
                 </p>
 
                 <div class="mt-6 flex justify-end gap-3">
-                    <SecondaryButton type="button" @click="confirmingDeleteTransaction = null">Cancel</SecondaryButton>
-                    <DangerButton type="button" @click="deleteTransaction">Delete</DangerButton>
+                    <SecondaryButton type="button" @click="confirmingDeleteTransaction = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <DangerButton type="button" @click="deleteTransaction">{{ $t('ui.common.delete') }}</DangerButton>
                 </div>
             </div>
         </Modal>

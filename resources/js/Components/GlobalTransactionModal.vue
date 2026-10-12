@@ -1,4 +1,5 @@
 <script setup>
+import { useI18n } from 'vue-i18n';
 import { computed, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import ModalForm from '@/Components/ModalForm.vue';
@@ -9,6 +10,8 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { useTransactionModal } from '@/composables/useTransactionModal';
 import { store, update, formOptions, editData } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
+
+const { t } = useI18n();
 
 const { isOpen, editingTransaction, defaultType, close } = useTransactionModal();
 
@@ -32,9 +35,9 @@ const form = useForm({
 });
 
 const tabs = [
-    { value: 'expense', label: 'Expense' },
-    { value: 'income', label: 'Income' },
-    { value: 'transfer', label: 'Transfer' },
+    { value: 'expense', label: t('ui.transaction_modal.expense') },
+    { value: 'income', label: t('ui.transaction_modal.income') },
+    { value: 'transfer', label: t('ui.transaction_modal.transfer') },
 ];
 
 const categoriesForTab = computed(() => (activeTab.value === 'income' ? incomeCategories.value : expenseCategories.value));
@@ -140,7 +143,7 @@ const submit = () => {
 <template>
     <ModalForm
         :show="isOpen"
-        :title="editingTransaction ? 'Edit transaction' : 'New transaction'"
+        :title="$t(editingTransaction ? 'ui.transaction_modal.edit' : 'ui.transaction_modal.new')"
         @close="close"
     >
         <div v-if="!editingTransaction" class="-mt-2 mb-4 flex gap-1 border-b border-gray-200 dark:border-gray-700">
@@ -161,26 +164,26 @@ const submit = () => {
         <form id="transaction-form" class="space-y-4" @submit.prevent="submit">
             <template v-if="activeTab === 'transfer'">
                 <div>
-                    <InputLabel for="from_account_id" value="From account" />
+                    <InputLabel for="from_account_id" :value="$t('ui.transaction_modal.from_account')" />
                     <select
                         id="from_account_id"
                         v-model="form.from_account_id"
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
-                        <option value="">Select an account</option>
+                        <option value="">{{ $t('ui.transaction_modal.select_account') }}</option>
                         <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.from_account_id" />
                 </div>
 
                 <div>
-                    <InputLabel for="to_account_id" value="To account" />
+                    <InputLabel for="to_account_id" :value="$t('ui.transaction_modal.to_account')" />
                     <select
                         id="to_account_id"
                         v-model="form.to_account_id"
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
-                        <option value="">Select an account</option>
+                        <option value="">{{ $t('ui.transaction_modal.select_account') }}</option>
                         <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.to_account_id" />
@@ -189,26 +192,26 @@ const submit = () => {
 
             <template v-else>
                 <div>
-                    <InputLabel for="account_id" value="Account" />
+                    <InputLabel for="account_id" :value="$t('ui.transaction_modal.account')" />
                     <select
                         id="account_id"
                         v-model="form.account_id"
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
-                        <option value="">Select an account</option>
+                        <option value="">{{ $t('ui.transaction_modal.select_account') }}</option>
                         <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.account_id" />
                 </div>
 
                 <div>
-                    <InputLabel for="category_id" value="Category" />
+                    <InputLabel for="category_id" :value="$t('ui.transaction_modal.category')" />
                     <select
                         id="category_id"
                         v-model="form.category_id"
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
-                        <option value="">Select a category</option>
+                        <option value="">{{ $t('ui.transaction_modal.select_category') }}</option>
                         <option v-for="category in categoriesForTab" :key="category.id" :value="category.id">{{ category.name }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.category_id" />
@@ -217,47 +220,47 @@ const submit = () => {
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <InputLabel for="amount" value="Amount" />
+                    <InputLabel for="amount" :value="$t('ui.transaction_modal.amount')" />
                     <TextInput id="amount" v-model="form.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                     <InputError class="mt-1" :message="form.errors.amount" />
                 </div>
 
                 <div>
-                    <InputLabel for="date" value="Date" />
+                    <InputLabel for="date" :value="$t('ui.transaction_modal.date')" />
                     <TextInput id="date" v-model="form.date" type="date" class="mt-1 block w-full" />
                     <InputError class="mt-1" :message="form.errors.date" />
                 </div>
                 <div>
-                    <InputLabel for="time" value="Time (optional)" />
+                    <InputLabel for="time" :value="$t('ui.transaction_modal.time')" />
                     <TextInput id="time" v-model="form.time" type="time" class="mt-1 block w-full" />
                     <InputError class="mt-1" :message="form.errors.time" />
                 </div>
             </div>
 
             <div v-if="activeTab === 'expense'">
-                <InputLabel for="payment_method" value="Payment method" />
+                <InputLabel for="payment_method" :value="$t('ui.transaction_modal.payment_method')" />
                 <select
                     id="payment_method"
                     v-model="form.payment_method"
                     class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                 >
-                    <option value="">Unspecified</option>
-                    <option value="cash">Cash</option>
-                    <option value="debit_card">Debit card</option>
-                    <option value="credit_card">Credit card</option>
-                    <option value="bank_transfer">Bank transfer</option>
-                    <option value="other">Other</option>
+                    <option value="">{{ $t('ui.transaction_modal.unspecified') }}</option>
+                    <option value="cash">{{ $t('ui.transaction_modal.cash') }}</option>
+                    <option value="debit_card">{{ $t('ui.transaction_modal.debit_card') }}</option>
+                    <option value="credit_card">{{ $t('ui.transaction_modal.credit_card') }}</option>
+                    <option value="bank_transfer">{{ $t('ui.transaction_modal.bank_transfer') }}</option>
+                    <option value="other">{{ $t('ui.transaction_modal.other') }}</option>
                 </select>
             </div>
 
             <div>
-                <InputLabel for="description" value="Description" />
+                <InputLabel for="description" :value="$t('ui.transaction_modal.description')" />
                 <TextInput id="description" v-model="form.description" type="text" class="mt-1 block w-full" />
                 <InputError class="mt-1" :message="form.errors.description" />
             </div>
 
             <div>
-                <InputLabel for="notes" value="Notes" />
+                <InputLabel for="notes" :value="$t('ui.transaction_modal.notes')" />
                 <textarea
                     id="notes"
                     v-model="form.notes"
@@ -269,8 +272,8 @@ const submit = () => {
         </form>
 
         <template #footer>
-            <SecondaryButton type="button" @click="close">Cancel</SecondaryButton>
-            <PrimaryButton form="transaction-form" type="submit" :disabled="form.processing">Save</PrimaryButton>
+            <SecondaryButton type="button" @click="close">{{ $t('ui.common.cancel') }}</SecondaryButton>
+            <PrimaryButton form="transaction-form" type="submit" :disabled="form.processing">{{ $t('ui.transaction_modal.save') }}</PrimaryButton>
         </template>
     </ModalForm>
 </template>
