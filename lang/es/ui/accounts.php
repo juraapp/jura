@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'title' => 'Bancos y billeteras',
+    'new' => 'Nueva cuenta',
+    'empty_title' => 'Aún no tienes cuentas',
+    'empty_hint' => 'Agrega tus bancos, billeteras digitales o efectivo para empezar a registrar transacciones.',
+    'create_first' => 'Crear mi primera cuenta',
+    'archived' => 'Archivada',
+    'edit' => 'Editar cuenta',
+    'name' => 'Nombre',
+    'type' => 'Tipo',
+    'currency' => 'Moneda',
+    'institution' => 'Banco o institución',
+    'initial_balance' => 'Saldo inicial',
+    'color' => 'Color',
+    'yield_rate' => 'Tasa de interés anual, % (opcional)',
+    'yield_compounding' => 'El interés se acredita',
+    'masked_number' => 'Número (opcional, parcialmente oculto)',
+    'notes' => 'Notas',
+    'active' => 'Cuenta activa',
+    'save' => 'Guardar',
+    'delete_title' => '¿Eliminar esta cuenta?',
+    'delete_hint' => 'Si tiene transacciones o movimientos recurrentes vinculados, se archivará en lugar de eliminarse para conservar tu historial.',
+];
