@@ -70,3 +70,8 @@ test('auto follows the language', () => {
 test('an empty value does not crash', () => {
     assert.equal(createFormat({}).date('not a date'), '');
 });
+
+test('month names follow the language', () => {
+    assert.match(createFormat({}, 'en').month('2026-03'), /March 2026/);
+    assert.match(createFormat({}, 'es').month('2026-03'), /marzo (de )?2026/);
+});
