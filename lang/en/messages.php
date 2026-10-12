@@ -21,6 +21,7 @@ return [
         'account_not_found' => "Account ':account' not found.",
         'category_not_found' => "Category ':category' does not exist for type ':type'.",
         'invalid_amount' => "Invalid amount: ':value'.",
+        'invalid_time' => "Invalid time: ':value'.",
         'invalid_date' => "Invalid date: ':value'.",
         'description_too_long' => 'Description exceeds 255 characters.',
         'notes_too_long' => 'Notes exceed 2000 characters.',

@@ -25,6 +25,7 @@ const form = useForm({
     to_account_id: '',
     amount: '',
     date: new Date().toISOString().slice(0, 10),
+    time: '',
     description: '',
     notes: '',
     payment_method: '',
@@ -55,6 +56,7 @@ const resetForm = () => {
     form.reset();
     form.clearErrors();
     form.date = new Date().toISOString().slice(0, 10);
+    form.time = new Date().toTimeString().slice(0, 5);
 };
 
 watch(isOpen, async (open) => {
@@ -71,6 +73,7 @@ watch(isOpen, async (open) => {
         resetForm();
         activeTab.value = data.type;
         form.date = data.date;
+        form.time = data.time ?? '';
         form.description = data.description ?? '';
         form.notes = data.notes ?? '';
         form.amount = String(data.amount);
@@ -104,6 +107,7 @@ const submit = () => {
             to_account_id: data.to_account_id,
             amount: data.amount,
             date: data.date,
+            time: data.time || null,
             description: data.description,
             notes: data.notes,
         }
@@ -113,6 +117,7 @@ const submit = () => {
             category_id: data.category_id,
             amount: data.amount,
             date: data.date,
+            time: data.time || null,
             description: data.description,
             notes: data.notes,
             payment_method: data.payment_method || null,
@@ -221,6 +226,11 @@ const submit = () => {
                     <InputLabel for="date" value="Date" />
                     <TextInput id="date" v-model="form.date" type="date" class="mt-1 block w-full" />
                     <InputError class="mt-1" :message="form.errors.date" />
+                </div>
+                <div>
+                    <InputLabel for="time" value="Time (optional)" />
+                    <TextInput id="time" v-model="form.time" type="time" class="mt-1 block w-full" />
+                    <InputError class="mt-1" :message="form.errors.time" />
                 </div>
             </div>
 

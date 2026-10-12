@@ -357,4 +357,62 @@ class TransactionsTest extends TestCase
 
         $response->assertNotFound();
     }
+
+    public function test_a_transaction_can_carry_a_time_and_it_can_be_changed_or_cleared(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $payload = ['type' => 'expense', 'account_id' => $account->id, 'category_id' => $category->id, 'amount' => 100, 'date' => now()->toDateString()];
+
+        $this->actingAs($user)->post('/finances/transactions', $payload + ['time' => '14:30'])->assertRedirect()->assertSessionHasNoErrors();
+        $transaction = Transaction::firstOrFail();
+        $this->assertSame('14:30', $transaction->time);
+
+        $this->actingAs($user)->patch("/finances/transactions/{$transaction->id}", $payload + ['time' => '09:05'])->assertRedirect();
+        $this->assertSame('09:05', $transaction->fresh()->time);
+
+        $this->actingAs($user)->patch("/finances/transactions/{$transaction->id}", $payload)->assertRedirect();
+        $this->assertNull($transaction->fresh()->time);
+    }
+
+    public function test_the_time_must_be_a_valid_hour_and_minute(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)->post('/finances/transactions', [
+            'type' => 'expense', 'account_id' => $account->id, 'category_id' => $category->id,
+            'amount' => 100, 'date' => now()->toDateString(), 'time' => '25:99',
+        ])->assertSessionHasErrors('time');
+    }
+
+    public function test_both_legs_of_a_transfer_share_the_time(): void
+    {
+        $user = User::factory()->create();
+        $from = Account::factory()->for($user)->create();
+        $to = Account::factory()->for($user)->create();
+
+        $this->actingAs($user)->post('/finances/transactions', [
+            'type' => 'transfer', 'from_account_id' => $from->id, 'to_account_id' => $to->id,
+            'amount' => 100, 'date' => now()->toDateString(), 'time' => '08:15',
+        ])->assertRedirect();
+
+        $this->assertSame(['08:15', '08:15'], Transaction::orderBy('id')->pluck('time')->all());
+    }
+
+    public function test_the_list_orders_a_day_by_time_with_untimed_rows_last(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $day = now()->toDateString();
+        $morning = Transaction::factory()->for($user)->for($account)->create(['date' => $day, 'time' => '08:00:00']);
+        $evening = Transaction::factory()->for($user)->for($account)->create(['date' => $day, 'time' => '20:00:00']);
+        $untimed = Transaction::factory()->for($user)->for($account)->create(['date' => $day, 'time' => null]);
+
+        $ids = collect($this->actingAs($user)->get('/finances/transactions')->viewData('page')['props']['transactions']['data'])->pluck('id')->all();
+
+        $this->assertSame([$evening->id, $morning->id, $untimed->id], $ids);
+    }
 }

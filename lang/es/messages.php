@@ -21,6 +21,7 @@ return [
         'account_not_found' => "Cuenta ':account' no encontrada.",
         'category_not_found' => "Categoría ':category' no existe para el tipo ':type'.",
         'invalid_amount' => "Monto inválido: ':value'.",
+        'invalid_time' => "Hora inválida: ':value'.",
         'invalid_date' => "Fecha inválida: ':value'.",
         'description_too_long' => 'Descripción supera 255 caracteres.',
         'notes_too_long' => 'Notas superan 2000 caracteres.',

@@ -9,13 +9,14 @@ use App\Modules\Shared\Casts\AsMoney;
 use App\Modules\Shared\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'account_id', 'type', 'category_id', 'amount', 'date', 'description',
+    'account_id', 'type', 'category_id', 'amount', 'date', 'time', 'description',
     'notes', 'payment_method', 'is_recurring_generated', 'recurring_transaction_id',
     'transfer_group_id',
 ])]
@@ -32,6 +33,16 @@ class Transaction extends Model
             'date' => 'date',
             'is_recurring_generated' => 'boolean',
         ];
+    }
+
+    /**
+     * Optional wall-clock time ("H:i") in the user's time zone.
+     */
+    protected function time(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value === null ? null : substr($value, 0, 5),
+        );
     }
 
     public function account(): BelongsTo

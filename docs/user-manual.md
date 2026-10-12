@@ -78,11 +78,14 @@ There are three kinds:
 | **Transfer** | you move money between your own accounts | lowers one account and raises the other; it is not counted as income or expense |
 
 To add one, use the add button (it is available from any page). Choose the account, category, amount, date and
-an optional description, notes and payment method (cash, debit card, credit card, bank transfer or other).
+an optional **time** (it defaults to now and can be cleared), an optional description, notes and payment method (cash, debit card, credit card, bank transfer or other).
 
 - You can **edit** or **delete** any transaction; balances update automatically.
 - **Filter** the list by type to see only incomes, expenses or transfers.
-- Editing or deleting one side of a transfer updates the other side too.
+- Editing or deleting one side of a transfer updates the other side too. Each transfer appears twice in the full list:
+  the row says **Transfer out → (destination)** on the source account and **Transfer in ← (source)** on the destination.
+- Within a day, transactions are listed latest time first; ones without a time come last. The time is shown in the format
+  you chose in Preferences (12- or 24-hour).
 
 ## Importing from CSV
 
@@ -95,7 +98,7 @@ Use this to bring in history from a spreadsheet or bank export.
 3. Confirm to import the valid rows.
 
 Rules:
-- Required columns: **date, account, category, type, amount**. Optional: description, notes.
+- Required columns: **date, account, category, type, amount**. Optional: description, notes, **time** (like `14:30` or `2:05 PM`).
 - Column names can be in English or Spanish; common alternatives such as "value" for amount are understood.
 - Up to **1000 rows** per file.
 - Account and category names must match ones you already have.
