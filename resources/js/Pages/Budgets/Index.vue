@@ -15,7 +15,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import { store, update, destroy } from '@/actions/App/Modules/Planning/Http/Controllers/BudgetController';
-import { index as forecastsIndex } from '@/routes/budget-forecasts';
+import { index as plannedEventsIndex } from '@/routes/planned-events';
 
 defineProps({
     budgets: { type: Array, required: true },
@@ -172,16 +172,19 @@ const barColor = (status) => ({
                             </span>
                         </div>
 
-                        <div v-if="budget.forecastCount > 0" class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-xs dark:border-gray-700">
+                        <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-xs dark:border-gray-700">
                             <button
                                 type="button"
                                 class="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-                                @click="router.visit(forecastsIndex(budget.id).url)"
+                                @click="router.visit(plannedEventsIndex.url())"
                             >
-                                {{ budget.forecastCount }} projected expense{{ budget.forecastCount > 1 ? 's' : '' }}
+                                <template v-if="budget.projected > 0">
+                                    <Money :amount="budget.projected" :currency="budget.currency" /> planned
+                                </template>
+                                <template v-else>Plan spending</template>
                             </button>
-                            <span class="text-gray-400">
-                                effective: <Money :amount="budget.effectiveRemaining" :currency="budget.currency" />
+                            <span v-if="budget.projected > 0" class="text-gray-400">
+                                after plans: <Money :amount="budget.effectiveRemaining" :currency="budget.currency" />
                             </span>
                         </div>
                     </div>

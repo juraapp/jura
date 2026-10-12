@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['category_id', 'currency', 'amount', 'allocated_amount', 'period_type', 'period_start'])]
 class Budget extends Model
@@ -38,10 +37,5 @@ class Budget extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
-    }
-
-    public function forecasts(): HasMany
-    {
-        return $this->hasMany(BudgetForecast::class);
     }
 }
