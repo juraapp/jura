@@ -13,14 +13,15 @@ for everyday use. Sections marked **Advanced** are optional extras.
 4. [Transactions](#transactions)
 5. [Importing from CSV](#importing-from-csv)
 6. [Categories](#categories)
-7. [Budgets](#budgets)
-8. [Savings goals](#savings-goals)
-9. [Recurring expenses](#recurring-expenses)
-10. [Reports](#reports)
-11. [Notifications](#notifications)
-12. [Preferences, profile and appearance](#preferences-profile-and-appearance)
-13. [Common questions](#common-questions)
-14. [Coming soon](#coming-soon)
+7. [Cash flow (planned income and expenses)](#cash-flow-planned-income-and-expenses)
+8. [Budgets](#budgets)
+9. [Savings goals](#savings-goals)
+10. [Recurring expenses](#recurring-expenses)
+11. [Reports](#reports)
+12. [Notifications](#notifications)
+13. [Preferences, profile and appearance](#preferences-profile-and-appearance)
+14. [Common questions](#common-questions)
+15. [Coming soon](#coming-soon)
 
 ---
 
@@ -106,6 +107,46 @@ categories** shared by everyone, and you can add your own.
 - System categories, and categories that already have transactions, **cannot be edited or deleted**, so your
   history never changes meaning. Create a new category instead.
 
+## Cash flow (planned income and expenses)
+
+Menu: **Planning → Cash flow**.
+
+Use this page to write down money you expect to receive or spend in the future, however irregular, and see what
+your balance could look like. Planned events are **estimates**: they never change your real balances or reports
+until you mark them as done.
+
+**Adding a planned event.** Press **Expect income** or **Plan an event**, then fill in what it is, the amount, the
+date and how sure you are. Under **More options** you can pick an account and category, add notes, or make it
+**repeat** (weekly, every two weeks, monthly or yearly), optionally until a date. Repeating events are created
+up to 12 months ahead and extended automatically.
+
+**How sure are you?**
+- **Confirmed**: it will happen (a signed contract, a fixed bill).
+- **Expected**: likely, but not certain.
+- **Speculative**: a hope or a maybe.
+
+**Three views of the future** (the switch at the top of the page):
+- **Conservative**: only confirmed income counts.
+- **Expected**: confirmed and expected income count.
+- **Optimistic**: all planned income counts.
+
+Planned expenses always count in full in every view. The chart and table show, month by month, the planned
+income, planned expenses and your projected balance, per currency. Today's balance is your real net worth.
+
+**When the money really moves.**
+- Press the **check** button (*Mark as done*) to record the real transaction from the plan. You can adjust the
+  amount, date, account and category first.
+- If you already recorded a similar transaction yourself, the plan shows **Looks done: ...** with a **Yes, link
+  it** button. Nothing is ever linked without your confirmation.
+- Press **Skip** for something that will not happen.
+
+**Changing repeating events.** Editing or deleting one occurrence asks whether it is **only this one** or **this
+and all future ones**. Earlier occurrences, and ones already done, are never touched. When you change "all future",
+the dates stay as they are; to move a date, edit that single occurrence.
+
+**Advanced.** An overdue plan that is still open counts in the current month. Different currencies are projected
+separately and never added together.
+
 ## Budgets
 
 Menu: **Planning → Budgets**.
@@ -117,9 +158,9 @@ A budget is a spending limit for one expense category in one period (a month or 
 - Creating a budget for a category and period that already has one updates it instead of adding a duplicate.
 - You get a notification when you cross the near-limit and exceeded points (see Notifications).
 
-**Advanced: forecasts.** Open a budget's forecasts to list planned future expenses against it. The card then
-shows a **projected** amount and an **effective remaining** figure next to the real spending. Projected figures are
-estimates; they never change your real balances or transactions.
+**Advanced: planned spending.** Expenses you add in **Cash flow** for the same category, currency and period show
+on the card as **planned**, together with what would remain **after plans**. Planned amounts are estimates; they do
+not change your real spending or balances until you mark them as done.
 
 ## Savings goals
 
@@ -193,7 +234,6 @@ mixes them.
 
 ## Coming soon
 
-Project budgeting is being built: scheduled future income of any size and date, budget buckets that fill
-automatically and carry over, a wish list grouped by project, a planner that compares purchase orders, and
-forecast reports that clearly separate real from projected data. This manual will gain a section for each as it
-ships.
+Project budgeting is being built in stages. Planned cash flow is available now (see above). Still to come:
+budget buckets that fill automatically and carry over, a wish list grouped by project, a planner that compares
+purchase orders, and forecast reports. This manual will gain a section for each as it ships.
