@@ -5,6 +5,7 @@ namespace App\Modules\Shared;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class SharedServiceProvider extends ServiceProvider
 {
@@ -25,7 +26,7 @@ class SharedServiceProvider extends ServiceProvider
                 return 'App\\Modules\\'.basename(dirname($file, 2)).'\\Models\\'.$model;
             }
 
-            return 'App\\Models\\'.$model;
+            throw new RuntimeException('No module model found for factory '.$factory::class);
         });
     }
 }

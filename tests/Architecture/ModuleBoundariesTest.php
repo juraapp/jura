@@ -70,4 +70,13 @@ class ModuleBoundariesTest extends TestCase
     {
         $this->assertSame([], $this->violations(), 'Module boundary violations found.');
     }
+
+    public function test_type_folders_have_been_replaced_by_modules(): void
+    {
+        $app = dirname(__DIR__, 2).'/app';
+
+        foreach (['Models', 'Services', 'Enums', 'Events', 'Listeners', 'Policies', 'Jobs', 'Notifications', 'Support', 'Casts', 'Exceptions', 'Console', 'Http'] as $legacy) {
+            $this->assertDirectoryDoesNotExist("{$app}/{$legacy}", "app/{$legacy} should live inside a module");
+        }
+    }
 }
