@@ -14,7 +14,7 @@ for everyday use. Sections marked **Advanced** are optional extras.
 5. [Importing from CSV](#importing-from-csv)
 6. [Categories](#categories)
 7. [Cash flow (planned income and expenses)](#cash-flow-planned-income-and-expenses)
-8. [Budgets](#budgets)
+8. [Buckets (budgets and savings)](#buckets-budgets-and-savings)
 9. [Savings goals](#savings-goals)
 10. [Recurring expenses](#recurring-expenses)
 11. [Reports](#reports)
@@ -147,20 +147,47 @@ the dates stay as they are; to move a date, edit that single occurrence.
 **Advanced.** An overdue plan that is still open counts in the current month. Different currencies are projected
 separately and never added together.
 
-## Budgets
+## Buckets (budgets and savings)
 
-Menu: **Planning → Budgets**.
+Menu: **Planning → Buckets**. (The old **Budgets** page now lives here; its address redirects.)
 
-A budget is a spending limit for one expense category in one period (a month or a year).
+A **bucket** is money you set aside for something. Buckets only *earmark* money: your real accounts and balances
+never change. There are two kinds:
 
-- Each card shows how much you have **spent**, what is **remaining**, and a status: **on track**, **near limit**
-  (80% used or more) or **exceeded**.
-- Creating a budget for a category and period that already has one updates it instead of adding a duplicate.
-- You get a notification when you cross the near-limit and exceeded points (see Notifications).
+- **Spending limit**: pick a category and a limit per month or year. The card shows how much you have spent, what is
+  left, and warns you at 80% and when you go over. This is what budgets used to be.
+- **Savings**: a pot for a goal (a car, a trip, an emergency fund), with an optional target. The card shows what is
+  available and how close you are to the target.
 
-**Advanced: planned spending.** Expenses you add in **Cash flow** for the same category, currency and period show
-on the card as **planned**, together with what would remain **after plans**. Planned amounts are estimates; they do
-not change your real spending or balances until you mark them as done.
+**Filling buckets from income.** Open a bucket and, under *Filling and advanced options*, choose how it fills when
+income arrives:
+- **Percent of income**: for example 20% of every income.
+- **Fixed amount**: for example 150,000 from every income.
+- **Fill up to its target**: tops up whatever is missing.
+
+Buckets are offered each income in **priority order** (lower number first), so the important ones are filled before
+the rest. A bucket with a target stops filling once the target is reached. Whatever no bucket claims goes to the
+**default bucket** (called *Unallocated* until you pick your own). Filling happens by itself, but **only once at least
+one bucket has a fill rule**; with no rules, nothing is allocated. If you edit or delete an income, its fills are
+redone or removed.
+
+**Deciding for one income.** In **Cash flow**, when you plan an income, *More options* lets you type exactly how much
+goes to each bucket for that income only. The rest goes to the default bucket.
+
+**Moving money around.**
+- **Move money** (the arrows icon) transfers funds from one bucket to another of the same currency.
+- **Add or remove funds** (the banknotes icon) corrects a balance by hand. Use a negative amount to remove.
+- Deleting a bucket returns its money to the default bucket.
+
+**End of the month or year (advanced).** For a bucket that resets, choose what happens to what is left:
+**keep it** in the bucket, **return it** to the default bucket, or **move it** to another bucket. This is applied
+automatically after the cycle ends.
+
+**Only from certain accounts (advanced).** Tick accounts to make a bucket fill only from income that lands there, for
+example a "Physical money" stash. Income in other accounts skips it.
+
+**Planned spending.** Expenses you plan in **Cash flow** for a spending bucket's category show on its card as
+**planned**, with what would remain **after plans**.
 
 ## Savings goals
 
@@ -201,7 +228,7 @@ Reports show **real, recorded** data. Totals are kept separate per currency.
 
 The bell in the top bar collects alerts. Mark one or all as read from there.
 
-- **Budget threshold / exceeded**: you have used most of, or gone over, a budget.
+- **Budget threshold / exceeded**: you have used most of, or gone over, a spending bucket's limit.
 - **Goal behind schedule**: a savings goal is falling behind its target date.
 - **Upcoming payment**: a recurring item is due within 3 days.
 - **Low balance**: an account balance has dropped below about three days of your typical spending, or below zero.
@@ -234,6 +261,5 @@ mixes them.
 
 ## Coming soon
 
-Project budgeting is being built in stages. Planned cash flow is available now (see above). Still to come:
-budget buckets that fill automatically and carry over, a wish list grouped by project, a planner that compares
-purchase orders, and forecast reports. This manual will gain a section for each as it ships.
+Project budgeting is being built in stages. Planned cash flow and buckets are available now (see above). Still to
+come: a wish list grouped by project, a planner that compares purchase orders, and forecast reports. This manual will gain a section for each as it ships.

@@ -30,6 +30,7 @@ class PlannedEventService
     public function __construct(
         private readonly LedgerQuery $ledger,
         private readonly RecordsTransactions $transactions,
+        private readonly IncomeAllocator $allocator,
     ) {}
 
     /**
@@ -40,6 +41,7 @@ class PlannedEventService
         $event = new PlannedEvent($this->attributes($user, $data) + [
             'date' => $data['date'],
             'notes' => $data['notes'] ?? null,
+            'allocation_overrides' => $this->overrides($data),
         ]);
         $event->user_id = $user->id;
         $event->save();
@@ -158,6 +160,7 @@ class PlannedEventService
         $event->update($attributes + [
             'date' => $data['date'],
             'notes' => $data['notes'] ?? null,
+            'allocation_overrides' => $this->overrides($data),
         ]);
     }
 
@@ -205,7 +208,7 @@ class PlannedEventService
     public function realize(PlannedEvent $event, array $data): int
     {
         return DB::transaction(function () use ($event, $data) {
-            $transactionId = $this->transactions->record($event->user, $event->type, [
+            $record = fn () => $this->transactions->record($event->user, $event->type, [
                 'account_id' => $data['account_id'],
                 'category_id' => $data['category_id'],
                 'amount' => $data['amount'] ?? $event->amount->toDecimalString(),
@@ -213,6 +216,10 @@ class PlannedEventService
                 'description' => $data['description'] ?? $event->description,
                 'notes' => $event->notes,
             ]);
+
+            $transactionId = $event->isIncome() && ! empty($event->allocation_overrides)
+                ? $this->allocator->withOverrides($event->allocation_overrides, $record)
+                : $record();
 
             $event->update([
                 'status' => PlannedEventStatus::Realized,
@@ -281,6 +288,24 @@ class PlannedEventService
         }
 
         return $matches;
+    }
+
+    /**
+     * Explicit per-bucket amounts for an income, or null (let the bucket rules decide).
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array{bucket_id: int, amount: string}>|null
+     */
+    private function overrides(array $data): ?array
+    {
+        if (($data['type'] ?? null) !== 'income' || empty($data['allocation_overrides'])) {
+            return null;
+        }
+
+        return collect($data['allocation_overrides'])
+            ->map(fn (array $row) => ['bucket_id' => (int) $row['bucket_id'], 'amount' => Money::of($row['amount'])->toDecimalString()])
+            ->values()
+            ->all();
     }
 
     /**

@@ -2,19 +2,22 @@
 
 ## Models
 
-Models live in modules: `Ledger` (Account, Category, Transaction), `Planning` (Budget, BudgetForecast, SavingsGoal, SavingsGoalContribution, RecurringTransaction), `Identity` (User). See `architecture.md` for the boundary rules.
+Models live in modules: `Ledger` (Account, Category, Transaction), `Planning` (Bucket, Allocation, PlannedEvent, PlannedEventSeries, SavingsGoal, SavingsGoalContribution, RecurringTransaction), `Identity` (User). See `architecture.md` for the boundary rules.
 
 | Model | Notes |
 |---|---|
 | `User` | `currency_default`, `locale`, `timezone` drive formatting app-wide (see `preferences`). |
 | `Account` | Bank/wallet/cash/credit-card/savings. `initial_balance` + the transaction ledger derive the live balance — balance is never a stored column (see `BalanceCalculator`). Soft-deletes; deleting an account with transactions archives it (`is_active = false`) instead. |
 | `Category` | Income or expense. `user_id` nullable — `null` means a system category (seeded, shared by every user). Uses a **custom** `visibleToUser` global scope (owner OR `user_id IS NULL`), not `BelongsToUser` — see below. Soft-deletes; system categories and categories with transactions can't be deleted/edited (`Category::isEditable()`). |
-| `Budget` | Per-category spending limit, scoped to a `currency` and `period_type` (monthly/yearly), for a specific `period_start`. Unique on `(user_id, category_id, currency, period_type, period_start)` — recreating a budget for the same period updates the amount (`updateOrCreate`) instead of duplicating. |
+| `Bucket` | A virtual earmark of money (`spending` or `savings`), replacing `Budget`. Spending buckets track a `category` against a per-`cycle` `cap_amount` (monthly/yearly) exactly like budgets did; savings buckets hold funded money with an optional target. Optional `fill_rule` (fixed/percent/fill_to_target) + `fill_value` claim income in `priority` order; `carry_over` (carry/release/overflow) decides what happens to the leftover when a cycle ends; `allowed_account_ids` restricts which accounts' income can fill it; one `is_default` bucket per currency catches unclaimed income. Unique per user/category/currency/cycle. |
+| `Allocation` | One signed line of the virtual money ledger (`income`, `planned`, `transfer`, `carry`, `spend`, `adjustment`). A bucket's funded balance is the sum of its allocations; for a category-linked spending bucket, *available* additionally subtracts real spending since `tracking_started_on`. |
 | `SavingsGoal` | Target amount + optional target date. `status`: active/completed/archived. Soft-deletes. Has many `SavingsGoalContribution`; recording a contribution that reaches the target auto-flips status to completed. |
 | `SavingsGoalContribution` | Belongs to a `SavingsGoal`; optionally linked to the `Transaction` it came from (`linked_transaction_id`, nullable). |
 | `RecurringTransaction` | Template for auto-generated transactions (weekly/biweekly/monthly/yearly). `is_active` toggles without deleting. |
 | `PlannedEvent` | A projected income or expense on a future date (`planned`/`realized`/`skipped`) with a `certainty` (confirmed/expected/speculative). **Never touches balances.** Realizing one records a real `Transaction` through `Ledger\Contracts\RecordsTransactions` and stores its id in `realized_transaction_id`. Optionally part of a `PlannedEventSeries` (a repeating rule that materializes occurrences up to 12 months ahead; extended daily by `planning:extend-series`). Replaces the old `BudgetForecast`. |
 | `Transaction` | `type`: income / expense / transfer_out / transfer_in. A transfer is always **two rows** sharing a `transfer_group_id` (see `TransactionService::createTransfer`) — never a single row with a "to account" column. `category_id` is null only for transfer rows. Soft-deletes. |
+
+Cross-module events from `Ledger`: `TransactionsMutated`, `IncomeRecorded`, `IncomeRemoved`.
 
 All models except `Category` (and the join-only `SavingsGoalContribution`) use the `App\Modules\Shared\Concerns\BelongsToUser` trait.
 
@@ -54,7 +57,7 @@ Use `Model::forUser($user)` (also from the trait) to query outside a request con
 - **`TransactionService`** (Ledger) — the only code path allowed to write a `Transaction`. Owns transfer double-entry (`createTransfer`/`updateTransfer`/`delete` all keep both legs of a transfer in sync or delete them together) and dispatches `TransactionsMutated` so caches invalidate.
 - **`BalanceCalculator`** (Ledger) — derives account balances and net worth from `initial_balance` + the ledger, cached (Redis, 1h TTL, keyed per-account/per-user) because it's read on nearly every page. Cache is invalidated via `forgetAccount()`, called after any mutation that could change a balance.
 - **`PlannedEventService`** (Planning) — creates events/series, edits and deletes with `this`/`future` scope, realizes, skips and links plans, and suggests matching real transactions. `CashFlowProjector` (Planning) projects balances per month and currency for a `ForecastView` (conservative = confirmed income only, expected = + expected, optimistic = all; expenses always count).
-- **`BudgetService`** (Planning) — computes a budget's `spent`/`remaining`/`percentage`/`status` (on_track/near_limit/exceeded) for its current period.
+- **`BucketService`** (Planning) — limit tracking for spending buckets (`progress()`: spent/remaining/percentage/status on_track/near_limit/exceeded for the current cycle). `BucketLedger` is the allocation ledger (balance, available, credit, move, default bucket); `BucketManager` saves/deletes buckets keeping the invariants; `IncomeAllocator` runs the pure `Waterfall` when a Ledger `IncomeRecorded` event fires (only if some bucket has a rule; planned incomes may carry explicit per-bucket overrides); `BucketCycleService` (daily `planning:close-bucket-cycles`) applies carry-over after a cycle ends.
 - **`ReportService`** (Reporting) — the aggregation layer behind the dashboard and the three report pages (monthly/annual/custom): period totals, expense-by-category, expense-by-account, net-worth evolution, etc. Every aggregate is a `Collection` **keyed by currency** — amounts in different currencies are never summed together.
 - **`InsightService`** (Reporting) — turns `ReportService`'s numbers into short, translated sentences ("You spent 12% more than last month"). Every phrase is a parametrized `__()` call over real aggregates, never freeform text.
 - **`TransactionImportService`** (Ledger) — parses/validates/imports a CSV of income/expense rows. Never writes a `Transaction` directly; hands validated rows to `TransactionService` so import-created transactions go through the exact same path as manually-created ones.

@@ -13,3 +13,4 @@ Schedule::job(new GenerateDueRecurringTransactions)->dailyAt('06:00');
 Schedule::command('app:notify-upcoming-recurring-payments')->dailyAt('07:00');
 Schedule::command('app:notify-behind-savings-goals')->weeklyOn(1, '07:00');
 Schedule::command('planning:extend-series')->dailyAt('05:30');
+Schedule::command('planning:close-bucket-cycles')->dailyAt('00:30');

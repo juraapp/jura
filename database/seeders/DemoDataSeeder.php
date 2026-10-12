@@ -7,9 +7,14 @@ use App\Modules\Ledger\Enums\AccountType;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Enums\Certainty;
+use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Enums\RecurringFrequency;
+use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Services\BucketLedger;
 use App\Modules\Planning\Services\PlannedEventService;
+use App\Modules\Shared\Support\Money;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -26,10 +31,17 @@ class DemoDataSeeder extends Seeder
             User::factory()->make(['name' => 'Test User'])->getAttributes(),
         );
 
-        if (Account::forUser($user)->exists()) {
-            return;
+        if (! Account::forUser($user)->exists()) {
+            $this->seedLedgerAndPlans($user);
         }
 
+        if (! Bucket::forUser($user)->exists()) {
+            $this->seedBuckets($user);
+        }
+    }
+
+    private function seedLedgerAndPlans(User $user): void
+    {
         $cash = Account::factory()->for($user)->create(['name' => 'Physical Money', 'type' => AccountType::Cash, 'initial_balance' => 250000, 'color' => '#16a34a', 'icon' => 'banknotes']);
         $debit = Account::factory()->for($user)->create(['name' => 'Debit card', 'type' => AccountType::Bank, 'initial_balance' => 1800000, 'color' => '#2563eb', 'icon' => 'wallet']);
 
@@ -77,5 +89,28 @@ class DemoDataSeeder extends Seeder
             'type' => 'expense', 'description' => 'Dentist', 'amount' => 350000, 'certainty' => Certainty::Confirmed->value,
             'category_id' => $category('Health')->id, 'date' => Carbon::today()->addDays(18)->toDateString(),
         ]);
+    }
+
+    private function seedBuckets(User $user): void
+    {
+        $cash = Account::forUser($user)->where('name', 'Physical Money')->first();
+        $groceries = Category::withoutGlobalScopes()->whereNull('user_id')->where('name', 'Food')->firstOrFail();
+        $funds = app(BucketLedger::class);
+
+        $car = Bucket::factory()->savings()->for($user)->priority(10)->rule(FillRule::Percent, 20)->create([
+            'name' => 'Car', 'currency' => 'COP', 'cap_amount' => 30000000,
+        ]);
+        $trip = Bucket::factory()->savings()->for($user)->priority(20)->rule(FillRule::Fixed, 150000)->create([
+            'name' => 'Trip to the coast', 'currency' => 'COP', 'cap_amount' => 4000000,
+            'allowed_account_ids' => $cash ? [$cash->id] : null,
+        ]);
+        Bucket::factory()->for($user)->priority(30)->create([
+            'name' => 'Groceries', 'category_id' => $groceries->id, 'currency' => 'COP', 'cap_amount' => 600000, 'cycle' => 'monthly',
+        ]);
+        $default = $funds->ensureDefaultBucket($user, 'COP');
+
+        $funds->credit($car, Money::of(2400000), AllocationSource::Adjustment, null, Carbon::today()->subDays(30), 'Starting balance');
+        $funds->credit($trip, Money::of(600000), AllocationSource::Adjustment, null, Carbon::today()->subDays(30), 'Starting balance');
+        $funds->credit($default, Money::of(310000), AllocationSource::Adjustment, null, Carbon::today()->subDays(30), 'Starting balance');
     }
 }

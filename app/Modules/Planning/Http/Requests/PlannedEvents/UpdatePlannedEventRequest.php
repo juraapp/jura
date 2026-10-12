@@ -26,6 +26,9 @@ class UpdatePlannedEventRequest extends FormRequest
             'category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $userId)->orWhereNull('user_id'))],
             'certainty' => ['required', 'in:confirmed,expected,speculative'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'allocation_overrides' => ['nullable', 'array'],
+            'allocation_overrides.*.bucket_id' => ['required', 'integer', Rule::exists('buckets', 'id')->where('user_id', $userId)],
+            'allocation_overrides.*.amount' => ['required', 'numeric', 'gt:0'],
             'scope' => ['nullable', 'in:this,future'],
         ];
     }
