@@ -277,4 +277,28 @@ class ForecastEngineTest extends TestCase
 
         $this->assertSame('300.00', $result->endBalances[1]->toDecimalString());
     }
+
+    public function test_buying_from_a_completing_bucket_closes_it_and_steps_up_the_bucket_waiting_for_it(): void
+    {
+        $savings = new EngineBucket(1, FillRule::Fixed, '100', null, true, Money::zero(), null, BudgetPeriodType::Monthly, CarryOverPolicy::Carry, null, false,
+            stepUpValue: '300', stepUpAfterBucketId: 2);
+        $car = new EngineBucket(2, FillRule::Fixed, '500', Money::of(1000), true, Money::zero(), null, null, CarryOverPolicy::Overflow, 3, false,
+            completesOnPurchase: true);
+        $rest = new EngineBucket(3, FillRule::Fixed, '50', null, true, Money::zero(), null, null, CarryOverPolicy::Carry, null, true);
+
+        $result = (new ForecastEngine(new Waterfall))->run(
+            new EngineInput($this->date('2026-10-01'), $this->date('2026-12-31'), [$savings, $car, $rest], [
+                $this->income('2026-10-02', 2000),
+                $this->income('2026-11-02', 2000),
+                $this->income('2026-12-02', 2000),
+            ]),
+            [new EngineLine(1, 'Car', Money::of(1000), 2, null, null, 3, null)],
+        );
+
+        // Oct: savings 100, car 500. Nov: savings 100, car 500 -> bought for 1000 (the 1000 at its target), bucket closed.
+        // Dec: car no longer takes income, savings steps up to 300.
+        $this->assertSame('2026-11-02', $result->lines[0]->purchaseDate?->toDateString());
+        $this->assertSame('0.00', $result->endBalances[2]->toDecimalString());
+        $this->assertSame('500.00', $result->endBalances[1]->toDecimalString());
+    }
 }

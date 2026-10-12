@@ -58,6 +58,15 @@ trait BucketRules
                     ? $fail('The percentage cannot be more than 100.')
                     : null,
             ],
+            'step_up_value' => ['nullable', 'numeric', 'gt:0', 'required_with:step_up_after_bucket_id'],
+            'step_up_after_bucket_id' => [
+                'nullable',
+                'integer',
+                'required_with:step_up_value',
+                Rule::exists('buckets', 'id')->where('user_id', $userId)->where('currency', strtoupper((string) $this->input('currency')))->whereNotNull('cap_amount'),
+                ...($editing !== null ? [Rule::notIn([$editing->id])] : []),
+            ],
+            'completes_on_purchase' => ['nullable', 'boolean'],
             'carry_over' => ['nullable', Rule::enum(CarryOverPolicy::class)],
             'overflow_bucket_id' => [
                 Rule::requiredIf(fn () => $this->input('carry_over') === CarryOverPolicy::Overflow->value),

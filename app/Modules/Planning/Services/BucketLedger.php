@@ -6,6 +6,7 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Enums\BucketKind;
+use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Shared\Support\Money;
@@ -73,6 +74,59 @@ class BucketLedger
                 ->whereBetween('date', [$period->startOf($moment)->format('Y-m-d'), $period->endOf($moment)->format('Y-m-d')])
                 ->sum('amount')
         );
+    }
+
+    /**
+     * The fill value that applies on a date: the step-up value once the bucket it waits for has reached
+     * its target, counted from the start of the current cycle ("from the following month onward").
+     */
+    public function fillValueFor(Bucket $bucket, CarbonInterface $date): ?string
+    {
+        $value = $bucket->fill_value !== null ? (string) $bucket->fill_value : null;
+
+        if ($bucket->step_up_value === null || $bucket->step_up_after_bucket_id === null) {
+            return $value;
+        }
+
+        $trigger = $bucket->stepUpAfter;
+        if ($trigger === null) {
+            return $value;
+        }
+
+        $period = $bucket->cyclePeriod();
+        $cutoff = $period !== null
+            ? Carbon::instance($period->startOf($date->toDateTimeImmutable()))->subDay()
+            : Carbon::instance($date)->startOfDay();
+
+        $reached = $trigger->completed_on !== null && $trigger->completed_on->lte($cutoff)
+            || ($trigger->cap_amount !== null && ! $this->balance($trigger, $cutoff)->lessThan($trigger->cap_amount));
+
+        return $reached ? (string) $bucket->step_up_value : $value;
+    }
+
+    /**
+     * Closes a bucket whose goal is done: what is left in it moves to its overflow bucket (or the default one)
+     * and it stops receiving income.
+     */
+    public function complete(Bucket $bucket, CarbonInterface $date): void
+    {
+        DB::transaction(function () use ($bucket, $date) {
+            $left = $this->balance($bucket);
+            $target = $bucket->carry_over === CarryOverPolicy::Overflow && $bucket->overflow_bucket_id !== null
+                ? Bucket::forUser($bucket->user_id)->find($bucket->overflow_bucket_id)
+                : $this->defaultBucket($bucket->user_id, $bucket->currency);
+
+            if ($left->isPositive() && $target !== null && ! $target->is($bucket)) {
+                $this->move($bucket, $target, $left, null, AllocationSource::Carry, $date);
+            }
+
+            $bucket->update(['completed_on' => $date->toDateString()]);
+        });
+    }
+
+    public function reopen(Bucket $bucket): void
+    {
+        $bucket->update(['completed_on' => null]);
     }
 
     /**

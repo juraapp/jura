@@ -71,6 +71,10 @@ class BucketController extends Controller
                 'fillRule' => $bucket->fill_rule?->value,
                 'fillRuleLabel' => $bucket->fill_rule?->label(),
                 'fillValue' => $bucket->fill_value !== null ? (float) $bucket->fill_value : null,
+                'stepUpValue' => $bucket->step_up_value !== null ? (float) $bucket->step_up_value : null,
+                'stepUpAfterBucketId' => $bucket->step_up_after_bucket_id,
+                'completedOn' => $bucket->completed_on?->toDateString(),
+                'completesOnPurchase' => $bucket->completes_on_purchase,
                 'carryOver' => $bucket->carry_over->value,
                 'carryOverLabel' => $bucket->carry_over->label(),
                 'overflowBucketId' => $bucket->overflow_bucket_id,
@@ -299,6 +303,24 @@ class BucketController extends Controller
             'released' => $figures['released']->toFloat(),
             'closing' => $figures['closing']->toFloat(),
         ];
+    }
+
+    public function complete(Bucket $bucket, BucketLedger $funds): RedirectResponse
+    {
+        $this->authorize('update', $bucket);
+
+        $funds->complete($bucket, today());
+
+        return back()->with('success', __('buckets.completed'));
+    }
+
+    public function reopen(Bucket $bucket, BucketLedger $funds): RedirectResponse
+    {
+        $this->authorize('update', $bucket);
+
+        $funds->reopen($bucket);
+
+        return back()->with('success', __('buckets.reopened'));
     }
 
     public function reset(Bucket $bucket, BucketLedger $funds): RedirectResponse

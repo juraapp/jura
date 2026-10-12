@@ -60,6 +60,10 @@ class PlannerService
                 (int) $bucket->cycle_every,
                 $bucket->cycle_anchor !== null ? CarbonImmutable::parse($bucket->cycle_anchor->toDateString()) : null,
                 $this->funds->receivedInCycle($bucket, $start),
+                $bucket->step_up_value !== null ? (string) $bucket->step_up_value : null,
+                $bucket->step_up_after_bucket_id,
+                $bucket->completes_on_purchase,
+                $bucket->completed_on !== null ? CarbonImmutable::parse($bucket->completed_on->toDateString()) : null,
             );
         })->values()->all();
 

@@ -28,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'name', 'kind', 'currency', 'priority', 'category_id', 'cycle', 'cycle_every', 'cycle_anchor', 'cycle_goal', 'cap_amount', 'fill_rule', 'fill_value',
-    'carry_over', 'overflow_bucket_id', 'allowed_account_ids', 'is_default', 'tracking_started_on', 'cycle_closed_through',
+    'step_up_value', 'step_up_after_bucket_id', 'completed_on', 'completes_on_purchase', 'carry_over', 'overflow_bucket_id', 'allowed_account_ids', 'is_default', 'tracking_started_on', 'cycle_closed_through',
 ])]
 class Bucket extends Model
 {
@@ -49,6 +49,8 @@ class Bucket extends Model
             'is_default' => 'boolean',
             'tracking_started_on' => 'date',
             'cycle_closed_through' => 'date',
+            'completed_on' => 'date',
+            'completes_on_purchase' => 'boolean',
             'priority' => 'integer',
         ];
     }
@@ -95,6 +97,19 @@ class Bucket extends Model
         }
 
         return $this->cap_amount;
+    }
+
+    /**
+     * Whether the bucket has been closed (its goal reached and spent) and no longer receives income.
+     */
+    public function isCompletedOn(CarbonInterface $date): bool
+    {
+        return $this->completed_on !== null && $this->completed_on->lte($date->copy()->startOfDay());
+    }
+
+    public function stepUpAfter(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'step_up_after_bucket_id');
     }
 
     public function cycles(): HasMany

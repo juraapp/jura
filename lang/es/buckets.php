@@ -12,6 +12,8 @@ return [
     'opening_balance' => 'Saldo inicial',
     'reset_note' => 'Restablecido a cero',
     'reset' => 'Fondos restablecidos a cero.',
+    'completed' => 'Balde completado. Lo que sobraba se movió.',
+    'reopened' => 'Balde reabierto.',
     'allocation_locked' => 'Este movimiento viene de tus ingresos o de un ciclo cerrado y no se puede eliminar aquí.',
     'allocation_removed' => 'Movimiento eliminado.',
     'cycle_limit_saved' => 'Límite de este ciclo guardado.',

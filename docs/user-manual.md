@@ -192,6 +192,9 @@ income arrives:
 - **Percent of income**: for example 20% of every income.
 - **Fixed amount**: for example 150,000 from every income. If the bucket has a cycle, the amount is per cycle instead:
   income tops the bucket up to it, so three payments in a month still give 150,000 in total, not 450,000.
+- **Raise it later** (advanced options): from the cycle *after* another bucket reaches its target (or is completed),
+  a fixed or percent fill switches to a new value. Example: General savings 150,000 per month, then 300,000 once the
+  Purchase fund is full. It takes effect from the following cycle, never mid-cycle.
 - **Share of what is left**: a percentage of the income that is still unclaimed when this bucket is reached in the
   priority order. Put it after the fixed buckets: for example Purchase 80.95% of what is left (17/21) and
   Restoration 100% of what is left; anything the Purchase bucket cannot take (it is full) flows on to Restoration.
@@ -251,6 +254,12 @@ example a "Physical money" stash. Income in other accounts skips it.
 
 **Planned spending.** Expenses you plan in **Cash flow** for a spending bucket's category show on its card as
 **planned**, with what would remain **after plans**.
+
+**Completing a bucket.** When a goal is done, a savings bucket can be **completed**: what is left in it moves to
+its "Move leftover to" bucket (or the default bucket) and it stops receiving income. Tick *Close this bucket when a
+wish-list item paid from it is bought* and buying the item does this for you (the planner does it too, on the
+purchase date). Use **Mark as completed** on the card to do it by hand and **Reopen** to undo it. Undoing a
+purchase reopens the bucket, but the leftover that already moved stays where it went.
 
 ## Wish list and projects
 

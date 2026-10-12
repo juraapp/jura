@@ -83,11 +83,11 @@ class CycleProjector
             }
 
             $inputs = $buckets
-                ->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($event->account_id))
+                ->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($event->account_id) && ! $bucket->isCompletedOn($date))
                 ->map(fn (Bucket $bucket) => new WaterfallBucket(
                     $bucket->id,
                     $bucket->fill_rule,
-                    $bucket->fill_value !== null ? (string) $bucket->fill_value : null,
+                    $this->funds->fillValueFor($bucket, $date),
                     $this->room($bucket, $balances[$bucket->id], $date),
                     $this->receivedOn($bucket, $received, $date),
                 ))->values()->all();
