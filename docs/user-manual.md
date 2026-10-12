@@ -15,13 +15,14 @@ for everyday use. Sections marked **Advanced** are optional extras.
 6. [Categories](#categories)
 7. [Cash flow (planned income and expenses)](#cash-flow-planned-income-and-expenses)
 8. [Buckets (budgets and savings)](#buckets-budgets-and-savings)
-9. [Savings goals](#savings-goals)
-10. [Recurring expenses](#recurring-expenses)
-11. [Reports](#reports)
-12. [Notifications](#notifications)
-13. [Preferences, profile and appearance](#preferences-profile-and-appearance)
-14. [Common questions](#common-questions)
-15. [Coming soon](#coming-soon)
+9. [Wish list and projects](#wish-list-and-projects)
+10. [Savings goals](#savings-goals)
+11. [Recurring expenses](#recurring-expenses)
+12. [Reports](#reports)
+13. [Notifications](#notifications)
+14. [Preferences, profile and appearance](#preferences-profile-and-appearance)
+15. [Common questions](#common-questions)
+16. [Coming soon](#coming-soon)
 
 ---
 
@@ -189,6 +190,31 @@ example a "Physical money" stash. Income in other accounts skips it.
 **Planned spending.** Expenses you plan in **Cash flow** for a spending bucket's category show on its card as
 **planned**, with what would remain **after plans**.
 
+## Wish list and projects
+
+Menu: **Planning → Wish list**.
+
+A place for everything you would like to get. Group things into **projects** (a home studio, a trip), **hobbies**
+(cycling) or any other grouping, and rate how much you want each one.
+
+- **New project** creates a group with a name, a type and a colour. Deleting a project keeps its items under
+  "No project".
+- **New item** needs a name and a price. Set **how much you want it** (1 to 5), and under *Funding, dates and limits*
+  you can add a **bucket** to pay for it from, a date you would like it by, and a link.
+- **Can only be bought with**: tick the accounts that may pay for it, for example "Physical money" only. Leave all
+  unchecked to allow any account. If the bucket is also restricted to certain accounts, only accounts allowed by both
+  can be used.
+- When an item is linked to a bucket, it shows a **% funded** bar: the bucket's available money compared with the
+  price. Items that share one bucket each compare against the same pot, so their bars overlap rather than add up.
+
+**Buying.** Press the check button (*Mark as purchased*), choose the account and category, and confirm the final
+price. Jura records the real expense and, if the item has a bucket, spends that money from the bucket in the same step.
+If the bucket holds less than the price, it pays what it has and the rest is simply paid from your account.
+**Undo purchase** removes the expense and returns the money to the bucket.
+
+**Dropping.** The forward button marks an item as *Dropped* (no longer wanted) without deleting it. Tick *Show
+purchased and dropped items* to see them, and use the arrow to want one again.
+
 ## Savings goals
 
 Menu: **Planning → Savings goals**.
@@ -261,5 +287,5 @@ mixes them.
 
 ## Coming soon
 
-Project budgeting is being built in stages. Planned cash flow and buckets are available now (see above). Still to
-come: a wish list grouped by project, a planner that compares purchase orders, and forecast reports. This manual will gain a section for each as it ships.
+Project budgeting is being built in stages. Planned cash flow, buckets and the wish list are available now (see above). Still
+to come: a planner that compares purchase orders, and forecast reports. This manual will gain a section for each as it ships.

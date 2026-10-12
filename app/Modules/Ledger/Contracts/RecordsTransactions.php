@@ -23,4 +23,9 @@ interface RecordsTransactions
      * @param  array<string, mixed>  $data  account_id, category_id, amount, date, description
      */
     public function recordRecurring(User $user, TransactionType $type, array $data, int $recurringTransactionId): void;
+
+    /**
+     * Delete a transaction this user previously recorded (for example to undo a purchase).
+     */
+    public function forget(User $user, int $transactionId): void;
 }

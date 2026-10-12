@@ -10,8 +10,11 @@ use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Enums\Certainty;
 use App\Modules\Planning\Enums\FillRule;
+use App\Modules\Planning\Enums\ProjectKind;
 use App\Modules\Planning\Enums\RecurringFrequency;
 use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Models\Project;
+use App\Modules\Planning\Models\WishlistItem;
 use App\Modules\Planning\Services\BucketLedger;
 use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Shared\Support\Money;
@@ -37,6 +40,10 @@ class DemoDataSeeder extends Seeder
 
         if (! Bucket::forUser($user)->exists()) {
             $this->seedBuckets($user);
+        }
+
+        if (! Project::forUser($user)->exists()) {
+            $this->seedWishlist($user);
         }
     }
 
@@ -112,5 +119,34 @@ class DemoDataSeeder extends Seeder
         $funds->credit($car, Money::of(2400000), AllocationSource::Adjustment, null, Carbon::today()->subDays(30), 'Starting balance');
         $funds->credit($trip, Money::of(600000), AllocationSource::Adjustment, null, Carbon::today()->subDays(30), 'Starting balance');
         $funds->credit($default, Money::of(310000), AllocationSource::Adjustment, null, Carbon::today()->subDays(30), 'Starting balance');
+    }
+
+    private function seedWishlist(User $user): void
+    {
+        $cash = Account::forUser($user)->where('name', 'Physical Money')->first();
+        $funds = app(BucketLedger::class);
+
+        $hobbyFund = Bucket::factory()->savings()->for($user)->priority(25)->rule(FillRule::Percent, 5)->create([
+            'name' => 'Hobby fund', 'currency' => 'COP', 'cap_amount' => 3000000,
+        ]);
+        $funds->credit($hobbyFund, Money::of(900000), AllocationSource::Adjustment, null, Carbon::today()->subDays(20), 'Starting balance');
+
+        $cycling = Project::factory()->for($user)->create(['name' => 'Cycling', 'kind' => ProjectKind::Hobby, 'color' => '#16a34a']);
+        $studio = Project::factory()->for($user)->create(['name' => 'Home studio', 'kind' => ProjectKind::Project, 'color' => '#7c3aed']);
+
+        $items = [
+            [$cycling, 'Road bike', 2500000, 5, $hobbyFund, null, Carbon::today()->addMonths(5)],
+            [$cycling, 'Helmet and lights', 380000, 3, $hobbyFund, null, null],
+            [$studio, 'Studio monitor pair', 1800000, 4, null, null, Carbon::today()->addMonths(3)],
+            [$studio, 'Standing desk', 1200000, 2, null, $cash ? [$cash->id] : null, null],
+            [null, 'Camera lens', 2200000, 3, null, null, null],
+        ];
+
+        foreach ($items as [$project, $name, $price, $importance, $bucket, $accounts, $desiredBy]) {
+            WishlistItem::factory()->for($user)->create([
+                'project_id' => $project?->id, 'bucket_id' => $bucket?->id, 'name' => $name, 'price' => $price,
+                'importance' => $importance, 'allowed_account_ids' => $accounts, 'desired_by' => $desiredBy, 'currency' => 'COP',
+            ]);
+        }
     }
 }

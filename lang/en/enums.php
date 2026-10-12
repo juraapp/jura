@@ -89,4 +89,17 @@ return [
         'spend' => 'Purchase',
         'adjustment' => 'Manual adjustment',
     ],
+
+    'project_kind' => [
+        'project' => 'Project',
+        'hobby' => 'Hobby',
+        'category' => 'Category',
+        'other' => 'Other',
+    ],
+
+    'wishlist_status' => [
+        'wanted' => 'Wanted',
+        'purchased' => 'Purchased',
+        'dropped' => 'Dropped',
+    ],
 ];
