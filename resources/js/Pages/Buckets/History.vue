@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
@@ -20,22 +21,23 @@ const props = defineProps({
 });
 
 const page = usePage();
+const { t } = useI18n();
 const format = useFormat();
 const { isDark } = useDarkMode();
 const locale = () => page.props.auth.user?.locale ?? 'en';
 const palette = () => CHART_PALETTE[isDark.value ? 'dark' : 'light'];
 
-const range = (cycle) => `${format.date(cycle.start)} to ${format.date(cycle.end)}`;
+const range = (cycle) => t('ui.bucket_history.range', { from: format.date(cycle.start), to: format.date(cycle.end) });
 const shortRange = (cycle) => format.date(cycle.start, { year: false });
 
 // Oldest first on the chart, then the cycle still running (dashed values are estimates).
 const timeline = computed(() => [...props.cycles].reverse().concat(props.current ? [props.current] : []));
 
 const series = computed(() => [
-    { name: 'Filled', type: 'column', data: timeline.value.map((cycle) => cycle.filled) },
-    { name: 'Spent', type: 'column', data: timeline.value.map((cycle) => cycle.spent) },
-    { name: 'Overflow out', type: 'column', data: timeline.value.map((cycle) => cycle.released) },
-    { name: 'Left at the end', type: 'line', data: timeline.value.map((cycle) => cycle.closing) },
+    { name: t('ui.bucket_history.s_filled'), type: 'column', data: timeline.value.map((cycle) => cycle.filled) },
+    { name: t('ui.bucket_history.s_spent'), type: 'column', data: timeline.value.map((cycle) => cycle.spent) },
+    { name: t('ui.bucket_history.s_overflow'), type: 'column', data: timeline.value.map((cycle) => cycle.released) },
+    { name: t('ui.bucket_history.s_left'), type: 'line', data: timeline.value.map((cycle) => cycle.closing) },
 ]);
 
 const options = computed(() => ({
@@ -43,7 +45,7 @@ const options = computed(() => ({
     colors: [palette().income, palette().expense, palette().series[3], palette().savings],
     stroke: { width: [0, 0, 0, 3] },
     plotOptions: { bar: { columnWidth: '55%' } },
-    xaxis: { categories: timeline.value.map((cycle) => `${shortRange(cycle)}${cycle.isOpen ? ' (now)' : ''}`), labels: { style: { colors: palette().text } } },
+    xaxis: { categories: timeline.value.map((cycle) => `${shortRange(cycle)}${cycle.isOpen ? ` (${t('ui.bucket_history.now_label')})` : ''}`), labels: { style: { colors: palette().text } } },
     yaxis: { labels: { style: { colors: palette().text }, formatter: (v) => formatCompact(v, locale()) } },
     grid: { borderColor: palette().grid },
     legend: { labels: { colors: Array(4).fill(palette().text), useSeriesColors: false } },
@@ -56,18 +58,18 @@ const saveLimit = (value) => router.post(cycleLimit.url(props.bucket.id), { cap_
 </script>
 
 <template>
-    <Head :title="`${bucket.name} history`" />
+    <Head :title="$t('ui.bucket_history.title', { name: bucket.name })" />
 
     <AuthenticatedLayout>
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ bucket.name }}: cycle history</h2>
+                    <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.bucket_history.heading', { name: bucket.name }) }}</h2>
                     <p v-if="bucket.cycleDescription" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {{ bucket.cycleDescription }}. At the end: {{ bucket.carryOverLabel.toLowerCase() }}<template v-if="bucket.overflowBucket"> ({{ bucket.overflowBucket }})</template>.
+                        {{ $t('ui.bucket_history.cycle_end', { description: bucket.cycleDescription, policy: bucket.carryOverLabel.toLowerCase() }) }}<template v-if="bucket.overflowBucket"> ({{ bucket.overflowBucket }})</template>.
                     </p>
                 </div>
-                <Link :href="bucketsIndex.url()" class="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400">Back to buckets</Link>
+                <Link :href="bucketsIndex.url()" class="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400">{{ $t('ui.bucket_history.back') }}</Link>
             </div>
         </template>
 
@@ -75,65 +77,65 @@ const saveLimit = (value) => router.post(cycleLimit.url(props.bucket.id), { cap_
             <EmptyState
                 v-if="!bucket.cycleDescription"
                 icon="arrow-path"
-                title="This bucket has no cycle"
-                description="Give it a cycle (for example every month) in the bucket's settings to see how it fills and empties over time."
+                :title="$t('ui.bucket_history.no_cycle')"
+                :description="$t('ui.bucket_history.no_cycle_hint')"
             />
 
             <template v-else>
                 <section v-if="current" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Now: {{ range(current) }}</h3>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ $t('ui.bucket_history.now', { range: range(current) }) }}</h3>
                     <dl class="mt-3 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-                        <div><dt class="text-xs text-gray-400">Started with</dt><dd><Money :amount="current.opening" :currency="bucket.currency" /></dd></div>
-                        <div><dt class="text-xs text-gray-400">Filled so far</dt><dd class="text-green-600 dark:text-green-400"><Money :amount="current.filled + current.movedIn" :currency="bucket.currency" /></dd></div>
-                        <div><dt class="text-xs text-gray-400">Spent / moved out</dt><dd class="text-red-600 dark:text-red-400"><Money :amount="current.spent + current.movedOut" :currency="bucket.currency" /></dd></div>
+                        <div><dt class="text-xs text-gray-400">{{ $t('ui.bucket_history.started') }}</dt><dd><Money :amount="current.opening" :currency="bucket.currency" /></dd></div>
+                        <div><dt class="text-xs text-gray-400">{{ $t('ui.bucket_history.filled_so_far') }}</dt><dd class="text-green-600 dark:text-green-400"><Money :amount="current.filled + current.movedIn" :currency="bucket.currency" /></dd></div>
+                        <div><dt class="text-xs text-gray-400">{{ $t('ui.bucket_history.spent_out') }}</dt><dd class="text-red-600 dark:text-red-400"><Money :amount="current.spent + current.movedOut" :currency="bucket.currency" /></dd></div>
                         <div>
-                            <dt class="text-xs text-gray-400">Expected still to fill</dt>
-                            <dd class="italic text-gray-500"><Money :amount="current.provisional" :currency="bucket.currency" /> (provisional)</dd>
+                            <dt class="text-xs text-gray-400">{{ $t('ui.bucket_history.still_fill') }}</dt>
+                            <dd class="italic text-gray-500"><Money :amount="current.provisional" :currency="bucket.currency" /> {{ $t('ui.bucket_history.provisional') }}</dd>
                         </div>
                     </dl>
                     <p v-if="bucket.cycleGoal" class="mt-3 text-sm text-gray-700 dark:text-gray-200">
-                        Goal this cycle: <Money :amount="bucket.cycleGoal" :currency="bucket.currency" />. Received so far:
+                        {{ $t('ui.bucket_history.goal_cycle') }} <Money :amount="bucket.cycleGoal" :currency="bucket.currency" />. {{ $t('ui.bucket_history.received') }}
                         <Money :amount="current.filled + current.movedIn" :currency="bucket.currency" />.
                     </p>
                     <p v-if="current.released > 0" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                        If you spend only what is planned, about <Money :amount="current.released" :currency="bucket.currency" /> moves on when this cycle ends.
+                        {{ $t('ui.bucket_history.moves_on', { amount: format.money(current.released, bucket.currency) }) }}
                     </p>
 
                     <form v-if="bucket.kind === 'spending'" class="mt-4 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-4 dark:border-gray-700" @submit.prevent="saveLimit(limit)">
                         <div>
-                            <InputLabel for="cycle_limit" :value="`Limit for this cycle only (usually ${bucket.cap ?? '-'})`" />
-                            <TextInput id="cycle_limit" v-model="limit" type="number" step="0.01" min="0.01" class="mt-1 block w-48" placeholder="Same as usual" />
+                            <InputLabel for="cycle_limit" :value="$t('ui.bucket_history.limit_label', { cap: bucket.cap ?? '-' })" />
+                            <TextInput id="cycle_limit" v-model="limit" type="number" step="0.01" min="0.01" class="mt-1 block w-48" :placeholder="$t('ui.bucket_history.same_as_usual')" />
                         </div>
-                        <PrimaryButton type="submit">Save</PrimaryButton>
-                        <SecondaryButton v-if="current.capOverride" type="button" @click="limit = ''; saveLimit('')">Use the usual limit</SecondaryButton>
+                        <PrimaryButton type="submit">{{ $t('ui.bucket_history.save') }}</PrimaryButton>
+                        <SecondaryButton v-if="current.capOverride" type="button" @click="limit = ''; saveLimit('')">{{ $t('ui.bucket_history.use_usual') }}</SecondaryButton>
                     </form>
                 </section>
 
                 <section v-if="timeline.length > 1">
-                    <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">How it filled and emptied</h3>
+                    <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $t('ui.bucket_history.chart_title') }}</h3>
                     <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                         <apexchart :key="isDark" type="line" height="320" :options="options" :series="series" />
                     </div>
-                    <p class="mt-2 text-xs text-gray-400">The last group is the cycle still running: its figures are what has happened so far plus the plan.</p>
+                    <p class="mt-2 text-xs text-gray-400">{{ $t('ui.bucket_history.chart_note') }}</p>
                 </section>
 
                 <section>
-                    <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Finished cycles</h3>
+                    <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $t('ui.bucket_history.finished') }}</h3>
                     <p v-if="!cycles.length" class="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-400 dark:border-gray-700">
-                        No cycle has ended yet. Each one is saved here when it closes.
+                        {{ $t('ui.bucket_history.none_finished') }}
                     </p>
                     <div v-else class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                         <table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
                             <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-900/40 dark:text-gray-400">
                                 <tr>
-                                    <th class="px-4 py-3 text-left">Cycle</th>
-                                    <th class="px-4 py-3 text-right">Started with</th>
-                                    <th class="px-4 py-3 text-right">Filled</th>
-                                    <th class="px-4 py-3 text-right">Moved in / out</th>
-                                    <th class="px-4 py-3 text-right">Spent</th>
-                                    <th class="px-4 py-3 text-right">Overflow out</th>
-                                    <th v-if="bucket.cycleGoal" class="px-4 py-3 text-right">Goal</th>
-                                    <th class="px-4 py-3 text-right">Left</th>
+                                    <th class="px-4 py-3 text-left">{{ $t('ui.bucket_history.col_cycle') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ $t('ui.bucket_history.col_started') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ $t('ui.bucket_history.col_filled') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ $t('ui.bucket_history.col_moved') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ $t('ui.bucket_history.col_spent') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ $t('ui.bucket_history.col_overflow') }}</th>
+                                    <th v-if="bucket.cycleGoal" class="px-4 py-3 text-right">{{ $t('ui.bucket_history.col_goal') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ $t('ui.bucket_history.col_left') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
