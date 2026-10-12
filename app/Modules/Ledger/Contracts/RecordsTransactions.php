@@ -11,6 +11,13 @@ use App\Modules\Ledger\Enums\TransactionType;
 interface RecordsTransactions
 {
     /**
+     * Record a plain income or expense and return the new transaction's id.
+     *
+     * @param  array<string, mixed>  $data  account_id, category_id, amount, date, description, notes
+     */
+    public function record(User $user, TransactionType $type, array $data): int;
+
+    /**
      * Record an income or expense generated from a recurring template.
      *
      * @param  array<string, mixed>  $data  account_id, category_id, amount, date, description

@@ -31,6 +31,15 @@ class TransactionService implements RecordsTransactions
         return $this->createSimple($user, TransactionType::Expense, $data);
     }
 
+    public function record(User $user, TransactionType $type, array $data): int
+    {
+        return match ($type) {
+            TransactionType::Income => $this->createIncome($user, $data)->id,
+            TransactionType::Expense => $this->createExpense($user, $data)->id,
+            default => throw new \InvalidArgumentException('Only income and expense can be recorded this way.'),
+        };
+    }
+
     public function recordRecurring(User $user, TransactionType $type, array $data, int $recurringTransactionId): void
     {
         $transaction = $type === TransactionType::Income
