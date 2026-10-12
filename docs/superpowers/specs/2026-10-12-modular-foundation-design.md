@@ -11,8 +11,8 @@ without deepening the `Transaction` hub coupling.
 ## Modules
 | Module | Owns |
 |---|---|
-| `Shared` (kernel) | `Money`, `AsMoney`, `BelongsToUser`, base `Controller`, shared enums that cross modules |
-| `Identity` | `User`, auth controllers/requests, profile, preferences, `HandleInertiaRequests` |
+| `Shared` (kernel) | `Money`, `AsMoney`, `BelongsToUser`, base `Controller`, `HandleInertiaRequests`, `SharedServiceProvider` |
+| `Identity` | `User`, auth controllers/requests, profile, preferences |
 | `Ledger` | `Account`, `Category`, `Transaction`, `TransactionService`, `BalanceCalculator`, CSV import, `TransactionsMutated`, `InvalidateBalanceCache`, their policies/requests/controllers/factories |
 | `Planning` | `Budget`, `BudgetForecast`, `SavingsGoal`, `SavingsGoalContribution`, `RecurringTransaction`, services, `GenerateDueRecurringTransactions`, policies/requests/controllers/factories |
 | `Reporting` | `ReportService`, `InsightService`, `DashboardController`, `ReportController`, PDF/CSV controllers |
@@ -22,19 +22,15 @@ Layout per module: `Models/ Services/ Http/{Controllers,Requests}/ Policies/ Enu
 Contracts/ Database/Factories/` (only the folders that have content), namespace `App\Modules\<Module>\...`.
 
 ## Boundary rules
-1. A module may import another module's `Contracts\*`, `Events\*`, `Enums\*` and `Shared`. It may not import
-   another module's `Models`, `Services`, `Http` or `Policies`.
-   - Exception: models may relate to models of a module they depend on (`Planning\Budget` -> `Ledger\Category`).
-     Dependencies point one way: `Planning`, `Reporting` and `Notifications` may depend on `Ledger`;
-     `Ledger` depends on nothing but `Shared`. `Notifications` also depends on `Planning`.
-2. Cross-module reads use contracts returning plain data (arrays/DTOs), for example
-   `Ledger\Contracts\LedgerQuery` (cash flow by category/account/period, account balances, net worth).
-   `Reporting` and `Planning` call it instead of querying `Transaction` directly.
-3. Cross-module writes use events. `RecurringTransactionService` creates transactions through
-   `Ledger\Contracts\RecordsTransactions` (a thin interface over `TransactionService`).
+1. Always allowed across modules: `Shared`, another module's `Contracts\*`, `Events\*`, `Enums\*`, and `Identity\Models\User`.
+2. Another module's `Models\*` may be referenced only from (a) files under a `Models/` directory
+   (relationships), or (b) the read-side modules `Reporting` and `Notifications`, which only read.
+3. Everything else (`Services`, `Http`, `Policies`, `Jobs`, ...) of another module is off limits. Cross-module
+   reads/writes go through contracts: `Ledger\Contracts\{Balances, LedgerQuery, RecordsTransactions}` and
+   `Planning\Contracts\BudgetProgress`.
 4. Contracts are bound in each module's service provider, registered in `bootstrap/providers.php`.
-5. An architecture test (`tests/Architecture/ModuleBoundariesTest.php`) scans `use` statements and fails on
-   violations. It starts with an explicit allowlist of known violations, and the allowlist may only shrink.
+5. An architecture test (`tests/Architecture/ModuleBoundariesTest.php`) scans module sources and fails on
+   violations. It is strict from the start, with no allowlist.
 
 ## What does not move
 - URLs, route names and route files (`routes/web.php` stays; controllers are re-imported). Wayfinder
@@ -46,8 +42,8 @@ Contracts/ Database/Factories/` (only the folders that have content), namespace 
 ## Known traps to handle during the move
 - **Policy auto-discovery:** moved models need their policy found. Verify with a test, otherwise register with
   `Gate::policy` in the module provider.
-- **Factories:** `HasFactory` guesses `Database\Factories\<Model>Factory`. Moved models need
-  `#[UseFactory]` or `newFactory()`.
+- **Factories:** factories stay in `database/factories/`; `SharedServiceProvider` resolves factory <-> model
+  names across modules.
 - **Stored class names:** the `notifications.type` column and any queued/serialised job payloads hold old class
   names. Ship a one-off data migration for notification types, and note queue flush in the deploy notes.
 - **Config references:** `config/auth.php` user model, `AppServiceProvider` event wiring, the scheduler in
