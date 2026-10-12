@@ -259,7 +259,7 @@ class BucketsTest extends TestCase
 
         $this->actingAs($user)->delete("/planning/buckets/{$bucket->id}")->assertRedirect();
 
-        $this->assertEquals(400, Allocation::where("bucket_id", $default->id)->sum("amount"));
+        $this->assertEquals(400, Allocation::where('bucket_id', $default->id)->sum('amount'));
         $this->assertDatabaseMissing('buckets', ['id' => $bucket->id]);
     }
 
@@ -283,5 +283,18 @@ class BucketsTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)->get('/planning/budgets')->assertRedirect('/planning/buckets');
+    }
+
+    public function test_priority_zero_is_the_highest_priority_and_negative_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)->post('/planning/buckets', $this->spendingPayload($category) + ['priority' => 0])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(0, Bucket::firstOrFail()->priority);
+
+        $this->actingAs($user)->post('/planning/buckets', $this->spendingPayload($category) + ['priority' => -1])
+            ->assertSessionHasErrors('priority');
     }
 }
