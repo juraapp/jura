@@ -23,14 +23,40 @@ Browser → routes/web.php → Controller → Form Request (validation + authori
         → Inertia::render('Pages/Component', [...]) → resources/js/Pages/Component.vue
 ```
 
-- Controllers stay thin: validation lives in `app/Http/Requests/{Domain}/{Store,Update}...Request.php`, business logic lives in `app/Services/*Service.php`. Livewire's per-component validation had no controller equivalent, so every domain module got a matching Form Request pair during the migration.
-- `Inertia::render()` return values become the page's `props`. Props are plain arrays/collections of primitives — Eloquent models and `App\Support\Money` value objects are never passed directly; controllers map them to floats/strings first (`$money->toFloat()`, `$model->toArray()`-style shaping). See any `*Controller@index` for the pattern.
+- Controllers stay thin: validation lives in each module's `Http/Requests/{Domain}/{Store,Update}...Request.php`, business logic lives in the module's `Services/*Service.php`. Livewire's per-component validation had no controller equivalent, so every domain module got a matching Form Request pair during the migration.
+- `Inertia::render()` return values become the page's `props`. Props are plain arrays/collections of primitives — Eloquent models and `App\Modules\Shared\Support\Money` value objects are never passed directly; controllers map them to floats/strings first (`$money->toFloat()`, `$model->toArray()`-style shaping). See any `*Controller@index` for the pattern.
 - Mutating actions (`store`/`update`/`destroy`) return `back()->with('success', __('domain.saved'))` rather than an Inertia redirect to a different page — the current page's props are simply re-fetched.
 - A handful of JSON (non-Inertia) endpoints exist alongside the Inertia ones, for data a page needs to fetch on demand rather than as a prop: `TransactionController@formOptions`/`editData` (feeds the global transaction modal, see `frontend-conventions.md`) and `TransactionImportController@parse`/`store` (feeds the CSV import wizard). These are plain `response()->json(...)` responses hit via `fetch()`, not `router.get()`/`useForm()`.
 
+## Modules
+
+Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` namespaces, no package). Each module has only the folders it needs: `Models/ Services/ Http/{Controllers,Requests}/ Policies/ Enums/ Events/ Listeners/ Contracts/ ...`. Factories stay in `database/factories/`; `SharedServiceProvider` finds the moved models. Routes, route names, tables and `resources/js` are not split by module.
+
+| Module | Owns |
+|---|---|
+| `Shared` | `Money`, `AsMoney`, `BelongsToUser`, base `Controller`, `HandleInertiaRequests` |
+| `Identity` | `User`, auth, profile, preferences |
+| `Ledger` | `Account`, `Category`, `Transaction`, balances, CSV import, `TransactionsMutated`. Source of truth for **actual** data. |
+| `Planning` | `Budget`, `BudgetForecast`, `SavingsGoal`, `RecurringTransaction` (and, next, planned income, buckets, wish list, scenarios). Owns **projected** data. |
+| `Reporting` | dashboard, reports, insights, PDF/CSV export (read-side) |
+| `Notifications` | alert notifications, their listeners and scheduled commands, the notification inbox (read-side) |
+
+**Boundary rules** (enforced by `tests/Architecture/ModuleBoundariesTest.php`):
+
+1. Always allowed across modules: `Shared`, another module's `Contracts`, `Events`, `Enums`, and `Identity\Models\User`.
+2. Another module's `Models` may be referenced only from files under a `Models/` directory (relationships) or from the read-side modules `Reporting` and `Notifications`.
+3. Nothing else (`Services`, `Http`, `Policies`, `Jobs`, ...) of another module may be imported. Cross-module calls go through contracts:
+   - `Ledger\Contracts\Balances`: account balances and net worth.
+   - `Ledger\Contracts\LedgerQuery`: expense totals and account/category option lists.
+   - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions.
+   - `Planning\Contracts\BudgetProgress`: budget spent/remaining/status.
+4. Contracts are bound in each module's service provider; providers are listed in `bootstrap/providers.php`.
+
+To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to `bootstrap/providers.php` if it binds contracts or registers listeners/commands, and run the architecture test. Listeners and commands inside modules are **not auto-discovered**; register them in the module provider.
+
 ## Shared props
 
-`app/Http/Middleware/HandleInertiaRequests.php` shares on every request:
+`app/Modules/Shared/Http/Middleware/HandleInertiaRequests.php` shares on every request:
 
 - `appName` — from `config('app.name')`.
 - `i18n` — `{ locale, messages }`, the single source of truth for both server- and client-rendered strings (see `i18n-conventions.md`).

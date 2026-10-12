@@ -2,6 +2,8 @@
 
 ## Models
 
+Models live in modules: `Ledger` (Account, Category, Transaction), `Planning` (Budget, BudgetForecast, SavingsGoal, SavingsGoalContribution, RecurringTransaction), `Identity` (User). See `architecture.md` for the boundary rules.
+
 | Model | Notes |
 |---|---|
 | `User` | `currency_default`, `locale`, `timezone` drive formatting app-wide (see `preferences`). |
@@ -13,7 +15,7 @@
 | `RecurringTransaction` | Template for auto-generated transactions (weekly/biweekly/monthly/yearly). `is_active` toggles without deleting. |
 | `Transaction` | `type`: income / expense / transfer_out / transfer_in. A transfer is always **two rows** sharing a `transfer_group_id` (see `TransactionService::createTransfer`) — never a single row with a "to account" column. `category_id` is null only for transfer rows. Soft-deletes. |
 
-All models except `Category` (and the join-only `SavingsGoalContribution`) use the `App\Models\Concerns\BelongsToUser` trait.
+All models except `Category` (and the join-only `SavingsGoalContribution`) use the `App\Modules\Shared\Concerns\BelongsToUser` trait.
 
 ## `BelongsToUser`
 
@@ -46,16 +48,16 @@ Use `Model::forUser($user)` (also from the trait) to query outside a request con
 
 (Categories additionally allow `user_id IS NULL` — system categories are valid for everyone.) If you add a new Form Request with a foreign key onto a `BelongsToUser` model, scope it the same way — a bare `exists:table,id` is a cross-tenant data leak, not just a style nit. This exact gap existed in the original Livewire app and was only caught while writing Phase 8's feature tests (see `testing-conventions.md`).
 
-## Key services (`app/Services/`)
+## Key services (inside their modules)
 
-- **`TransactionService`** — the only code path allowed to write a `Transaction`. Owns transfer double-entry (`createTransfer`/`updateTransfer`/`delete` all keep both legs of a transfer in sync or delete them together) and dispatches `TransactionsMutated` so caches invalidate.
-- **`BalanceCalculator`** — derives account balances and net worth from `initial_balance` + the ledger, cached (Redis, 1h TTL, keyed per-account/per-user) because it's read on nearly every page. Cache is invalidated via `forgetAccount()`, called after any mutation that could change a balance.
-- **`BudgetService`** — computes a budget's `spent`/`remaining`/`percentage`/`status` (on_track/near_limit/exceeded) for its current period.
-- **`ReportService`** — the aggregation layer behind the dashboard and the three report pages (monthly/annual/custom): period totals, expense-by-category, expense-by-account, net-worth evolution, etc. Every aggregate is a `Collection` **keyed by currency** — amounts in different currencies are never summed together.
-- **`InsightService`** — turns `ReportService`'s numbers into short, translated sentences ("You spent 12% more than last month"). Every phrase is a parametrized `__()` call over real aggregates, never freeform text.
-- **`TransactionImportService`** — parses/validates/imports a CSV of income/expense rows. Never writes a `Transaction` directly; hands validated rows to `TransactionService` so import-created transactions go through the exact same path as manually-created ones.
-- **`RecurringTransactionService`** — generates due `Transaction`s from active `RecurringTransaction` templates (see the `notify:*` console commands).
+- **`TransactionService`** (Ledger) — the only code path allowed to write a `Transaction`. Owns transfer double-entry (`createTransfer`/`updateTransfer`/`delete` all keep both legs of a transfer in sync or delete them together) and dispatches `TransactionsMutated` so caches invalidate.
+- **`BalanceCalculator`** (Ledger) — derives account balances and net worth from `initial_balance` + the ledger, cached (Redis, 1h TTL, keyed per-account/per-user) because it's read on nearly every page. Cache is invalidated via `forgetAccount()`, called after any mutation that could change a balance.
+- **`BudgetService`** (Planning) — computes a budget's `spent`/`remaining`/`percentage`/`status` (on_track/near_limit/exceeded) for its current period.
+- **`ReportService`** (Reporting) — the aggregation layer behind the dashboard and the three report pages (monthly/annual/custom): period totals, expense-by-category, expense-by-account, net-worth evolution, etc. Every aggregate is a `Collection` **keyed by currency** — amounts in different currencies are never summed together.
+- **`InsightService`** (Reporting) — turns `ReportService`'s numbers into short, translated sentences ("You spent 12% more than last month"). Every phrase is a parametrized `__()` call over real aggregates, never freeform text.
+- **`TransactionImportService`** (Ledger) — parses/validates/imports a CSV of income/expense rows. Never writes a `Transaction` directly; hands validated rows to `TransactionService` so import-created transactions go through the exact same path as manually-created ones.
+- **`RecurringTransactionService`** (Planning) — generates due `Transaction`s from active `RecurringTransaction` templates (see the `notify:*` console commands).
 
 ## Money
 
-`App\Support\Money` is an immutable, bcmath-backed value object — amounts are never manipulated as PHP floats. `App\Casts\AsMoney` is the Eloquent cast used on every money column (`amount`, `initial_balance`, `target_amount`, ...): reading the attribute returns a `Money`, writing accepts a `Money`, numeric string, or float. **Controllers must call `->toFloat()` (or `->toDecimalString()`) before putting a `Money` into an Inertia prop or JSON response** — Inertia doesn't know how to serialize it.
+`App\Modules\Shared\Support\Money` is an immutable, bcmath-backed value object — amounts are never manipulated as PHP floats. `App\Modules\Shared\Casts\AsMoney` is the Eloquent cast used on every money column (`amount`, `initial_balance`, `target_amount`, ...): reading the attribute returns a `Money`, writing accepts a `Money`, numeric string, or float. **Controllers must call `->toFloat()` (or `->toDecimalString()`) before putting a `Money` into an Inertia prop or JSON response** — Inertia doesn't know how to serialize it.
