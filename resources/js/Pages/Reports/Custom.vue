@@ -38,54 +38,54 @@ const formatDate = (date) => format.date(date);
 </script>
 
 <template>
-    <Head title="Custom report" />
+    <Head :title="$t('ui.reports.custom_title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                Custom report
+                {{ $t('ui.reports.custom_title') }}
             </h2>
         </template>
 
         <div class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
             <div class="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div>
-                    <InputLabel for="from" value="From" />
+                    <InputLabel for="from" :value="$t('ui.reports.from')" />
                     <TextInput id="from" v-model="filters.from" type="date" class="mt-1" @change="applyFilters" />
                 </div>
                 <div>
-                    <InputLabel for="to" value="To" />
+                    <InputLabel for="to" :value="$t('ui.reports.to')" />
                     <TextInput id="to" v-model="filters.to" type="date" class="mt-1" @change="applyFilters" />
                 </div>
                 <a :href="csvUrl" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
                     <DynamicIcon name="arrow-down-tray" class="h-4 w-4" />
-                    Export CSV
+                    {{ $t('ui.reports.export_csv') }}
                 </a>
             </div>
 
             <div v-for="currencyTotals in totals" :key="currencyTotals.currency" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <StatCard :label="`Income for the period (${currencyTotals.currency})`" icon="arrow-up-circle" icon-color="text-green-600 dark:text-green-400" icon-bg="bg-green-50 dark:bg-green-500/10">
+                <StatCard :label="$t('ui.reports.income_period', { currency: currencyTotals.currency })" icon="arrow-up-circle" icon-color="text-green-600 dark:text-green-400" icon-bg="bg-green-50 dark:bg-green-500/10">
                     <Money :amount="currencyTotals.income" :currency="currencyTotals.currency" />
                 </StatCard>
-                <StatCard :label="`Expenses for the period (${currencyTotals.currency})`" icon="arrow-down-circle" icon-color="text-red-600 dark:text-red-400" icon-bg="bg-red-50 dark:bg-red-500/10">
+                <StatCard :label="$t('ui.reports.expenses_period', { currency: currencyTotals.currency })" icon="arrow-down-circle" icon-color="text-red-600 dark:text-red-400" icon-bg="bg-red-50 dark:bg-red-500/10">
                     <Money :amount="currencyTotals.expense" :currency="currencyTotals.currency" />
                 </StatCard>
-                <StatCard :label="`Savings for the period (${currencyTotals.currency})`" icon="chart-pie">
+                <StatCard :label="$t('ui.reports.savings_period', { currency: currencyTotals.currency })" icon="chart-pie">
                     <Money :amount="currencyTotals.savings" :currency="currencyTotals.currency" />
                 </StatCard>
             </div>
 
-            <EmptyState v-if="transactions.length === 0" icon="list-bullet" title="No transactions in this date range" />
+            <EmptyState v-if="transactions.length === 0" icon="list-bullet" :title="$t('ui.reports.no_tx')" />
 
             <div v-else class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-900/40">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.reports.date') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.reports.description') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.reports.account') }}</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.reports.amount') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">

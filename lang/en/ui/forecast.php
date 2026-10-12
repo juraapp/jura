@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'title' => 'Forecast report',
+    'heading' => 'Forecast',
+    'intro_solid' => 'solid line',
+    'intro_dashed' => 'dashed lines',
+    'intro_1' => 'The',
+    'intro_2' => 'is your real net worth, month by month, from recorded transactions. The',
+    'intro_3' => 'are estimates built from the income and expenses you planned in',
+    'intro_4' => 'under three levels of trust in your planned income.',
+    'cash_flow' => 'Cash flow',
+    'empty_title' => 'Nothing to forecast yet',
+    'empty_hint' => 'Create an account and plan some income or expenses in Cash flow to see your projected balance here.',
+    'net_worth' => 'Net worth, {currency}',
+    'today' => 'Today:',
+    'recorded' => 'Recorded',
+    'projected' => 'Projected, {view}',
+    'today_label' => 'Today',
+    'month_projected' => 'Month (projected)',
+    'planned_income' => 'Planned income',
+    'planned_expenses' => 'Planned expenses',
+    'view_balance' => '{view} balance',
+    'note' => 'Planned income and expenses are shown for the Expected view. Expenses always count in full.',
+];

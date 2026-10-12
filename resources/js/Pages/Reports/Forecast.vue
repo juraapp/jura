@@ -1,5 +1,6 @@
 <script setup>
 import { Head, Link, usePage } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
@@ -13,6 +14,7 @@ const props = defineProps({
 });
 
 const page = usePage();
+const { t } = useI18n();
 const { isDark } = useDarkMode();
 const locale = () => page.props.auth.user?.locale ?? 'en';
 const palette = () => CHART_PALETTE[isDark.value ? 'dark' : 'light'];
@@ -28,9 +30,9 @@ const seriesFor = (currency) => {
     const lastActual = currency.actual.length ? currency.actual[currency.actual.length - 1].netWorth : currency.opening;
 
     return [
-        { name: 'Recorded', data: [...currency.actual.map((row) => row.netWorth), ...blanks(futureCount)] },
+        { name: t('ui.forecast.recorded'), data: [...currency.actual.map((row) => row.netWorth), ...blanks(futureCount)] },
         ...props.views.map((view) => ({
-            name: `Projected, ${view.label.toLowerCase()}`,
+            name: t('ui.forecast.projected', { view: view.label.toLowerCase() }),
             // Start from the latest recorded value so each dashed line visibly continues the solid one.
             data: [...blanks(Math.max(pastCount - 1, 0)), lastActual, ...currency.projected[view.value].map((row) => row.closing)],
         })),
@@ -46,7 +48,7 @@ const optionsFor = (currency) => ({
     grid: { borderColor: palette().grid },
     legend: { labels: { colors: Array(4).fill(palette().text), useSeriesColors: false } },
     dataLabels: { enabled: false },
-    annotations: currency.actual.length ? { xaxis: [{ x: currency.actual[currency.actual.length - 1].label, borderColor: palette().text, strokeDashArray: 2, label: { text: 'Today', style: { color: '#fff', background: '#6b7280' } } }] } : {},
+    annotations: currency.actual.length ? { xaxis: [{ x: currency.actual[currency.actual.length - 1].label, borderColor: palette().text, strokeDashArray: 2, label: { text: t('ui.forecast.today_label'), style: { color: '#fff', background: '#6b7280' } } }] } : {},
     tooltip: { y: { formatter: (v) => (v === null ? '' : formatMoney(v, currency.currency, locale())) } },
 });
 
@@ -61,32 +63,31 @@ const rowsFor = (currency) => currency.projected.expected.map((row, index) => ({
 </script>
 
 <template>
-    <Head title="Forecast report" />
+    <Head :title="$t('ui.forecast.title')" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Forecast</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.forecast.heading') }}</h2>
         </template>
 
         <div class="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
             <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">
-                The <strong>solid line</strong> is your real net worth, month by month, from recorded transactions. The <strong>dashed lines</strong> are estimates
-                built from the income and expenses you planned in
-                <Link :href="plannedEventsIndex.url()" class="font-medium text-primary-600 hover:underline dark:text-primary-400">Cash flow</Link>,
-                under three levels of trust in your planned income.
+                {{ $t('ui.forecast.intro_1') }} <strong>{{ $t('ui.forecast.intro_solid') }}</strong> {{ $t('ui.forecast.intro_2') }} <strong>{{ $t('ui.forecast.intro_dashed') }}</strong> {{ $t('ui.forecast.intro_3') }}
+                <Link :href="plannedEventsIndex.url()" class="font-medium text-primary-600 hover:underline dark:text-primary-400">{{ $t('ui.forecast.cash_flow') }}</Link>,
+                {{ $t('ui.forecast.intro_4') }}
             </p>
 
             <EmptyState
                 v-if="currencies.length === 0"
                 icon="document-chart-bar"
-                title="Nothing to forecast yet"
-                description="Create an account and plan some income or expenses in Cash flow to see your projected balance here."
+                :title="$t('ui.forecast.empty_title')"
+                :description="$t('ui.forecast.empty_hint')"
             />
 
             <section v-for="currency in currencies" :key="currency.currency" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Net worth, {{ currency.currency }}</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Today: <Money :amount="currency.opening" :currency="currency.currency" /></p>
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $t('ui.forecast.net_worth', { currency: currency.currency }) }}</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.forecast.today') }} <Money :amount="currency.opening" :currency="currency.currency" /></p>
                 </div>
 
                 <apexchart
@@ -101,10 +102,10 @@ const rowsFor = (currency) => currency.projected.expected.map((row, index) => ({
                     <table class="min-w-full text-sm">
                         <thead>
                             <tr class="text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                <th class="py-2 pr-4 font-semibold">Month (projected)</th>
-                                <th class="px-4 py-2 text-right font-semibold">Planned income</th>
-                                <th class="px-4 py-2 text-right font-semibold">Planned expenses</th>
-                                <th v-for="view in views" :key="view.value" class="px-4 py-2 text-right font-semibold">{{ view.label }} balance</th>
+                                <th class="py-2 pr-4 font-semibold">{{ $t('ui.forecast.month_projected') }}</th>
+                                <th class="px-4 py-2 text-right font-semibold">{{ $t('ui.forecast.planned_income') }}</th>
+                                <th class="px-4 py-2 text-right font-semibold">{{ $t('ui.forecast.planned_expenses') }}</th>
+                                <th v-for="view in views" :key="view.value" class="px-4 py-2 text-right font-semibold">{{ $t('ui.forecast.view_balance', { view: view.label }) }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 tabular-nums dark:divide-gray-700">
@@ -118,7 +119,7 @@ const rowsFor = (currency) => currency.projected.expected.map((row, index) => ({
                             </tr>
                         </tbody>
                     </table>
-                    <p class="mt-2 text-xs text-gray-400">Planned income and expenses are shown for the Expected view. Expenses always count in full.</p>
+                    <p class="mt-2 text-xs text-gray-400">{{ $t('ui.forecast.note') }}</p>
                 </div>
             </section>
         </div>
