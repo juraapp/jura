@@ -80,6 +80,12 @@ export function createFormat(preferences = {}, locale = 'en') {
         }
     };
 
+    // "March 2026" (or "Mar 26" when short) in the user's language.
+    const month = (value, { short = false } = {}) => toDate(value).toLocaleDateString(
+        localeTag(locale),
+        short ? { month: 'short', year: '2-digit' } : { month: 'long', year: 'numeric' },
+    );
+
     const time = (value) => {
         const { hours, minutes } = toTimeParts(value);
         const twelveHour = prefs.time_format === '12h' || (isAuto(prefs.time_format) && language === 'en');
@@ -128,5 +134,5 @@ export function createFormat(preferences = {}, locale = 'en') {
         return sign + (before ? symbol + gap + body : body + gap + symbol);
     };
 
-    return { number, date, time, dateTime, money };
+    return { number, date, month, time, dateTime, money };
 }

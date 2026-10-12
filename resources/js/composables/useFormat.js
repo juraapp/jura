@@ -13,6 +13,7 @@ export function useFormat() {
     return {
         number: (...args) => current.value.number(...args),
         date: (...args) => current.value.date(...args),
+        month: (...args) => current.value.month(...args),
         time: (...args) => current.value.time(...args),
         dateTime: (...args) => current.value.dateTime(...args),
         money: (...args) => current.value.money(...args),
