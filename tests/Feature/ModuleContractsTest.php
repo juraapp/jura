@@ -16,6 +16,16 @@ use App\Modules\Ledger\Policies\TransactionPolicy;
 use App\Modules\Ledger\Services\BalanceCalculator;
 use App\Modules\Ledger\Services\EloquentLedgerQuery;
 use App\Modules\Ledger\Services\TransactionService;
+use App\Modules\Planning\Contracts\BudgetProgress;
+use App\Modules\Planning\Models\Budget;
+use App\Modules\Planning\Models\BudgetForecast;
+use App\Modules\Planning\Models\RecurringTransaction;
+use App\Modules\Planning\Models\SavingsGoal;
+use App\Modules\Planning\Policies\BudgetForecastPolicy;
+use App\Modules\Planning\Policies\BudgetPolicy;
+use App\Modules\Planning\Policies\RecurringTransactionPolicy;
+use App\Modules\Planning\Policies\SavingsGoalPolicy;
+use App\Modules\Planning\Services\BudgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
@@ -83,5 +93,18 @@ class ModuleContractsTest extends TestCase
         $this->assertSame(['Active'], $ledger->activeAccountOptions()->pluck('name')->all());
         $this->assertContains('Mine', $ledger->categoryOptions(CategoryType::Expense)->pluck('name')->all());
         $this->assertNotContains('Mine', $ledger->categoryOptions(CategoryType::Income)->pluck('name')->all());
+    }
+
+    public function test_planning_contract_resolves_to_its_implementation(): void
+    {
+        $this->assertInstanceOf(BudgetService::class, app(BudgetProgress::class));
+    }
+
+    public function test_planning_models_resolve_their_policies(): void
+    {
+        $this->assertInstanceOf(BudgetPolicy::class, Gate::getPolicyFor(Budget::class));
+        $this->assertInstanceOf(BudgetForecastPolicy::class, Gate::getPolicyFor(BudgetForecast::class));
+        $this->assertInstanceOf(SavingsGoalPolicy::class, Gate::getPolicyFor(SavingsGoal::class));
+        $this->assertInstanceOf(RecurringTransactionPolicy::class, Gate::getPolicyFor(RecurringTransaction::class));
     }
 }

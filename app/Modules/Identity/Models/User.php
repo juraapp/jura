@@ -2,12 +2,12 @@
 
 namespace App\Modules\Identity\Models;
 
-use App\Models\Budget;
-use App\Models\RecurringTransaction;
-use App\Models\SavingsGoal;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Models\Budget;
+use App\Modules\Planning\Models\RecurringTransaction;
+use App\Modules\Planning\Models\SavingsGoal;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

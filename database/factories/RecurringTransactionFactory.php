@@ -2,12 +2,12 @@
 
 namespace Database\Factories;
 
-use App\Enums\RecurringFrequency;
-use App\Models\RecurringTransaction;
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
+use App\Modules\Planning\Enums\RecurringFrequency;
+use App\Modules\Planning\Models\RecurringTransaction;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 

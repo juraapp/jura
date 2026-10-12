@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\SavingsGoalStatus;
-use App\Models\SavingsGoal;
+use App\Modules\Planning\Enums\SavingsGoalStatus;
+use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Shared\Support\Money;
 use App\Notifications\GoalBehindSchedule;
 use Illuminate\Console\Attributes\Description;

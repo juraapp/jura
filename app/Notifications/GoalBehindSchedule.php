@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\SavingsGoal;
+use App\Modules\Planning\Models\SavingsGoal;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 

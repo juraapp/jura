@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Enums\SavingsGoalStatus;
-use App\Models\SavingsGoal;
 use App\Modules\Identity\Models\User;
+use App\Modules\Planning\Enums\SavingsGoalStatus;
+use App\Modules\Planning\Models\SavingsGoal;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

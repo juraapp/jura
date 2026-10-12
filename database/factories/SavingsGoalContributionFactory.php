@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\SavingsGoal;
-use App\Models\SavingsGoalContribution;
+use App\Modules\Planning\Models\SavingsGoal;
+use App\Modules\Planning\Models\SavingsGoalContribution;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

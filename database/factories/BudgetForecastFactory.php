@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Budget;
 use App\Modules\Ledger\Models\Category;
+use App\Modules\Planning\Models\Budget;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
  */
 class BudgetForecastFactory extends Factory
 {
-    protected $model = \App\Models\BudgetForecast::class;
+    protected $model = \App\Modules\Planning\Models\BudgetForecast::class;
 
     public function definition(): array
     {

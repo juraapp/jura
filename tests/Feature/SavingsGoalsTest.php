@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\SavingsGoal;
 use App\Modules\Identity\Models\User;
+use App\Modules\Planning\Models\SavingsGoal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
