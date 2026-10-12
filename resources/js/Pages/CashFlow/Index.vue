@@ -39,6 +39,7 @@ const props = defineProps({
     incomeCategories: { type: Array, required: true },
     frequencies: { type: Array, required: true },
     certainties: { type: Array, required: true },
+    buckets: { type: Array, required: true },
 });
 
 const page = usePage();
@@ -114,7 +115,17 @@ const form = useForm({
     frequency: '',
     ends_on: '',
     scope: 'this',
+    allocation_overrides: [],
 });
+
+// Per-bucket amounts for an income, edited as { [bucketId]: amount } and sent as a list.
+const overrideAmounts = ref({});
+form.transform((data) => ({
+    ...data,
+    allocation_overrides: data.type === 'income'
+        ? Object.entries(overrideAmounts.value).filter(([, amount]) => Number(amount) > 0).map(([id, amount]) => ({ bucket_id: Number(id), amount }))
+        : [],
+}));
 
 const categoriesForType = computed(() => (form.type === 'income' ? props.incomeCategories : props.expenseCategories));
 
@@ -124,6 +135,7 @@ const openCreateModal = (type = 'expense') => {
     form.clearErrors();
     form.type = type;
     form.date = today;
+    overrideAmounts.value = {};
     showModal.value = true;
 };
 
@@ -141,6 +153,7 @@ const openEditModal = (event) => {
     form.frequency = '';
     form.ends_on = '';
     form.scope = 'this';
+    overrideAmounts.value = Object.fromEntries((event.allocationOverrides ?? []).map((row) => [row.bucket_id, String(row.amount)]));
     showModal.value = true;
 };
 
@@ -440,6 +453,18 @@ const deleteEvent = () => {
                                 <TextInput id="ends_on" v-model="form.ends_on" type="date" class="mt-1 block w-full" :disabled="!form.frequency" />
                                 <InputError class="mt-1" :message="form.errors.ends_on" />
                             </div>
+                        </div>
+
+                        <div v-if="form.type === 'income' && buckets.length && !(editingEvent && editingEvent.seriesId)">
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Where should this income go? (optional)</p>
+                            <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                                By default your buckets fill by their own rules. Enter amounts here to decide for this income only; the rest goes to your default bucket.
+                            </p>
+                            <div v-for="bucket in buckets" :key="bucket.id" class="mb-1.5 flex items-center justify-between gap-3">
+                                <span class="text-sm text-gray-700 dark:text-gray-200">{{ bucket.name }} <span class="text-xs text-gray-400">{{ bucket.currency }}</span></span>
+                                <TextInput v-model="overrideAmounts[bucket.id]" type="number" step="0.01" min="0" class="block w-32" placeholder="0" />
+                            </div>
+                            <InputError class="mt-1" :message="form.errors['allocation_overrides.0.bucket_id'] || form.errors['allocation_overrides.0.amount']" />
                         </div>
 
                         <div>

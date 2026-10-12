@@ -5,7 +5,7 @@
 `lang/` is directory-based PHP arrays, not the old flat `lang/es.json`:
 
 ```
-lang/en/   accounts.php  budgets.php  categories.php  enums.php  insights.php
+lang/en/   accounts.php  buckets.php  categories.php  enums.php  insights.php
            messages.php  notifications.php  pdf.php  preferences.php
            planned-events.php  recurring-transactions.php  savings-goals.php  transactions.php
 lang/es/   (mirrors lang/en/ exactly, same keys)

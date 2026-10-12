@@ -25,9 +25,14 @@ class BucketLedger
     /**
      * Sum of all allocations (funded money).
      */
-    public function balance(Bucket $bucket): Money
+    public function balance(Bucket $bucket, ?CarbonInterface $asOf = null): Money
     {
-        return Money::of(Allocation::forUser($bucket->user_id)->where('bucket_id', $bucket->id)->sum('amount'));
+        return Money::of(
+            Allocation::forUser($bucket->user_id)
+                ->where('bucket_id', $bucket->id)
+                ->when($asOf !== null, fn ($query) => $query->where('date', '<=', $asOf->toDateString()))
+                ->sum('amount')
+        );
     }
 
     /**
@@ -35,12 +40,12 @@ class BucketLedger
      * bucket, real spending since tracking began is subtracted, so the
      * envelope shrinks as the category is spent.
      */
-    public function available(Bucket $bucket): Money
+    public function available(Bucket $bucket, ?CarbonInterface $asOf = null): Money
     {
-        $balance = $this->balance($bucket);
+        $balance = $this->balance($bucket, $asOf);
 
         if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null) {
-            $spent = $this->ledger->expenseTotal($bucket->category_id, $bucket->currency, $bucket->tracking_started_on, today());
+            $spent = $this->ledger->expenseTotal($bucket->category_id, $bucket->currency, $bucket->tracking_started_on, $asOf ?? today());
             $balance = $balance->subtract($spent);
         }
 
@@ -82,15 +87,21 @@ class BucketLedger
     /**
      * Moves funded money from one bucket to another of the same currency.
      */
-    public function move(Bucket $from, Bucket $to, Money $amount, ?string $description = null): void
-    {
+    public function move(
+        Bucket $from,
+        Bucket $to,
+        Money $amount,
+        ?string $description = null,
+        AllocationSource $source = AllocationSource::Transfer,
+        ?CarbonInterface $date = null,
+    ): void {
         if (! $amount->isPositive() || $from->currency !== $to->currency || $from->is($to)) {
             throw new InvalidArgumentException('Money can only move between two different buckets of the same currency.');
         }
 
-        DB::transaction(function () use ($from, $to, $amount, $description) {
-            $this->credit($from, $amount->negate(), AllocationSource::Transfer, $to->id, null, $description);
-            $this->credit($to, $amount, AllocationSource::Transfer, $from->id, null, $description);
+        DB::transaction(function () use ($from, $to, $amount, $description, $source, $date) {
+            $this->credit($from, $amount->negate(), $source, $to->id, $date, $description);
+            $this->credit($to, $amount, $source, $from->id, $date, $description);
         });
     }
 

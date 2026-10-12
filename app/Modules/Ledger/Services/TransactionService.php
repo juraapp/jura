@@ -5,6 +5,8 @@ namespace App\Modules\Ledger\Services;
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Enums\TransactionType;
+use App\Modules\Ledger\Events\IncomeRecorded;
+use App\Modules\Ledger\Events\IncomeRemoved;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Transaction;
@@ -92,6 +94,11 @@ class TransactionService implements RecordsTransactions
     public function updateSimple(Transaction $transaction, array $data): Transaction
     {
         $affectedAccounts = collect([$transaction->account]);
+        $isIncome = $transaction->type === TransactionType::Income;
+
+        if ($isIncome) {
+            IncomeRemoved::dispatch($transaction->user, $transaction->id);
+        }
 
         $transaction->update([
             'account_id' => $data['account_id'],
@@ -108,6 +115,10 @@ class TransactionService implements RecordsTransactions
         }
 
         $this->announce($transaction->user, $affectedAccounts);
+
+        if ($isIncome) {
+            $this->announceIncome($transaction->refresh());
+        }
 
         return $transaction;
     }
@@ -156,6 +167,10 @@ class TransactionService implements RecordsTransactions
 
             $transaction->delete();
 
+            if ($transaction->type === TransactionType::Income) {
+                IncomeRemoved::dispatch($transaction->user, $transaction->id);
+            }
+
             $this->announce($transaction->user, $affectedAccounts);
         });
     }
@@ -174,8 +189,25 @@ class TransactionService implements RecordsTransactions
         ]);
 
         $this->announce($user, collect([$transaction->account]));
+        $this->announceIncome($transaction);
 
         return $transaction;
+    }
+
+    private function announceIncome(Transaction $transaction): void
+    {
+        if ($transaction->type !== TransactionType::Income) {
+            return;
+        }
+
+        IncomeRecorded::dispatch(
+            $transaction->user,
+            $transaction->id,
+            $transaction->account_id,
+            $transaction->amount,
+            $transaction->account->currency,
+            $transaction->date,
+        );
     }
 
     /**

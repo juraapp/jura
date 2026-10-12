@@ -37,7 +37,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
 | `Shared` | `Money`, `AsMoney`, `BelongsToUser`, base `Controller`, `HandleInertiaRequests` |
 | `Identity` | `User`, auth, profile, preferences |
 | `Ledger` | `Account`, `Category`, `Transaction`, balances, CSV import, `TransactionsMutated`. Source of truth for **actual** data. |
-| `Planning` | `Budget`, `BudgetForecast`, `SavingsGoal`, `RecurringTransaction` (and, next, planned income, buckets, wish list, scenarios). Owns **projected** data. |
+| `Planning` | `PlannedEvent`, `Bucket`, `Allocation`, `SavingsGoal`, `RecurringTransaction` (and, next, wish list and scenarios). Owns **projected** and **earmarked** (virtual) money. |
 | `Reporting` | dashboard, reports, insights, PDF/CSV export (read-side) |
 | `Notifications` | alert notifications, their listeners and scheduled commands, the notification inbox (read-side) |
 
@@ -49,7 +49,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
    - `Ledger\Contracts\Balances`: account balances and net worth.
    - `Ledger\Contracts\LedgerQuery`: expense totals, account/category option lists, account currency and similar-transaction lookups.
    - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record`, `recordRecurring`).
-   - `Planning\Contracts\BudgetProgress`: budget spent/remaining/status.
+   - `Planning\Contracts\BucketProgress`: spending-bucket spent/remaining/status.
 4. Contracts are bound in each module's service provider; providers are listed in `bootstrap/providers.php`.
 
 To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to `bootstrap/providers.php` if it binds contracts or registers listeners/commands, and run the architecture test. Listeners and commands inside modules are **not auto-discovered**; register them in the module provider.

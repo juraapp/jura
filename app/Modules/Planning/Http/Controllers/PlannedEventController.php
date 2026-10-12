@@ -12,6 +12,7 @@ use App\Modules\Planning\Http\Requests\PlannedEvents\LinkPlannedEventRequest;
 use App\Modules\Planning\Http\Requests\PlannedEvents\RealizePlannedEventRequest;
 use App\Modules\Planning\Http\Requests\PlannedEvents\StorePlannedEventRequest;
 use App\Modules\Planning\Http\Requests\PlannedEvents\UpdatePlannedEventRequest;
+use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Services\CashFlowProjector;
 use App\Modules\Planning\Services\PlannedEventService;
@@ -66,6 +67,7 @@ class PlannedEventController extends Controller
             'expenseCategories' => $ledger->categoryOptions(CategoryType::Expense, ['id', 'name', 'icon', 'color']),
             'incomeCategories' => $ledger->categoryOptions(CategoryType::Income, ['id', 'name', 'icon', 'color']),
             'frequencies' => collect(RecurringFrequency::cases())->map(fn (RecurringFrequency $case) => ['value' => $case->value, 'label' => $case->label()]),
+            'buckets' => Bucket::inPriorityOrder()->get(['id', 'name', 'currency']),
             'certainties' => collect(Certainty::cases())->map(fn (Certainty $case) => ['value' => $case->value, 'label' => $case->label()]),
         ]);
     }
@@ -160,6 +162,7 @@ class PlannedEventController extends Controller
             'certaintyLabel' => $event->certainty->label(),
             'seriesId' => $event->series_id,
             'notes' => $event->notes,
+            'allocationOverrides' => $event->allocation_overrides ?? [],
             'account' => $event->account ? ['id' => $event->account->id, 'name' => $event->account->name] : null,
             'category' => $event->category ? [
                 'id' => $event->category->id,

@@ -4,7 +4,7 @@ PHPUnit only — **no Pest**, per project convention. Every test class extends `
 
 ```bash
 vendor/bin/sail artisan test --compact                              # full suite
-vendor/bin/sail artisan test --compact tests/Feature/BudgetsTest.php # one file
+vendor/bin/sail artisan test --compact tests/Feature/BucketsTest.php # one file
 vendor/bin/sail artisan test --compact --filter=test_user_can_create_a_budget
 ```
 
@@ -17,7 +17,7 @@ $response = $this->actingAs($user)->get('/planning/budgets');
 
 $response->assertOk();
 $response->assertInertia(fn (Assert $page) => $page
-    ->component('Budgets/Index')
+    ->component('Buckets/Index')
     ->has('budgets', 2)          // exact count
     ->where('typeFilter', 'all') // exact value
     ->has('currencies')          // just presence
@@ -33,13 +33,13 @@ Import from **`Inertia\Testing\AssertableInertia`**, not `Illuminate\Testing\Flu
 Because nearly every model uses `BelongsToUser` (see `domain-model.md`), route-model binding itself filters out another user's row — a policy's `update`/`delete` check never even runs for a genuinely cross-tenant request, since the model was never found:
 
 ```php
-public function test_user_cannot_update_another_users_budget(): void
+public function test_user_cannot_update_another_users_bucket(): void
 {
     $owner = User::factory()->create();
-    $budget = Budget::factory()->for($owner)->create();
+    $bucket = Bucket::factory()->for($owner)->create();
     $intruder = User::factory()->create();
 
-    $response = $this->actingAs($intruder)->patch("/planning/budgets/{$budget->id}", [...]);
+    $response = $this->actingAs($intruder)->patch("/planning/buckets/{$bucket->id}", [...]);
 
     $response->assertNotFound(); // not assertForbidden()
 }
@@ -49,7 +49,7 @@ public function test_user_cannot_update_another_users_budget(): void
 
 ## Soft deletes
 
-`Account`, `Category`, `SavingsGoal`, and `Transaction` use `SoftDeletes`; `Budget` and `RecurringTransaction` don't. Use the right assertion:
+`Account`, `Category`, `SavingsGoal`, and `Transaction` use `SoftDeletes`; `Bucket`, `Allocation` and `RecurringTransaction` don't. Use the right assertion:
 
 ```php
 $this->assertSoftDeleted('accounts', ['id' => $account->id]);   // soft-delete models
@@ -60,7 +60,7 @@ $this->assertDatabaseMissing('budgets', ['id' => $budget->id]); // hard-delete m
 
 ## Factories and cross-model foreign keys
 
-Every domain model has a factory in `database/factories/`. The one sharp edge: **`Account` (like most models) is itself `BelongsToUser`-scoped**, so a `RecurringTransaction`/`Transaction`/`Budget` factory's default `account_id => Account::factory()` creates an account owned by a *fresh, unrelated* user unless you explicitly tie it to the same user:
+Every domain model has a factory in `database/factories/`. The one sharp edge: **`Account` (like most models) is itself `BelongsToUser`-scoped**, so a `RecurringTransaction`/`Transaction`/`Bucket` factory's default `account_id => Account::factory()` creates an account owned by a *fresh, unrelated* user unless you explicitly tie it to the same user:
 
 ```php
 // Wrong — $account belongs to some other random factory-created user.
