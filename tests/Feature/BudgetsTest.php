@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Category;
+use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Budget;
+use App\Modules\Planning\Models\PlannedEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -26,6 +28,37 @@ class BudgetsTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Budgets/Index')
             ->has('budgets', 1)
+        );
+    }
+
+    public function test_budget_cards_project_planned_expenses_for_their_category_period_and_currency(): void
+    {
+        Carbon::setTestNow('2026-10-12 09:00:00');
+        $user = User::factory()->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $other = Category::factory()->expense()->create(['user_id' => $user->id]);
+        Budget::factory()->for($user)->create([
+            'category_id' => $category->id,
+            'currency' => 'COP',
+            'amount' => 1000,
+            'period_type' => 'monthly',
+            'period_start' => '2026-10-01',
+        ]);
+
+        $plan = fn (array $attributes) => PlannedEvent::factory()->for($user)->expense()->create($attributes + [
+            'category_id' => $category->id, 'currency' => 'COP', 'date' => '2026-10-20', 'amount' => 200,
+        ]);
+        $plan([]);                                                              // counts
+        $plan(['amount' => 50, 'date' => '2026-10-31']);                        // counts
+        $plan(['date' => '2026-11-02']);                                        // next period
+        $plan(['status' => PlannedEventStatus::Skipped]);                       // closed
+        $plan(['currency' => 'USD']);                                           // other currency
+        $plan(['category_id' => $other->id]);                                   // other category
+
+        $this->actingAs($user)->get('/planning/budgets')->assertInertia(fn (Assert $page) => $page
+            ->has('budgets', 1)
+            ->where('budgets.0.projected', 250)
+            ->where('budgets.0.effectiveRemaining', 750)
         );
     }
 

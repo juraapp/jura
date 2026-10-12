@@ -8,8 +8,8 @@ use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Http\Requests\Budgets\StoreBudgetRequest;
 use App\Modules\Planning\Http\Requests\Budgets\UpdateBudgetRequest;
 use App\Modules\Planning\Models\Budget;
-use App\Modules\Planning\Services\BudgetForecastService;
 use App\Modules\Planning\Services\BudgetService;
+use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
@@ -19,7 +19,7 @@ use Inertia\Response;
 
 class BudgetController extends Controller
 {
-    public function index(BudgetService $service, BudgetForecastService $forecastService, LedgerQuery $ledger): Response
+    public function index(BudgetService $service, PlannedEventService $planned, LedgerQuery $ledger): Response
     {
         $now = Carbon::now();
 
@@ -29,9 +29,10 @@ class BudgetController extends Controller
             ->filter(fn (Budget $budget) => $budget->period_type->value === 'yearly'
                 ? $budget->period_start->isSameYear($now)
                 : $budget->period_start->isSameMonth($now))
-            ->map(function (Budget $budget) use ($service, $forecastService) {
+            ->map(function (Budget $budget) use ($service, $planned) {
                 $progress = $service->progress($budget);
-                $forecast = $forecastService->summary($budget);
+                [$start, $end] = $service->periodBounds($budget);
+                $projected = $planned->plannedExpenseTotal($budget->category_id, $budget->currency, $start, $end);
 
                 return [
                     'id' => $budget->id,
@@ -43,16 +44,14 @@ class BudgetController extends Controller
                     ],
                     'currency' => $budget->currency,
                     'amount' => $budget->amount->toFloat(),
-                    'allocatedAmount' => $budget->allocated_amount?->toFloat(),
                     'periodType' => $budget->period_type->value,
                     'periodTypeLabel' => $budget->period_type->label(),
                     'spent' => $progress['spent']->toFloat(),
                     'remaining' => $progress['remaining']->toFloat(),
-                    'projected' => $forecast['projected']->toFloat(),
-                    'effectiveRemaining' => $forecast['effectiveRemaining']->toFloat(),
+                    'projected' => $projected->toFloat(),
+                    'effectiveRemaining' => $progress['remaining']->subtract($projected)->toFloat(),
                     'percentage' => $progress['percentage'],
                     'status' => $progress['status'],
-                    'forecastCount' => $budget->forecasts()->where('is_anticipated', true)->count(),
                 ];
             })
             ->values();
