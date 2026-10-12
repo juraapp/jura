@@ -4,6 +4,9 @@ import { Deferred, Link, router, usePage } from '@inertiajs/vue3';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import { onClickOutside } from '@/composables/onClickOutside';
 import { read, readAll } from '@/routes/notifications';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const page = usePage();
 const open = ref(false);
@@ -78,7 +81,7 @@ const markAllAsRead = () => {
                             </span>
                             <div class="min-w-0">
                                 <p class="text-sm text-gray-700 dark:text-gray-300">{{ notification.message }}</p>
-                                <p class="mt-0.5 text-xs text-gray-400">{{ new Date(notification.createdAt).toLocaleString() }}</p>
+                                <p class="mt-0.5 text-xs text-gray-400">{{ format.dateTime(new Date(notification.createdAt)) }}</p>
                             </div>
                         </Link>
                     </template>

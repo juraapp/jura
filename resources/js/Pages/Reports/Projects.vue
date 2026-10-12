@@ -6,6 +6,9 @@ import Money from '@/Components/Money.vue';
 import SegmentedControl from '@/Components/SegmentedControl.vue';
 import { index as wishlistIndex } from '@/routes/wishlist';
 import { projects as projectsReport } from '@/routes/reports';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 defineProps({
     projects: { type: Array, required: true },
@@ -79,7 +82,7 @@ const formatMonth = (date) => new Date(`${date}T00:00:00`).toLocaleDateString('e
                                     <div class="h-full bg-green-500" :style="{ width: total.fundedPercent + '%' }"></div>
                                 </div>
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {{ total.fundedPercent.toFixed(0) }}% funded today.
+                                    {{ format.number(total.fundedPercent, 0) }}% funded today.
                                     <template v-if="total.completion">Everything could be bought by <strong>{{ formatMonth(total.completion) }}</strong>.</template>
                                     <template v-else>Not everything can be bought within 24 months with this view of your income.</template>
                                 </p>

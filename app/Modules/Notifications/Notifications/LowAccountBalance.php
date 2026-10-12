@@ -28,7 +28,7 @@ class LowAccountBalance extends Notification
             'severity' => 'warning',
             'message' => __('notifications.low_balance', [
                 'account' => $this->account->name,
-                'amount' => $this->balance->format($this->account->currency, $notifiable->locale),
+                'amount' => $notifiable->formatter()->money($this->balance, $this->account->currency),
             ]),
             'account_id' => $this->account->id,
             'url' => route('accounts.index'),

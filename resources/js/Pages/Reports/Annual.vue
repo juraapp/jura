@@ -7,6 +7,9 @@ import Money from '@/Components/Money.vue';
 import StatCard from '@/Components/StatCard.vue';
 import { annual as annualReport } from '@/routes/reports';
 import { pdf as annualPdf } from '@/routes/reports/annual';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     year: { type: Number, required: true },
@@ -59,7 +62,7 @@ const pdfUrl = computed(() => annualPdf.url({ query: { year: props.year } }));
                     </StatCard>
                     <StatCard label="Total savings" icon="chart-pie">
                         <Money :amount="currencySummary.savings" :currency="currencySummary.currency" />
-                        <template #footer>{{ currencySummary.savingsRate.toFixed(1) }}% annual savings rate</template>
+                        <template #footer>{{ format.number(currencySummary.savingsRate, 1) }}% annual savings rate</template>
                     </StatCard>
                     <StatCard label="Monthly average" icon="calendar">
                         <Money :amount="currencySummary.avgMonthlyExpense" :currency="currencySummary.currency" />
@@ -81,7 +84,7 @@ const pdfUrl = computed(() => annualPdf.url({ query: { year: props.year } }));
                     <div v-if="currencySummary.topCategory" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                         <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Category you spent the most on</p>
                         <p class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{{ currencySummary.topCategory.name }}</p>
-                        <p class="text-sm text-gray-500">{{ currencySummary.topCategory.percentage.toFixed(1) }}% of total</p>
+                        <p class="text-sm text-gray-500">{{ format.number(currencySummary.topCategory.percentage, 1) }}% of total</p>
                     </div>
                 </div>
 

@@ -34,15 +34,15 @@
             <tr>
                 <td>
                     <div class="label">{{ __('pdf.income', [], $user->locale) }}</div>
-                    <div class="value green">{{ $currencySummary['income']->format($currency, $user->locale) }}</div>
+                    <div class="value green">{{ $user->formatter()->money($currencySummary['income'], $currency) }}</div>
                 </td>
                 <td>
                     <div class="label">{{ __('pdf.expense', [], $user->locale) }}</div>
-                    <div class="value red">{{ $currencySummary['expense']->format($currency, $user->locale) }}</div>
+                    <div class="value red">{{ $user->formatter()->money($currencySummary['expense'], $currency) }}</div>
                 </td>
                 <td>
-                    <div class="label">{{ __('pdf.savings', ['rate' => number_format($currencySummary['savingsRate'], 1)], $user->locale) }}</div>
-                    <div class="value">{{ $currencySummary['savings']->format($currency, $user->locale) }}</div>
+                    <div class="label">{{ __('pdf.savings', ['rate' => $user->formatter()->number($currencySummary['savingsRate'], 1)], $user->locale) }}</div>
+                    <div class="value">{{ $user->formatter()->money($currencySummary['savings'], $currency) }}</div>
                 </td>
             </tr>
         </table>
@@ -69,8 +69,8 @@
                     @foreach ($categoryRows as $row)
                         <tr>
                             <td>{{ $row['category']?->name ?? __('pdf.no_category', [], $user->locale) }}</td>
-                            <td style="text-align:right">{{ $row['total']->format($currency, $user->locale) }}</td>
-                            <td style="text-align:right">{{ number_format($row['percentage'], 1) }}%</td>
+                            <td style="text-align:right">{{ $user->formatter()->money($row['total'], $currency) }}</td>
+                            <td style="text-align:right">{{ $user->formatter()->number($row['percentage'], 1) }}%</td>
                         </tr>
                     @endforeach
                 </tbody>

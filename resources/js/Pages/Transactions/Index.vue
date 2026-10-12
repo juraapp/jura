@@ -13,6 +13,9 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import { useTransactionModal } from '@/composables/useTransactionModal';
 import { destroy } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     typeFilter: { type: String, required: true },
@@ -68,7 +71,7 @@ const amountClass = (type) => ({
 
 const amountSign = (type) => ({ income: '+', expense: '−' }[type] ?? '');
 
-const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDate = (date) => format.date(date);
 </script>
 
 <template>

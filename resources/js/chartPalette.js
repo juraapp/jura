@@ -1,3 +1,6 @@
+import { usePage } from '@inertiajs/vue3';
+import { createFormat } from '@/format';
+
 // Palette from the dataviz skill's validated reference (references/palette.md):
 // fixed categorical hue order, CVD-safe in both light and dark, plus the
 // income/expense/savings convention (green/red/blue) used across badges.
@@ -20,12 +23,11 @@ export const CHART_PALETTE = {
     },
 };
 
+// Charts show whole amounts unless the user chose a number of decimals.
 export function formatMoney(value, currency, locale) {
-    return new Intl.NumberFormat((locale || 'en').replace('_', '-'), {
-        style: 'currency',
-        currency: currency || 'COP',
-        maximumFractionDigits: 0,
-    }).format(value);
+    const user = usePage().props.auth?.user;
+
+    return createFormat(user, locale || user?.locale).money(value, currency || 'COP', { fractionDigits: user?.fraction_digits ?? 0 });
 }
 
 export function formatCompact(value, locale) {

@@ -1,5 +1,13 @@
 # Frontend Conventions
 
+## Formatting dates, times, numbers and money
+Never call `toLocaleDateString`, `toFixed` or `Intl.NumberFormat` for user-visible values. Use `useFormat()`
+(`resources/js/composables/useFormat.js`: `date`, `time`, `dateTime`, `number`, `money`) so the user's
+Preferences (date style, 12/24h, separators, decimals, currency display) apply everywhere. `<Money>` and the
+chart helpers in `chartPalette.js` already do. The rules live in `resources/js/format.js` and are mirrored for the
+server by `App\Modules\Shared\Support\UserFormat` (PDFs, notifications); change both together. `format.js` has no
+framework imports and is tested with `npm run test:js` (`node --test`).
+
 ## Pages vs Components vs Layouts
 
 - **`Pages/`** — one file per `Inertia::render('X')` target, same path (`Pages/Accounts/Index.vue` ↔ `Inertia::render('Accounts/Index', ...)`). A Page always wraps its content in `<AuthenticatedLayout>` (or `<GuestLayout>` for auth screens) and receives its data exclusively via `defineProps()` — never fetches its own initial data.

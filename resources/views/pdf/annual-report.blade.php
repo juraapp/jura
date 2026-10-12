@@ -32,31 +32,31 @@
             <tr>
                 <td>
                     <div class="label">{{ __('pdf.income_total', [], $user->locale) }}</div>
-                    <div class="value green">{{ $currencySummary['income']->format($currency, $user->locale) }}</div>
+                    <div class="value green">{{ $user->formatter()->money($currencySummary['income'], $currency) }}</div>
                 </td>
                 <td>
                     <div class="label">{{ __('pdf.expense_total', [], $user->locale) }}</div>
-                    <div class="value red">{{ $currencySummary['expense']->format($currency, $user->locale) }}</div>
+                    <div class="value red">{{ $user->formatter()->money($currencySummary['expense'], $currency) }}</div>
                 </td>
                 <td>
-                    <div class="label">{{ __('pdf.annual_savings', ['rate' => number_format($currencySummary['savingsRate'], 1)], $user->locale) }}</div>
-                    <div class="value">{{ $currencySummary['savings']->format($currency, $user->locale) }}</div>
+                    <div class="label">{{ __('pdf.annual_savings', ['rate' => $user->formatter()->number($currencySummary['savingsRate'], 1)], $user->locale) }}</div>
+                    <div class="value">{{ $user->formatter()->money($currencySummary['savings'], $currency) }}</div>
                 </td>
                 <td>
                     <div class="label">{{ __('pdf.avg_monthly_expense', [], $user->locale) }}</div>
-                    <div class="value">{{ $currencySummary['avgMonthlyExpense']->format($currency, $user->locale) }}</div>
+                    <div class="value">{{ $user->formatter()->money($currencySummary['avgMonthlyExpense'], $currency) }}</div>
                 </td>
             </tr>
         </table>
 
         @if ($currencySummary['topCategory'])
-            <p>{{ __('pdf.top_category', ['category' => $currencySummary['topCategory']['category']?->name, 'percentage' => number_format($currencySummary['topCategory']['percentage'], 1)], $user->locale) }}</p>
+            <p>{{ __('pdf.top_category', ['category' => $currencySummary['topCategory']['category']?->name, 'percentage' => $user->formatter()->number($currencySummary['topCategory']['percentage'], 1)], $user->locale) }}</p>
         @endif
         @if ($currencySummary['bestIncomeMonth'])
-            <p>{{ __('pdf.best_income_month', ['month' => ucfirst($currencySummary['bestIncomeMonth']['label']), 'amount' => $currencySummary['bestIncomeMonth']['income']->format($currency, $user->locale)], $user->locale) }}</p>
+            <p>{{ __('pdf.best_income_month', ['month' => ucfirst($currencySummary['bestIncomeMonth']['label']), 'amount' => $user->formatter()->money($currencySummary['bestIncomeMonth']['income'], $currency)], $user->locale) }}</p>
         @endif
         @if ($currencySummary['worstExpenseMonth'])
-            <p>{{ __('pdf.worst_expense_month', ['month' => ucfirst($currencySummary['worstExpenseMonth']['label']), 'amount' => $currencySummary['worstExpenseMonth']['expense']->format($currency, $user->locale)], $user->locale) }}</p>
+            <p>{{ __('pdf.worst_expense_month', ['month' => ucfirst($currencySummary['worstExpenseMonth']['label']), 'amount' => $user->formatter()->money($currencySummary['worstExpenseMonth']['expense'], $currency)], $user->locale) }}</p>
         @endif
 
         <h2>{{ __('pdf.monthly_comparison_heading', [], $user->locale) }}</h2>
@@ -68,9 +68,9 @@
                 @foreach ($currencySummary['months'] as $row)
                     <tr>
                         <td>{{ ucfirst($row['label']) }}</td>
-                        <td style="text-align:right">{{ $row['income']->format($currency, $user->locale) }}</td>
-                        <td style="text-align:right">{{ $row['expense']->format($currency, $user->locale) }}</td>
-                        <td style="text-align:right">{{ $row['savings']->format($currency, $user->locale) }}</td>
+                        <td style="text-align:right">{{ $user->formatter()->money($row['income'], $currency) }}</td>
+                        <td style="text-align:right">{{ $user->formatter()->money($row['expense'], $currency) }}</td>
+                        <td style="text-align:right">{{ $user->formatter()->money($row['savings'], $currency) }}</td>
                     </tr>
                 @endforeach
             </tbody>

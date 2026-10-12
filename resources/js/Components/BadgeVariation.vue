@@ -1,6 +1,9 @@
 <script setup>
 import { computed } from 'vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     value: {
@@ -34,7 +37,7 @@ const classes = computed(() => {
 const label = computed(() => {
     const sign = isUp.value && !isFlat.value ? '+' : '';
 
-    return `${sign}${Math.abs(props.value).toFixed(1)}${props.suffix}`;
+    return `${sign}${format.number(Math.abs(props.value), 1)}${props.suffix}`;
 });
 </script>
 

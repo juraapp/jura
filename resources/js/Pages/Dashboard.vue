@@ -12,6 +12,9 @@ import { index as accountsIndex } from '@/routes/accounts';
 import { index as plannedEventsIndex } from '@/routes/planned-events';
 import { index as transactionsIndex } from '@/routes/transactions';
 import { dashboard } from '@/routes';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     evolutionMonths: { type: Number, required: true },
@@ -212,7 +215,7 @@ const netWorthEvolutionOptions = (currency) => ({
                                     class="font-medium"
                                     :class="currency.summary.savings < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
                                 >
-                                    {{ currency.summary.savingsRate.toFixed(1) }}%
+                                    {{ format.number(currency.summary.savingsRate, 1) }}%
                                 </span>
                                 <span class="ms-1 text-gray-400">savings rate</span>
                             </template>
@@ -234,12 +237,12 @@ const netWorthEvolutionOptions = (currency) => ({
                             <template v-if="currency.summary.topCategory">{{ currency.summary.topCategory.name }}</template>
                             <span v-else class="text-gray-400">&mdash;</span>
                             <template v-if="currency.summary.topCategory" #footer>
-                                <span class="text-gray-400">{{ currency.summary.topCategory.percentage.toFixed(1) }}% of your expenses</span>
+                                <span class="text-gray-400">{{ format.number(currency.summary.topCategory.percentage, 1) }}% of your expenses</span>
                             </template>
                         </StatCard>
 
                         <StatCard label="Days of financial autonomy" icon="flag">
-                            <template v-if="currency.summary.daysOfAutonomy !== null">{{ currency.summary.daysOfAutonomy.toFixed(0) }} days</template>
+                            <template v-if="currency.summary.daysOfAutonomy !== null">{{ format.number(currency.summary.daysOfAutonomy, 0) }} days</template>
                             <span v-else class="text-gray-400">&mdash;</span>
                             <template v-if="currency.summary.daysOfAutonomy !== null" #footer>
                                 <span class="text-gray-400">at your current spending pace</span>

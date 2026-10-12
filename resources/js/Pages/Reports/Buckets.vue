@@ -8,6 +8,9 @@ import { useDarkMode } from '@/composables/useDarkMode';
 import { CHART_PALETTE, formatCompact, formatMoney } from '@/chartPalette';
 import { index as bucketsIndex } from '@/routes/buckets';
 import { buckets as bucketsReport } from '@/routes/reports';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     currencies: { type: Array, required: true },
@@ -128,7 +131,7 @@ const targetPercent = (bucket) => (bucket.cap ? Math.max(0, Math.min(100, (bucke
                                     <td class="px-4 py-2 font-medium">{{ bucket.name }}<span v-if="bucket.isDefault" class="ml-1.5 rounded-full bg-primary-50 px-1.5 py-0.5 text-xs text-primary-700 dark:bg-primary-500/10 dark:text-primary-400">Default</span></td>
                                     <td class="px-4 py-2 text-right"><Money :amount="bucket.available" :currency="currency.currency" /></td>
                                     <td class="px-4 py-2 text-right">
-                                        <template v-if="bucket.cap && bucket.kind === 'savings'"><Money :amount="bucket.cap" :currency="currency.currency" /> <span class="text-xs text-gray-400">({{ targetPercent(bucket).toFixed(0) }}%)</span></template>
+                                        <template v-if="bucket.cap && bucket.kind === 'savings'"><Money :amount="bucket.cap" :currency="currency.currency" /> <span class="text-xs text-gray-400">({{ format.number(targetPercent(bucket), 0) }}%)</span></template>
                                         <span v-else-if="bucket.cap" class="text-xs text-gray-400">limit <Money :amount="bucket.cap" :currency="currency.currency" /> per cycle</span>
                                         <span v-else class="text-gray-300">-</span>
                                     </td>

@@ -14,6 +14,9 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import { store, update, destroy, contribute, restore, forceDestroy } from '@/actions/App/Modules/Planning/Http/Controllers/SavingsGoalController';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 defineProps({
     goals: { type: Array, required: true },
@@ -117,7 +120,7 @@ const submitContribution = () => {
     });
 };
 
-const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDate = (date) => format.date(date);
 </script>
 
 <template>
@@ -204,7 +207,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { day: '
                             <div class="h-full rounded-full bg-primary-600 transition-all" :style="{ width: goal.percentage + '%' }"></div>
                         </div>
                         <div class="mt-1.5 flex items-center justify-between text-xs">
-                            <span class="text-gray-400">{{ goal.percentage.toFixed(0) }}%</span>
+                            <span class="text-gray-400">{{ format.number(goal.percentage, 0) }}%</span>
                             <span v-if="goal.status === 'completed'" class="font-medium text-green-600 dark:text-green-400">Goal completed!</span>
                             <span v-else-if="goal.schedule === 'behind'" class="font-medium text-orange-500">Behind schedule</span>
                             <span v-else-if="goal.schedule === 'ahead'" class="font-medium text-green-600 dark:text-green-400">On track</span>
