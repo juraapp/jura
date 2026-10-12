@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Reports;
+namespace App\Modules\Reporting\Http\Controllers\Reports;
 
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Http\Controllers\Controller;

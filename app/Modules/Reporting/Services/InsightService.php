@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Modules\Reporting\Services;
 
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Enums\TransactionType;

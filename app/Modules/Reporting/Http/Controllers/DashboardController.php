@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Modules\Reporting\Http\Controllers;
 
 use App\Modules\Ledger\Models\Transaction;
-use App\Modules\Ledger\Services\BalanceCalculator;
+use App\Modules\Ledger\Contracts\Balances;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Support\Money;
-use App\Services\InsightService;
-use App\Services\ReportService;
+use App\Modules\Reporting\Services\InsightService;
+use App\Modules\Reporting\Services\ReportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -16,7 +16,7 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request, ReportService $reports, BalanceCalculator $balances, InsightService $insights): Response
+    public function index(Request $request, ReportService $reports, Balances $balances, InsightService $insights): Response
     {
         $user = $request->user();
         $evolutionMonths = $request->integer('evolutionMonths', 6) === 12 ? 12 : 6;

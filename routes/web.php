@@ -1,11 +1,6 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\Reports\AnnualReportPdfController;
-use App\Http\Controllers\Reports\CustomReportCsvController;
-use App\Http\Controllers\Reports\MonthlyReportPdfController;
 use App\Modules\Identity\Http\Controllers\PreferenceController;
 use App\Modules\Identity\Http\Controllers\ProfileController;
 use App\Modules\Ledger\Http\Controllers\AccountController;
@@ -17,6 +12,11 @@ use App\Modules\Planning\Http\Controllers\BudgetController;
 use App\Modules\Planning\Http\Controllers\BudgetForecastController;
 use App\Modules\Planning\Http\Controllers\RecurringTransactionController;
 use App\Modules\Planning\Http\Controllers\SavingsGoalController;
+use App\Modules\Reporting\Http\Controllers\DashboardController;
+use App\Modules\Reporting\Http\Controllers\ReportController;
+use App\Modules\Reporting\Http\Controllers\Reports\AnnualReportPdfController;
+use App\Modules\Reporting\Http\Controllers\Reports\CustomReportCsvController;
+use App\Modules\Reporting\Http\Controllers\Reports\MonthlyReportPdfController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
