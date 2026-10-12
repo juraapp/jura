@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
@@ -27,8 +27,12 @@ import {
     skip,
     reopen,
     link,
+    bulkDestroy,
 } from '@/actions/App/Modules/Planning/Http/Controllers/PlannedEventController';
 import { useFormat } from '@/composables/useFormat';
+import BulkCheckbox from '@/Components/BulkCheckbox.vue';
+import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
+import { useBulkSelection } from '@/composables/useBulkSelection';
 
 const format = useFormat();
 
@@ -45,6 +49,9 @@ const props = defineProps({
     certainties: { type: Array, required: true },
     buckets: { type: Array, required: true },
 });
+
+const bulk = useBulkSelection(() => props.events);
+watch(() => props.events, () => bulk.clear());
 
 const page = usePage();
 const { isDark } = useDarkMode();
@@ -302,6 +309,8 @@ const deleteEvent = () => {
                 </EmptyState>
 
                 <div v-else class="space-y-6">
+                    <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> Select all</label>
+                    <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" noun="planned events" note="Deleting an occurrence of a repeating event removes only that one; the rest of the series stays." />
                     <div v-for="group in groupedEvents" :key="group.month">
                         <h4 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ monthLabel(group.month) }}</h4>
                         <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
@@ -312,6 +321,7 @@ const deleteEvent = () => {
                                 :class="{ 'opacity-60': event.status !== 'planned' }"
                             >
                                 <div class="flex flex-wrap items-center gap-3">
+                                    <BulkCheckbox :bulk="bulk" :id="event.id" :label="`Select ${event.description}`" />
                                     <div class="w-14 shrink-0 text-center">
                                         <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatDate(event.date) }}</p>
                                         <p v-if="isOverdue(event)" class="text-[10px] font-semibold uppercase text-red-600 dark:text-red-400">Overdue</p>

@@ -8,6 +8,7 @@ use App\Modules\Planning\Http\Requests\SavingsGoals\StoreSavingsGoalRequest;
 use App\Modules\Planning\Http\Requests\SavingsGoals\UpdateSavingsGoalRequest;
 use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
@@ -104,6 +105,19 @@ class SavingsGoalController extends Controller
         $savingsGoal->delete();
 
         return back()->with('success', __('savings-goals.deleted'));
+    }
+
+    public function bulkDestroy(BulkIdsRequest $request): RedirectResponse
+    {
+        $count = 0;
+
+        foreach (SavingsGoal::whereIn('id', $request->validated('ids'))->get() as $item) {
+            $this->authorize('delete', $item);
+            $item->delete();
+            $count++;
+        }
+
+        return back()->with('success', __('messages.bulk.deleted', ['count' => $count]));
     }
 
     public function restore(int $id): RedirectResponse

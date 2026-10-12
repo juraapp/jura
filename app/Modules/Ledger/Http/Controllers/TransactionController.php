@@ -4,6 +4,8 @@ namespace App\Modules\Ledger\Http\Controllers;
 
 use App\Modules\Ledger\Enums\CategoryType;
 use App\Modules\Ledger\Enums\TransactionType;
+use App\Modules\Ledger\Http\Requests\Transactions\BulkTransactionsRequest;
+use App\Modules\Ledger\Http\Requests\Transactions\BulkUpdateTransactionsRequest;
 use App\Modules\Ledger\Http\Requests\Transactions\StoreTransactionRequest;
 use App\Modules\Ledger\Http\Requests\Transactions\UpdateTransactionRequest;
 use App\Modules\Ledger\Models\Account;
@@ -11,6 +13,8 @@ use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Ledger\Services\TransactionService;
 use App\Modules\Shared\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,35 +24,11 @@ use Inertia\Response;
 
 class TransactionController extends Controller
 {
+    private const BULK_LIMIT = 2000;
+
     public function index(Request $request, string $type = 'all'): Response
     {
-        $query = Auth::user()->transactions()->with(['account', 'category'])->latest('date')->orderByRaw('time is null')->latest('time')->latest('id');
-
-        if ($type === 'transfer') {
-            $query->where('type', 'transfer_out');
-        } elseif ($type !== 'all') {
-            $query->where('type', $type);
-        }
-
-        if ($request->filled('account')) {
-            $query->where('account_id', $request->query('account'));
-        }
-
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->query('category'));
-        }
-
-        if ($request->filled('from')) {
-            $query->whereDate('date', '>=', $request->query('from'));
-        }
-
-        if ($request->filled('to')) {
-            $query->whereDate('date', '<=', $request->query('to'));
-        }
-
-        if ($request->filled('q')) {
-            $query->where('description', 'like', '%'.$request->query('q').'%');
-        }
+        $query = $this->filteredQuery($type, $request->only(['account', 'category', 'from', 'to', 'q']));
 
         $transactions = $query->paginate(15)->withQueryString();
 
@@ -88,6 +68,117 @@ class TransactionController extends Controller
             'categories' => Category::orderBy('name')->get(['id', 'name', 'type']),
             'filters' => $request->only(['account', 'category', 'from', 'to', 'q']),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters  account, category, from, to, q
+     * @return Builder<Transaction>
+     */
+    private function filteredQuery(string $type, array $filters): Builder
+    {
+        $query = Transaction::with(['account', 'category'])->latest('date')->orderByRaw('time is null')->latest('time')->latest('id');
+
+        if ($type === 'transfer') {
+            $query->where('type', 'transfer_out');
+        } elseif ($type !== 'all') {
+            $query->where('type', $type);
+        }
+
+        if (! empty($filters['account'])) {
+            $query->where('account_id', $filters['account']);
+        }
+
+        if (! empty($filters['category'])) {
+            $query->where('category_id', $filters['category']);
+        }
+
+        if (! empty($filters['from'])) {
+            $query->whereDate('date', '>=', $filters['from']);
+        }
+
+        if (! empty($filters['to'])) {
+            $query->whereDate('date', '<=', $filters['to']);
+        }
+
+        if (! empty($filters['q'])) {
+            $query->where('description', 'like', '%'.$filters['q'].'%');
+        }
+
+        return $query;
+    }
+
+    /**
+     * The transactions a bulk request points at: explicit ids, or every row the list filters match.
+     *
+     * @return Collection<int, Transaction>
+     */
+    private function bulkSelection(BulkTransactionsRequest $request): Collection
+    {
+        if ($request->boolean('all_matching')) {
+            return $this->filteredQuery($request->input('type', 'all'), (array) $request->input('filters', []))
+                ->limit(self::BULK_LIMIT)
+                ->get();
+        }
+
+        return Auth::user()->transactions()->with('account')->whereIn('id', $request->input('ids', []))->get();
+    }
+
+    public function bulkDestroy(BulkTransactionsRequest $request, TransactionService $service): RedirectResponse
+    {
+        $deleted = [];
+
+        foreach ($this->bulkSelection($request) as $transaction) {
+            if ($transaction->fresh() === null) {
+                continue;
+            }
+
+            $this->authorize('delete', $transaction);
+
+            $legs = $transaction->type->isTransfer() && $transaction->transfer_group_id
+                ? Transaction::where('transfer_group_id', $transaction->transfer_group_id)->pluck('id')->all()
+                : [$transaction->id];
+
+            $service->delete($transaction);
+            array_push($deleted, ...$legs);
+        }
+
+        $deleted = array_values(array_unique($deleted));
+
+        return back()->with([
+            'success' => __('transactions.bulk_deleted', ['count' => count($deleted)]),
+            'undo' => $deleted === [] ? null : ['url' => route('transactions.bulk-restore'), 'ids' => $deleted],
+        ]);
+    }
+
+    public function bulkRestore(Request $request, TransactionService $service): RedirectResponse
+    {
+        $ids = $request->validate(['ids' => ['required', 'array', 'max:'.BulkTransactionsRequest::MAX_IDS], 'ids.*' => ['integer']])['ids'];
+        $restored = 0;
+
+        foreach (Transaction::onlyTrashed()->whereIn('id', $ids)->get() as $transaction) {
+            $this->authorize('delete', $transaction);
+            $service->restore($transaction);
+            $restored++;
+        }
+
+        return back()->with('success', __('transactions.bulk_restored', ['count' => $restored]));
+    }
+
+    public function bulkUpdate(BulkUpdateTransactionsRequest $request, TransactionService $service): RedirectResponse
+    {
+        $category = $request->filled('category_id') ? Category::find($request->integer('category_id')) : null;
+        $accountId = $request->filled('account_id') ? $request->integer('account_id') : null;
+        $changed = 0;
+
+        foreach ($this->bulkSelection($request) as $transaction) {
+            $this->authorize('update', $transaction);
+
+            if ($service->reassign($transaction, $accountId, $category)) {
+                $changed++;
+            }
+        }
+
+        return back()->with('success', __('transactions.bulk_updated', ['count' => $changed]));
     }
 
     public function formOptions(): JsonResponse

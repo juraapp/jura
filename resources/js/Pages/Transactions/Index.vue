@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
@@ -12,7 +12,9 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import { useTransactionModal } from '@/composables/useTransactionModal';
-import { destroy } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
+import BulkActionBar from '@/Components/BulkActionBar.vue';
+import { useBulkSelection } from '@/composables/useBulkSelection';
+import { destroy, bulkDestroy, bulkUpdate } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
 import { useFormat } from '@/composables/useFormat';
 
 const format = useFormat();
@@ -72,6 +74,38 @@ const amountClass = (type) => ({
 const amountSign = (type) => ({ income: '+', expense: '−' }[type] ?? '');
 
 const formatDate = (date) => format.date(date);
+
+/* ---- bulk selection ---- */
+const bulk = useBulkSelection(() => props.transactions.data);
+watch(() => props.transactions.data, () => bulk.clear());
+
+// "All matching" sends the current filters instead of ids, so it reaches past this page.
+const bulkPayload = () => (bulk.allMatching.value
+    ? { all_matching: true, type: props.typeFilter, filters: { ...filters } }
+    : { ids: bulk.ids.value });
+
+const confirmingBulkDelete = ref(false);
+const bulkDelete = () => {
+    router.post(bulkDestroy.url(), bulkPayload(), {
+        preserveScroll: true,
+        onFinish: () => (confirmingBulkDelete.value = false),
+    });
+};
+
+const editingBulk = ref(false);
+const bulkChanges = reactive({ category_id: '', account_id: '' });
+const openBulkEdit = () => {
+    bulkChanges.category_id = '';
+    bulkChanges.account_id = '';
+    editingBulk.value = true;
+};
+const bulkEdit = () => {
+    router.post(bulkUpdate.url(), {
+        ...bulkPayload(),
+        category_id: bulkChanges.category_id || null,
+        account_id: bulkChanges.account_id || null,
+    }, { preserveScroll: true, onSuccess: () => (editingBulk.value = false) });
+};
 </script>
 
 <template>
@@ -143,11 +177,25 @@ const formatDate = (date) => format.date(date);
             </EmptyState>
 
             <template v-else>
+                <BulkActionBar
+                    :count="bulk.count.value"
+                    :matching-total="transactions.total"
+                    :all-matching="bulk.allMatching.value"
+                    @clear="bulk.clear()"
+                    @select-all-matching="bulk.allMatching.value = true"
+                >
+                    <SecondaryButton type="button" @click="openBulkEdit">Change category / account</SecondaryButton>
+                    <DangerButton type="button" @click="confirmingBulkDelete = true">Delete</DangerButton>
+                </BulkActionBar>
+
                 <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead class="bg-gray-50 dark:bg-gray-900/40">
                                 <tr>
+                                    <th class="w-10 px-4 py-3">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700" aria-label="Select all on this page" :checked="bulk.allOnPageSelected.value" @change="bulk.togglePage()" />
+                                    </th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
@@ -156,7 +204,10 @@ const formatDate = (date) => format.date(date);
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                <tr v-for="transaction in transactions.data" :key="transaction.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                                <tr v-for="transaction in transactions.data" :key="transaction.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/40" :class="{ 'bg-primary-50/60 dark:bg-primary-500/5': bulk.isSelected(transaction.id) || bulk.allMatching.value }">
+                                    <td class="w-10 px-4 py-3">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700" :aria-label="`Select ${transaction.description || 'transaction'}`" :checked="bulk.isSelected(transaction.id) || bulk.allMatching.value" @change="bulk.toggle(transaction.id)" />
+                                    </td>
                                     <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                                         {{ formatDate(transaction.date) }}
                                         <span v-if="transaction.time" class="block text-xs text-gray-400">{{ format.time(transaction.time) }}</span>
@@ -215,6 +266,42 @@ const formatDate = (date) => format.date(date);
                 </div>
             </template>
         </div>
+
+        <Modal :show="confirmingBulkDelete" @close="confirmingBulkDelete = false">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Delete {{ bulk.allMatching.value ? transactions.total : bulk.count.value }} transactions?
+                </h2>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Both sides of any transfer are deleted. Balances update right away, and you can undo or restore them from the Trash.
+                </p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <SecondaryButton type="button" @click="confirmingBulkDelete = false">Cancel</SecondaryButton>
+                    <DangerButton type="button" @click="bulkDelete">Delete</DangerButton>
+                </div>
+            </div>
+        </Modal>
+
+        <Modal :show="editingBulk" @close="editingBulk = false">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Change {{ bulk.allMatching.value ? transactions.total : bulk.count.value }} transactions</h2>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Leave a field empty to keep it. Transfers are never changed, and a category only applies to transactions of the same kind.</p>
+                <div class="mt-4 space-y-3">
+                    <select v-model="bulkChanges.category_id" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        <option value="">Keep category</option>
+                        <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }} ({{ category.type }})</option>
+                    </select>
+                    <select v-model="bulkChanges.account_id" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        <option value="">Keep account</option>
+                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+                    </select>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <SecondaryButton type="button" @click="editingBulk = false">Cancel</SecondaryButton>
+                    <PrimaryButton type="button" :disabled="!bulkChanges.category_id && !bulkChanges.account_id" @click="bulkEdit">Apply</PrimaryButton>
+                </div>
+            </div>
+        </Modal>
 
         <Modal :show="confirmingDeleteTransaction !== null" @close="confirmingDeleteTransaction = null">
             <div class="p-6">

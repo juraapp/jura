@@ -1,8 +1,31 @@
 <script setup>
+import { watch } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import { useToast } from '@/composables/useToast';
 
-const { toasts, remove } = useToast();
+const { toasts, push, remove } = useToast();
+const page = usePage();
+
+// The server flashes success/error/warning messages (and an optional Undo) with every redirect.
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (!flash) return;
+
+        ['success', 'error', 'warning'].forEach((type) => {
+            if (!flash[type]) return;
+
+            const undo = type === 'success' ? flash.undo : null;
+            push({
+                type,
+                message: flash[type],
+                action: undo ? { label: 'Undo', onClick: () => router.post(undo.url, { ids: undo.ids }, { preserveScroll: true }) } : null,
+            });
+        });
+    },
+    { immediate: true },
+);
 </script>
 
 <template>
@@ -33,6 +56,15 @@ const { toasts, remove } = useToast();
                 </span>
 
                 <p class="text-sm font-normal text-gray-700 dark:text-gray-300">{{ toast.message }}</p>
+
+                <button
+                    v-if="toast.action"
+                    type="button"
+                    class="shrink-0 text-sm font-semibold text-primary-600 hover:underline dark:text-primary-400"
+                    @click="toast.action.onClick(); remove(toast.id)"
+                >
+                    {{ toast.action.label }}
+                </button>
 
                 <button
                     type="button"

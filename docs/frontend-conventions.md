@@ -1,5 +1,10 @@
 # Frontend Conventions
 
+## Lists with bulk actions
+Use `useBulkSelection(() => rows)` with `<BulkCheckbox>` per row (and `page` in the header) and `<BulkDeleteBar>` for plain
+delete-many; add a `bulkDestroy` action on the controller taking `ids[]` (`Shared\Http\Requests\BulkIdsRequest`, max 500).
+Server flashes (`success`/`error`/`warning`, plus `undo: {url, ids}`) are shown as toasts by `ToastContainer`.
+
 ## Formatting dates, times, numbers and money
 Never call `toLocaleDateString`, `toFixed` or `Intl.NumberFormat` for user-visible values. Use `useFormat()`
 (`resources/js/composables/useFormat.js`: `date`, `time`, `dateTime`, `number`, `money`) so the user's

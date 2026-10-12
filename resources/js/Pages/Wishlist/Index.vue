@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
@@ -22,6 +22,7 @@ import {
     destroy,
     purchase,
     unpurchase,
+    bulkDestroy,
 } from '@/actions/App/Modules/Planning/Http/Controllers/WishlistItemController';
 import {
     store as storeProject,
@@ -29,6 +30,9 @@ import {
     destroy as destroyProject,
 } from '@/actions/App/Modules/Planning/Http/Controllers/ProjectController';
 import { useFormat } from '@/composables/useFormat';
+import BulkCheckbox from '@/Components/BulkCheckbox.vue';
+import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
+import { useBulkSelection } from '@/composables/useBulkSelection';
 
 const format = useFormat();
 
@@ -41,6 +45,9 @@ const props = defineProps({
     currencies: { type: Array, required: true },
     projectKinds: { type: Array, required: true },
 });
+
+const bulk = useBulkSelection(() => groups.value.flatMap((group) => group.items));
+watch(() => groups.value.flatMap((group) => group.items), () => bulk.clear());
 
 const page = usePage();
 const locale = () => page.props.auth.user?.locale ?? 'en';
@@ -242,6 +249,8 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                     <input v-model="showClosed" type="checkbox" class="rounded border-gray-300 text-primary-600" />
                     Show purchased and dropped items
                 </label>
+                <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> Select all</label>
+                <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" noun="wish list items" />
 
                 <section v-for="group in groups" :key="group.project?.id ?? 'none'" class="space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -275,6 +284,7 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                     <ul v-else class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
                         <li v-for="item in group.items" :key="item.id" class="px-4 py-3" :class="{ 'opacity-60': item.status !== 'wanted' }">
                             <div class="flex flex-wrap items-center gap-3">
+                                <BulkCheckbox :bulk="bulk" :id="item.id" :label="`Select ${item.name}`" />
                                 <div class="min-w-0 flex-1">
                                     <p class="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
                                         <span class="truncate" :class="{ 'line-through': item.status === 'dropped' }">{{ item.name }}</span>

@@ -9,6 +9,7 @@ use App\Modules\Planning\Http\Requests\RecurringTransactions\StoreRecurringTrans
 use App\Modules\Planning\Http\Requests\RecurringTransactions\UpdateRecurringTransactionRequest;
 use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -78,6 +79,19 @@ class RecurringTransactionController extends Controller
         $recurringTransaction->update(['is_active' => ! $recurringTransaction->is_active]);
 
         return back();
+    }
+
+    public function bulkDestroy(BulkIdsRequest $request): RedirectResponse
+    {
+        $count = 0;
+
+        foreach (RecurringTransaction::whereIn('id', $request->validated('ids'))->get() as $item) {
+            $this->authorize('delete', $item);
+            $item->delete();
+            $count++;
+        }
+
+        return back()->with('success', __('messages.bulk.deleted', ['count' => $count]));
     }
 
     public function destroy(RecurringTransaction $recurringTransaction): RedirectResponse

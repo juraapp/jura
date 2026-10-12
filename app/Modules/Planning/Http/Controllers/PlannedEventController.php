@@ -17,6 +17,7 @@ use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Services\CashFlowProjector;
 use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -107,6 +108,19 @@ class PlannedEventController extends Controller
         $service->deleteEvent($plannedEvent, $scope);
 
         return back()->with('success', __('planned-events.deleted'));
+    }
+
+    public function bulkDestroy(BulkIdsRequest $request, PlannedEventService $service): RedirectResponse
+    {
+        $count = 0;
+
+        foreach (PlannedEvent::whereIn('id', $request->validated('ids'))->get() as $item) {
+            $this->authorize('delete', $item);
+            $service->deleteEvent($item, 'this');
+            $count++;
+        }
+
+        return back()->with('success', __('messages.bulk.deleted', ['count' => $count]));
     }
 
     public function realize(RealizePlannedEventRequest $request, PlannedEvent $plannedEvent, PlannedEventService $service): RedirectResponse

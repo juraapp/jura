@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
@@ -27,8 +27,12 @@ import {
     reset,
     allocations,
     destroyAllocation,
+    bulkDestroy,
 } from '@/actions/App/Modules/Planning/Http/Controllers/BucketController';
 import { useFormat } from '@/composables/useFormat';
+import BulkCheckbox from '@/Components/BulkCheckbox.vue';
+import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
+import { useBulkSelection } from '@/composables/useBulkSelection';
 
 const format = useFormat();
 
@@ -42,6 +46,9 @@ const props = defineProps({
     fillRules: { type: Array, required: true },
     carryOvers: { type: Array, required: true },
 });
+
+const bulk = useBulkSelection(() => props.buckets);
+watch(() => props.buckets, () => bulk.clear());
 
 const page = usePage();
 const locale = () => page.props.auth.user?.locale ?? 'en';
@@ -222,7 +229,12 @@ const deleteBucket = () => {
                 </template>
             </EmptyState>
 
-            <div v-else class="grid gap-4 md:grid-cols-2">
+            <div v-else>
+            <div class="mb-3 space-y-2">
+                <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> Select all</label>
+                <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" noun="buckets" note="Money held in a deleted bucket moves to your default bucket." />
+            </div>
+            <div class="grid gap-4 md:grid-cols-2">
                 <div
                     v-for="bucket in buckets"
                     :key="bucket.id"
@@ -230,6 +242,7 @@ const deleteBucket = () => {
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex min-w-0 items-center gap-3">
+                            <BulkCheckbox :bulk="bulk" :id="bucket.id" :label="`Select ${bucket.name}`" />
                             <CategoryIcon v-if="bucket.category" :category="bucket.category" size="h-10 w-10" />
                             <div v-else class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600 dark:bg-primary-500/10">
                                 <DynamicIcon name="banknotes" class="h-5 w-5" />
@@ -328,6 +341,7 @@ const deleteBucket = () => {
                         </ul>
                     </details>
                 </div>
+            </div>
             </div>
         </div>
 
