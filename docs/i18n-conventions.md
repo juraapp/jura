@@ -22,7 +22,7 @@ lang/es/   (mirrors lang/en/ exactly, same keys)
 - `insights.php` — every templated sentence `InsightService` produces.
 - `.env`: `APP_LOCALE=en`, `APP_FALLBACK_LOCALE=en` — English is the source of truth; Spanish is the translation, not the default.
 
-`APP_LOCALE` is a static, app-wide default — there is currently no per-request locale switch wired to `Auth::user()->locale`; a user's saved locale preference (`settings/preferences`) is persisted but nothing sets `app()->setLocale()` from it. If you build a locale switcher, that's the missing piece — a middleware calling `App::setLocale($request->user()->locale)` after auth.
+`APP_LOCALE` is the default for guests. For signed-in users the `SetUserLocale` middleware (Shared, registered before `HandleInertiaRequests`) calls `App::setLocale()` with the saved `locale` preference, so server strings and the shared `i18n` props follow it. Vue pages still use English literals (see below), so changing the language only affects server-side text until those are migrated to `$t()`.
 
 ## Server → client bridge
 

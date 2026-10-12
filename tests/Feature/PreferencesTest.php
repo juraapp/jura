@@ -102,4 +102,14 @@ class PreferencesTest extends TestCase
 
         $response->assertRedirect('/login');
     }
+
+    public function test_requests_use_the_users_saved_language(): void
+    {
+        $user = User::factory()->create(['locale' => 'es']);
+
+        $this->actingAs($user)->get('/settings/preferences')
+            ->assertInertia(fn (Assert $page) => $page->where('i18n.locale', 'es'));
+
+        $this->assertSame('es', app()->getLocale());
+    }
 }
