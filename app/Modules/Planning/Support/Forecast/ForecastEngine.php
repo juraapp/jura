@@ -2,8 +2,8 @@
 
 namespace App\Modules\Planning\Support\Forecast;
 
-use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\CarryOverPolicy;
+use App\Modules\Planning\Support\CyclePeriod;
 use App\Modules\Planning\Support\Waterfall;
 use App\Modules\Planning\Support\WaterfallBucket;
 use App\Modules\Shared\Support\Money;
@@ -82,10 +82,11 @@ final class ForecastEngine
                 continue;
             }
 
-            $cursor = $this->cycleEnd($bucket->cycle, $input->start);
+            $period = new CyclePeriod($bucket->cycle, $bucket->cycleEvery, $bucket->cycleAnchor?->toDateTimeImmutable());
+            $cursor = CarbonImmutable::instance($period->endOf($input->start->toDateTimeImmutable()))->startOfDay();
             while ($cursor->lte($input->end)) {
                 $events[] = ['date' => $cursor, 'order' => 1, 'type' => 'cycle', 'bucketId' => $bucket->id];
-                $cursor = $this->cycleEnd($bucket->cycle, $cursor->addDay());
+                $cursor = CarbonImmutable::instance($period->endOf($cursor->addDay()->toDateTimeImmutable()))->startOfDay();
             }
         }
 
@@ -98,11 +99,6 @@ final class ForecastEngine
         usort($events, fn (array $a, array $b) => [$a['date']->getTimestamp(), $a['order']] <=> [$b['date']->getTimestamp(), $b['order']]);
 
         return $events;
-    }
-
-    private function cycleEnd(BudgetPeriodType $cycle, CarbonImmutable $from): CarbonImmutable
-    {
-        return $cycle === BudgetPeriodType::Yearly ? $from->endOfYear()->startOfDay() : $from->endOfMonth()->startOfDay();
     }
 
     /**

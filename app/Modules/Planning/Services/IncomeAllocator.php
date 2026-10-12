@@ -66,7 +66,7 @@ class IncomeAllocator
                 $bucket->id,
                 $bucket->fill_rule,
                 $bucket->fill_value !== null ? (string) $bucket->fill_value : null,
-                $this->room($bucket),
+                $this->room($bucket, $date),
             ))
             ->values()
             ->all();
@@ -107,9 +107,11 @@ class IncomeAllocator
      * How much more the bucket can take: up to its target for savings buckets and
      * fill-to-target rules. Spending limits are not funding targets.
      */
-    private function room(Bucket $bucket): ?Money
+    private function room(Bucket $bucket, CarbonInterface $date): ?Money
     {
-        if ($bucket->cap_amount === null) {
+        $cap = $bucket->effectiveCap($date);
+
+        if ($cap === null) {
             return null;
         }
 
@@ -117,7 +119,7 @@ class IncomeAllocator
             return null;
         }
 
-        $missing = $bucket->cap_amount->subtract($this->funds->available($bucket));
+        $missing = $cap->subtract($this->funds->available($bucket));
 
         return $missing->isPositive() ? $missing : Money::zero();
     }

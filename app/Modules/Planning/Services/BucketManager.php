@@ -40,6 +40,8 @@ class BucketManager
                 'priority' => $data['priority'] ?? $bucket?->priority ?? 100,
                 'category_id' => $kind === BucketKind::Spending ? $data['category_id'] : null,
                 'cycle' => $data['cycle'] ?? null,
+                'cycle_every' => isset($data['cycle']) ? (int) ($data['cycle_every'] ?? 1) : 1,
+                'cycle_anchor' => isset($data['cycle']) ? ($data['cycle_anchor'] ?? null) : null,
                 'cap_amount' => isset($data['cap_amount']) ? Money::of($data['cap_amount']) : null,
                 'fill_rule' => $fillRule,
                 'fill_value' => $fillRule !== null && $fillRule !== FillRule::FillToTarget ? $data['fill_value'] : null,

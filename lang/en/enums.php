@@ -10,6 +10,8 @@ return [
     ],
 
     'budget_period_type' => [
+        'daily' => 'Daily',
+        'weekly' => 'Weekly',
         'monthly' => 'Monthly',
         'yearly' => 'Yearly',
     ],

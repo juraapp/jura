@@ -57,6 +57,8 @@ class PlannerService
                 $bucket->carry_over,
                 $bucket->overflow_bucket_id,
                 $bucket->is_default,
+                (int) $bucket->cycle_every,
+                $bucket->cycle_anchor !== null ? CarbonImmutable::parse($bucket->cycle_anchor->toDateString()) : null,
             );
         })->values()->all();
 
