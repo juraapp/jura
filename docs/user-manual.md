@@ -183,7 +183,11 @@ never change. There are two kinds:
 **Filling buckets from income.** Open a bucket and, under *Filling and advanced options*, choose how it fills when
 income arrives:
 - **Percent of income**: for example 20% of every income.
-- **Fixed amount**: for example 150,000 from every income.
+- **Fixed amount**: for example 150,000 from every income. If the bucket has a cycle, the amount is per cycle instead:
+  income tops the bucket up to it, so three payments in a month still give 150,000 in total, not 450,000.
+- **Share of what is left**: a percentage of the income that is still unclaimed when this bucket is reached in the
+  priority order. Put it after the fixed buckets: for example Purchase 80.95% of what is left (17/21) and
+  Restoration 100% of what is left; anything the Purchase bucket cannot take (it is full) flows on to Restoration.
 - **Fill up to its target**: tops up whatever is missing.
 
 Buckets are offered each income in **priority order** (P0 first, then P1, and so on), so the important ones are filled before

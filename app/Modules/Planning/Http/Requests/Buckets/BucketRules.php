@@ -50,11 +50,11 @@ trait BucketRules
             'cap_amount' => [Rule::requiredIf(fn () => $spending() || $needsTarget()), 'nullable', 'numeric', 'gt:0'],
             'fill_rule' => ['nullable', Rule::enum(FillRule::class)],
             'fill_value' => [
-                Rule::requiredIf(fn () => in_array($this->input('fill_rule'), [FillRule::Fixed->value, FillRule::Percent->value], true)),
+                Rule::requiredIf(fn () => in_array($this->input('fill_rule'), [FillRule::Fixed->value, FillRule::Percent->value, FillRule::PercentOfRemaining->value], true)),
                 'nullable',
                 'numeric',
                 'gt:0',
-                fn ($attribute, $value, $fail) => $this->input('fill_rule') === FillRule::Percent->value && (float) $value > 100
+                fn ($attribute, $value, $fail) => in_array($this->input('fill_rule'), [FillRule::Percent->value, FillRule::PercentOfRemaining->value], true) && (float) $value > 100
                     ? $fail('The percentage cannot be more than 100.')
                     : null,
             ],

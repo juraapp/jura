@@ -53,6 +53,29 @@ class BucketLedger
     }
 
     /**
+     * Income the bucket already received in the cycle containing the date, or null when it has no cycle
+     * (a fixed rule then applies to every income).
+     */
+    public function receivedInCycle(Bucket $bucket, CarbonInterface $date): ?Money
+    {
+        $period = $bucket->cyclePeriod();
+
+        if ($period === null) {
+            return null;
+        }
+
+        $moment = $date->toDateTimeImmutable();
+
+        return Money::of(
+            Allocation::forUser($bucket->user_id)
+                ->where('bucket_id', $bucket->id)
+                ->whereIn('source', [AllocationSource::Income->value, AllocationSource::Planned->value])
+                ->whereBetween('date', [$period->startOf($moment)->format('Y-m-d'), $period->endOf($moment)->format('Y-m-d')])
+                ->sum('amount')
+        );
+    }
+
+    /**
      * Whether the bucket has ever been funded or is set up to be.
      */
     public function hasFunding(Bucket $bucket): bool

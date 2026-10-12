@@ -241,4 +241,28 @@ class IncomeAllocationTest extends TestCase
             'allocation_overrides' => [['bucket_id' => $foreign->id, 'amount' => 200]],
         ])->assertSessionHasErrors('allocation_overrides.0.bucket_id');
     }
+
+    public function test_a_fixed_fill_on_a_bucket_with_a_cycle_is_per_cycle_not_per_income(): void
+    {
+        $leisure = $this->bucket('Leisure', 0, FillRule::Fixed, 150000, [
+            'cycle' => 'monthly', 'cap_amount' => 150000, 'kind' => 'spending',
+        ]);
+        $savings = $this->bucket('Savings', 1, FillRule::Fixed, 300000, ['cycle' => 'monthly']);
+        $car = $this->bucket('Purchase', 2, FillRule::PercentOfRemaining, '80.952381', ['cap_amount' => 10000000]);
+        $restoration = $this->bucket('Restoration', 3, FillRule::PercentOfRemaining, 100);
+
+        foreach ([2000000, 1000000, 1500000] as $amount) {
+            $this->income($amount);
+        }
+
+        $this->assertSame(150000.0, $this->funded($leisure));
+        $this->assertSame(300000.0, $this->funded($savings));
+        $this->assertEqualsWithDelta(3278571.0, $this->funded($car), 2);
+        $this->assertEqualsWithDelta(771429.0, $this->funded($restoration), 2);
+
+        $this->income(2000000, null, '2026-11-02');
+
+        $this->assertSame(300000.0, $this->funded($leisure));
+        $this->assertSame(600000.0, $this->funded($savings));
+    }
 }

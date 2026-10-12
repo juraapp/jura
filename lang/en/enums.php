@@ -69,6 +69,7 @@ return [
     'fill_rule' => [
         'fixed' => 'Fixed amount',
         'percent' => 'Percent of income',
+        'of_remaining' => 'Share of what is left',
         'fill_to_target' => 'Fill up to its target',
     ],
 

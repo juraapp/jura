@@ -5,6 +5,7 @@ namespace App\Modules\Planning\Support\Forecast;
 use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
+use App\Modules\Planning\Support\CyclePeriod;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonImmutable;
 
@@ -30,7 +31,15 @@ final readonly class EngineBucket
         public bool $isDefault,
         public int $cycleEvery = 1,
         public ?CarbonImmutable $cycleAnchor = null,
+        public ?Money $receivedThisCycle = null,
     ) {}
+
+    public function cyclePeriod(): ?CyclePeriod
+    {
+        return $this->cycle === null
+            ? null
+            : new CyclePeriod($this->cycle, $this->cycleEvery, $this->cycleAnchor?->toDateTimeImmutable());
+    }
 
     public function acceptsAccount(?int $accountId): bool
     {

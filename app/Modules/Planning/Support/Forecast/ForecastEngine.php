@@ -17,6 +17,9 @@ use Carbon\CarbonImmutable;
  */
 final class ForecastEngine
 {
+    /** @var array<int, array<string, Money>> income received per bucket and cycle start */
+    private array $received = [];
+
     public function __construct(private readonly Waterfall $waterfall) {}
 
     /**
@@ -26,7 +29,13 @@ final class ForecastEngine
     {
         $buckets = [];
         $balances = [];
+        $this->received = [];
         foreach ($input->buckets as $bucket) {
+            $period = $bucket->cyclePeriod();
+            if ($period !== null) {
+                $this->received[$bucket->id] = [$period->startOf($input->start->toDateTimeImmutable())->format('Y-m-d') => $bucket->receivedThisCycle ?? Money::zero()];
+            }
+
             $buckets[$bucket->id] = $bucket;
             $balances[$bucket->id] = $bucket->balance;
         }
@@ -119,7 +128,7 @@ final class ForecastEngine
         $inputs = [];
         foreach ($input->buckets as $bucket) {
             if ($bucket->acceptsAccount($income->accountId)) {
-                $inputs[] = new WaterfallBucket($bucket->id, $bucket->rule, $bucket->value, $bucket->room($balances[$bucket->id]));
+                $inputs[] = new WaterfallBucket($bucket->id, $bucket->rule, $bucket->value, $bucket->room($balances[$bucket->id]), $this->receivedOn($bucket, $income->date));
             }
         }
 
@@ -127,12 +136,28 @@ final class ForecastEngine
 
         foreach ($result['allocations'] as $bucketId => $amount) {
             $balances[$bucketId] = $balances[$bucketId]->add($amount);
+
+            if (isset($this->received[$bucketId])) {
+                $key = $buckets[$bucketId]->cyclePeriod()->startOf($income->date->toDateTimeImmutable())->format('Y-m-d');
+                $this->received[$bucketId][$key] = ($this->received[$bucketId][$key] ?? Money::zero())->add($amount);
+            }
         }
 
         $default = $input->defaultBucket();
         if ($result['leftover']->isPositive() && $default !== null && $default->acceptsAccount($income->accountId)) {
             $balances[$default->id] = $balances[$default->id]->add($result['leftover']);
         }
+    }
+
+    private function receivedOn(EngineBucket $bucket, CarbonImmutable $date): ?Money
+    {
+        if (! isset($this->received[$bucket->id])) {
+            return null;
+        }
+
+        $key = $bucket->cyclePeriod()->startOf($date->toDateTimeImmutable())->format('Y-m-d');
+
+        return $this->received[$bucket->id][$key] ?? Money::zero();
     }
 
     /**

@@ -129,4 +129,27 @@ class WaterfallTest extends TestCase
         $this->assertSame([], $result['allocations']);
         $this->assertTrue($result['leftover']->isZero());
     }
+
+    public function test_a_fixed_rule_with_a_cycle_only_tops_up_what_the_cycle_has_not_received_yet(): void
+    {
+        $result = (new Waterfall)->distribute(Money::of(1000), [
+            new WaterfallBucket(1, FillRule::Fixed, '150', null, Money::of(100)),
+            new WaterfallBucket(2, FillRule::Fixed, '150', null, Money::of(150)),
+        ]);
+
+        $this->assertSame([1 => '50.00'], $this->amounts($result['allocations']));
+        $this->assertSame('950.00', $result['leftover']->toDecimalString());
+    }
+
+    public function test_share_of_what_is_left_is_taken_after_earlier_buckets(): void
+    {
+        $result = (new Waterfall)->distribute(Money::of(1000), [
+            $this->bucket(1, FillRule::Fixed, '200'),
+            $this->bucket(2, FillRule::PercentOfRemaining, '50', '300'),
+            $this->bucket(3, FillRule::PercentOfRemaining, '100'),
+        ]);
+
+        $this->assertSame([1 => '200.00', 2 => '300.00', 3 => '500.00'], $this->amounts($result['allocations']));
+        $this->assertSame('0.00', $result['leftover']->toDecimalString());
+    }
 }

@@ -61,6 +61,14 @@ class CycleProjector
             ->get()
             ->filter(fn (PlannedEvent $event) => $view->includesIncome($event->certainty));
 
+        /** @var array<int, array<string, Money>> income received per bucket and cycle start, real or simulated */
+        $received = [];
+        foreach ($buckets as $bucket) {
+            if ($bucket->cyclePeriod() !== null) {
+                $received[$bucket->id] = [$windows[$bucket->id][0]->format('Y-m-d') => $this->funds->receivedInCycle($bucket, $today) ?? Money::zero()];
+            }
+        }
+
         $anyRule = $buckets->contains(fn (Bucket $bucket) => $bucket->fill_rule !== null);
         $default = $buckets->firstWhere('is_default', true);
 
@@ -81,6 +89,7 @@ class CycleProjector
                     $bucket->fill_rule,
                     $bucket->fill_value !== null ? (string) $bucket->fill_value : null,
                     $this->room($bucket, $balances[$bucket->id], $date),
+                    $this->receivedOn($bucket, $received, $date),
                 ))->values()->all();
 
             $result = $this->waterfall->distribute($event->amount, $inputs, $overrides);
@@ -92,6 +101,11 @@ class CycleProjector
 
             foreach ($allocations as $bucketId => $amount) {
                 $balances[$bucketId] = $balances[$bucketId]->add($amount);
+
+                if (isset($received[$bucketId])) {
+                    $key = $buckets->firstWhere('id', $bucketId)->cyclePeriod()->startOf($date->toDateTimeImmutable())->format('Y-m-d');
+                    $received[$bucketId][$key] = ($received[$bucketId][$key] ?? Money::zero())->add($amount);
+                }
 
                 if ($date->lte($windows[$bucketId][1])) {
                     $fills[$bucketId] = $fills[$bucketId]->add($amount);
@@ -152,5 +166,19 @@ class CycleProjector
         $missing = $cap->subtract($available);
 
         return $missing->isPositive() ? $missing : Money::zero();
+    }
+
+    /**
+     * @param  array<int, array<string, Money>>  $received
+     */
+    private function receivedOn(Bucket $bucket, array $received, CarbonInterface $date): ?Money
+    {
+        if (! isset($received[$bucket->id])) {
+            return null;
+        }
+
+        $key = $bucket->cyclePeriod()->startOf($date->toDateTimeImmutable())->format('Y-m-d');
+
+        return $received[$bucket->id][$key] ?? Money::zero();
     }
 }

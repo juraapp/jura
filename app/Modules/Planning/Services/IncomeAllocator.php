@@ -67,6 +67,7 @@ class IncomeAllocator
                 $bucket->fill_rule,
                 $bucket->fill_value !== null ? (string) $bucket->fill_value : null,
                 $this->room($bucket, $date),
+                $this->funds->receivedInCycle($bucket, $date),
             ))
             ->values()
             ->all();

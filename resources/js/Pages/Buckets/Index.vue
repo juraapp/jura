@@ -61,7 +61,12 @@ const barColor = (status) => ({ exceeded: 'bg-red-500', near_limit: 'bg-orange-4
 const ruleText = (bucket) => {
     if (!bucket.fillRule) return 'Not filled automatically';
     if (bucket.fillRule === 'percent') return `Gets ${bucket.fillValue}% of each income`;
-    if (bucket.fillRule === 'fixed') return `Gets ${money(bucket.fillValue, bucket.currency)} from each income`;
+    if (bucket.fillRule === 'of_remaining') return `Gets ${bucket.fillValue}% of what is left of each income`;
+    if (bucket.fillRule === 'fixed') {
+        return bucket.cycle
+            ? `Topped up to ${money(bucket.fillValue, bucket.currency)} from income each cycle`
+            : `Gets ${money(bucket.fillValue, bucket.currency)} from each income`;
+    }
     return 'Tops up to its target from each income';
 };
 
@@ -98,7 +103,12 @@ watch(() => form.kind, (kind) => {
     if (kind === 'spending' && !form.cycle) form.cycle = 'monthly';
     if (kind === 'savings' && !editingBucket.value) form.cycle = '';
 });
-const needsValue = computed(() => ['fixed', 'percent'].includes(form.fill_rule));
+const needsValue = computed(() => ['fixed', 'percent', 'of_remaining'].includes(form.fill_rule));
+const fillValueLabel = computed(() => {
+    if (form.fill_rule === 'percent') return 'Percent of each income';
+    if (form.fill_rule === 'of_remaining') return 'Percent of what is left when this bucket is reached';
+    return form.cycle ? 'Amount per cycle (income tops it up to this)' : 'Amount from each income';
+});
 const overflowChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === form.currency && bucket.id !== editingBucket.value?.id));
 
 const openCreateModal = () => {
@@ -450,7 +460,7 @@ const deleteBucket = () => {
                         </div>
 
                         <div v-if="needsValue">
-                            <InputLabel for="fill_value" :value="form.fill_rule === 'percent' ? 'Percent of each income' : 'Amount from each income'" />
+                            <InputLabel for="fill_value" :value="fillValueLabel" />
                             <TextInput id="fill_value" v-model="form.fill_value" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                             <InputError class="mt-1" :message="form.errors.fill_value" />
                         </div>
