@@ -45,4 +45,22 @@ return [
         'expense' => 'Expense',
         'transfer' => 'Transfer',
     ],
+
+    'certainty' => [
+        'confirmed' => 'Confirmed',
+        'expected' => 'Expected',
+        'speculative' => 'Speculative',
+    ],
+
+    'planned_event_status' => [
+        'planned' => 'Planned',
+        'realized' => 'Done',
+        'skipped' => 'Skipped',
+    ],
+
+    'forecast_view' => [
+        'conservative' => 'Conservative',
+        'expected' => 'Expected',
+        'optimistic' => 'Optimistic',
+    ],
 ];
