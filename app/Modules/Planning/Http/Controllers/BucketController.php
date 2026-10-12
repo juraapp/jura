@@ -66,6 +66,7 @@ class BucketController extends Controller
                 'cycleEvery' => $bucket->cycle_every,
                 'cycleAnchor' => $bucket->cycle_anchor?->toDateString(),
                 'cycleDescription' => $bucket->cyclePeriod()?->describe(),
+                'cycleGoal' => $bucket->cycle_goal?->toFloat(),
                 'cap' => $bucket->cap_amount?->toFloat(),
                 'fillRule' => $bucket->fill_rule?->value,
                 'fillRuleLabel' => $bucket->fill_rule?->label(),
@@ -198,10 +199,23 @@ class BucketController extends Controller
             'projectedRelease' => $row['projectedRelease']->toFloat(),
             'projectedIn' => $row['projectedIn']->toFloat(),
             'projectedClose' => $row['projectedClose']->toFloat(),
+            'receivedSoFar' => $this->receivedSoFar($bucket, $row),
             'capOverride' => $bucket->cyclePeriod() !== null
                 ? BucketCycle::where('bucket_id', $bucket->id)->where('starts_on', $row['start']->toDateString())->first()?->cap_override?->toFloat()
                 : null,
         ];
+    }
+
+    /**
+     * Money that came into the bucket during the current cycle so far (for a contribution goal).
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function receivedSoFar(Bucket $bucket, array $row): float
+    {
+        $figures = app(BucketCycleService::class)->figures($bucket, $row['start'], today());
+
+        return $figures['filled']->add($figures['moved_in'])->toFloat();
     }
 
     public function history(Bucket $bucket, BucketLedger $funds, BucketCycleService $cycles, CycleProjector $projector): Response
@@ -238,6 +252,7 @@ class BucketController extends Controller
                 'currency' => $bucket->currency,
                 'kind' => $bucket->kind->value,
                 'cap' => $bucket->cap_amount?->toFloat(),
+                'cycleGoal' => $bucket->cycle_goal?->toFloat(),
                 'cycleDescription' => $period?->describe(),
                 'carryOverLabel' => $bucket->carry_over->label(),
                 'overflowBucket' => $bucket->overflowBucket?->name,
@@ -251,7 +266,7 @@ class BucketController extends Controller
     public function cycleLimit(CycleLimitRequest $request, Bucket $bucket): RedirectResponse
     {
         $period = $bucket->cyclePeriod();
-        abort_if($period === null, 404);
+        abort_if($period === null || $bucket->kind !== BucketKind::Spending, 404);
 
         $start = $period->startOf(today()->toDateTimeImmutable())->format('Y-m-d');
         $end = $period->endOf(today()->toDateTimeImmutable())->format('Y-m-d');

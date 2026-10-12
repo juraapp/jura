@@ -91,6 +91,10 @@ const saveLimit = (value) => router.post(cycleLimit.url(props.bucket.id), { cap_
                             <dd class="italic text-gray-500"><Money :amount="current.provisional" :currency="bucket.currency" /> (provisional)</dd>
                         </div>
                     </dl>
+                    <p v-if="bucket.cycleGoal" class="mt-3 text-sm text-gray-700 dark:text-gray-200">
+                        Goal this cycle: <Money :amount="bucket.cycleGoal" :currency="bucket.currency" />. Received so far:
+                        <Money :amount="current.filled + current.movedIn" :currency="bucket.currency" />.
+                    </p>
                     <p v-if="current.released > 0" class="mt-3 text-xs text-gray-500 dark:text-gray-400">
                         If you spend only what is planned, about <Money :amount="current.released" :currency="bucket.currency" /> moves on when this cycle ends.
                     </p>
@@ -128,6 +132,7 @@ const saveLimit = (value) => router.post(cycleLimit.url(props.bucket.id), { cap_
                                     <th class="px-4 py-3 text-right">Moved in / out</th>
                                     <th class="px-4 py-3 text-right">Spent</th>
                                     <th class="px-4 py-3 text-right">Overflow out</th>
+                                    <th v-if="bucket.cycleGoal" class="px-4 py-3 text-right">Goal</th>
                                     <th class="px-4 py-3 text-right">Left</th>
                                 </tr>
                             </thead>
@@ -139,6 +144,9 @@ const saveLimit = (value) => router.post(cycleLimit.url(props.bucket.id), { cap_
                                     <td class="px-4 py-3 text-right tabular-nums"><Money :amount="cycle.movedIn" :currency="bucket.currency" /> / <Money :amount="cycle.movedOut" :currency="bucket.currency" /></td>
                                     <td class="px-4 py-3 text-right tabular-nums text-red-600 dark:text-red-400"><Money :amount="cycle.spent" :currency="bucket.currency" /></td>
                                     <td class="px-4 py-3 text-right tabular-nums"><Money :amount="cycle.released" :currency="bucket.currency" /></td>
+                                    <td v-if="bucket.cycleGoal" class="px-4 py-3 text-right tabular-nums" :class="cycle.cap && cycle.filled + cycle.movedIn >= cycle.cap ? 'text-green-600 dark:text-green-400' : 'text-gray-500'">
+                                        <template v-if="cycle.cap"><Money :amount="cycle.cap" :currency="bucket.currency" /></template><template v-else>-</template>
+                                    </td>
                                     <td class="px-4 py-3 text-right font-medium tabular-nums"><Money :amount="cycle.closing" :currency="bucket.currency" /></td>
                                 </tr>
                             </tbody>

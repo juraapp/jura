@@ -224,6 +224,11 @@ what moved in or out, what was spent, what overflowed and what was left) with a 
 closes, so the history stays correct even if you change the bucket later. Cycles that ended while Jura was not running
 are closed in order the next time it runs.
 
+**Cycles on savings buckets.** A savings bucket can have a cycle too (choose one in the form; *No cycle* is the
+default). It keeps the same history as a spending bucket, and you can set a **goal to save each cycle** (for example
+200 a month). The card shows what it received so far this cycle against that goal, and the history page shows the goal
+for every finished cycle. The bucket's overall target is unchanged: money carried over counts toward it.
+
 **A different limit for one cycle.** On the history page, **Limit for this cycle only** changes the limit for the
 current cycle (for example a holiday month). Clear it to go back to the usual limit.
 

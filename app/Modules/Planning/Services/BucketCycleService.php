@@ -92,7 +92,7 @@ class BucketCycleService
                 'status' => BucketCycle::CLOSED,
                 'released' => $released,
                 'closing' => $leftover->subtract($released),
-                'cap' => $override ?? $bucket->cap_amount,
+                'cap' => $bucket->kind === BucketKind::Savings ? $bucket->cycle_goal : ($override ?? $bucket->cap_amount),
                 'closed_at' => now(),
             ])->save();
 

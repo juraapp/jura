@@ -27,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * a target). Funded money is the sum of its allocations.
  */
 #[Fillable([
-    'name', 'kind', 'currency', 'priority', 'category_id', 'cycle', 'cycle_every', 'cycle_anchor', 'cap_amount', 'fill_rule', 'fill_value',
+    'name', 'kind', 'currency', 'priority', 'category_id', 'cycle', 'cycle_every', 'cycle_anchor', 'cycle_goal', 'cap_amount', 'fill_rule', 'fill_value',
     'carry_over', 'overflow_bucket_id', 'allowed_account_ids', 'is_default', 'tracking_started_on', 'cycle_closed_through',
 ])]
 class Bucket extends Model
@@ -41,6 +41,7 @@ class Bucket extends Model
             'cycle' => BudgetPeriodType::class,
             'cycle_every' => 'integer',
             'cycle_anchor' => 'date',
+            'cycle_goal' => AsMoney::class,
             'cap_amount' => AsMoney::class,
             'fill_rule' => FillRule::class,
             'carry_over' => CarryOverPolicy::class,

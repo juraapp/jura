@@ -42,6 +42,7 @@ class BucketManager
                 'cycle' => $data['cycle'] ?? null,
                 'cycle_every' => isset($data['cycle']) ? (int) ($data['cycle_every'] ?? 1) : 1,
                 'cycle_anchor' => isset($data['cycle']) ? ($data['cycle_anchor'] ?? null) : null,
+                'cycle_goal' => isset($data['cycle']) && $kind === BucketKind::Savings && isset($data['cycle_goal']) ? Money::of($data['cycle_goal']) : null,
                 'cap_amount' => isset($data['cap_amount']) ? Money::of($data['cap_amount']) : null,
                 'fill_rule' => $fillRule,
                 'fill_value' => $fillRule !== null && $fillRule !== FillRule::FillToTarget ? $data['fill_value'] : null,

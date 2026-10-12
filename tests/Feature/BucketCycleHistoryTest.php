@@ -212,4 +212,54 @@ class BucketCycleHistoryTest extends TestCase
         $this->assertSame('2026-10-05', $bucket->cycle_anchor->toDateString());
         $this->assertSame('Every 2 weeks from Monday', $bucket->cyclePeriod()->describe());
     }
+
+    public function test_a_savings_bucket_can_have_a_cycle_and_a_goal_per_cycle(): void
+    {
+        $this->post('/planning/buckets', [
+            'kind' => 'savings', 'name' => 'Trip', 'currency' => 'COP', 'cap_amount' => 5000,
+            'cycle' => 'monthly', 'cycle_every' => 1, 'cycle_goal' => 200,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $trip = Bucket::where('name', 'Trip')->firstOrFail();
+        $this->assertSame('monthly', $trip->cycle->value);
+        $this->assertSame('200.00', $trip->cycle_goal->toDecimalString());
+    }
+
+    public function test_a_savings_bucket_without_a_cycle_keeps_working_and_ignores_a_goal(): void
+    {
+        $this->post('/planning/buckets', ['kind' => 'savings', 'name' => 'Rainy day', 'currency' => 'COP', 'cycle_goal' => 200])
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $bucket = Bucket::where('name', 'Rainy day')->firstOrFail();
+        $this->assertNull($bucket->cycle);
+        $this->assertNull($bucket->cycle_goal);
+    }
+
+    public function test_a_closed_savings_cycle_records_what_it_received_against_its_goal_and_keeps_its_money(): void
+    {
+        $this->savings->update(['cycle' => 'monthly', 'cycle_goal' => 400]);
+        $this->receive('2026-10-01');
+
+        $this->closeAt('2026-11-02');
+
+        $row = BucketCycle::where('bucket_id', $this->savings->id)->firstOrFail();
+        $this->assertSame('500.00', $row->filled->toDecimalString());
+        $this->assertSame('400.00', $row->cap->toDecimalString(), 'the cycle goal is kept with the snapshot');
+        $this->assertSame('500.00', $row->closing->toDecimalString());
+        $this->assertSame(0, Allocation::where('bucket_id', $this->savings->id)->where('amount', '<', 0)->count(), 'a carry bucket keeps its money');
+    }
+
+    public function test_the_card_and_history_show_progress_toward_the_cycle_goal(): void
+    {
+        $this->savings->update(['cycle' => 'monthly', 'cycle_goal' => 400]);
+        $this->receive('2026-10-01');
+
+        $this->get('/planning/buckets')->assertInertia(fn ($page) => $page
+            ->where('buckets', fn ($buckets) => collect($buckets)->firstWhere('id', $this->savings->id)['cycleView']['receivedSoFar'] == 500
+                && collect($buckets)->firstWhere('id', $this->savings->id)['cycleGoal'] == 400)
+        );
+        $this->get("/planning/buckets/{$this->savings->id}/history")->assertInertia(fn ($page) => $page
+            ->where('bucket.cycleGoal', 400)->where('current.filled', 500)
+        );
+    }
 }
