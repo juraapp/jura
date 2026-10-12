@@ -40,7 +40,7 @@ class PlannerService
 
         $names = [];
         $balances = [];
-        $engineBuckets = $buckets->map(function (Bucket $bucket) use (&$names, &$balances) {
+        $engineBuckets = $buckets->map(function (Bucket $bucket) use (&$names, &$balances, $start) {
             $balance = $this->funds->available($bucket);
             $names[$bucket->id] = $bucket->name;
             $balances[$bucket->id] = $balance->toFloat();
@@ -59,6 +59,7 @@ class PlannerService
                 $bucket->is_default,
                 (int) $bucket->cycle_every,
                 $bucket->cycle_anchor !== null ? CarbonImmutable::parse($bucket->cycle_anchor->toDateString()) : null,
+                $this->funds->receivedInCycle($bucket, $start),
             );
         })->values()->all();
 

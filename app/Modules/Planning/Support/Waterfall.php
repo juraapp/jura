@@ -44,8 +44,9 @@ final class Waterfall
             }
 
             $wanted = match ($bucket->rule) {
-                FillRule::Fixed => Money::of($bucket->value ?? 0),
+                FillRule::Fixed => $this->fixedAmount($bucket),
                 FillRule::Percent => $income->multiply($bucket->value ?? 0)->divide(100),
+                FillRule::PercentOfRemaining => $remaining->multiply($bucket->value ?? 0)->divide(100),
                 FillRule::FillToTarget => $bucket->room ?? Money::zero(),
             };
 
@@ -61,6 +62,19 @@ final class Waterfall
         }
 
         return ['allocations' => $allocations, 'leftover' => $remaining];
+    }
+
+    private function fixedAmount(WaterfallBucket $bucket): Money
+    {
+        $amount = Money::of($bucket->value ?? 0);
+
+        if ($bucket->received === null) {
+            return $amount;
+        }
+
+        $missing = $amount->subtract($bucket->received);
+
+        return $missing->isPositive() ? $missing : Money::zero();
     }
 
     private function smaller(Money $a, Money $b): Money

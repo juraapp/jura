@@ -69,6 +69,7 @@ return [
     'fill_rule' => [
         'fixed' => 'Monto fijo',
         'percent' => 'Porcentaje del ingreso',
+        'of_remaining' => 'Parte de lo que queda',
         'fill_to_target' => 'Llenar hasta su meta',
     ],
 

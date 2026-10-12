@@ -260,4 +260,21 @@ class ForecastEngineTest extends TestCase
         $this->assertSame('600.00', $result->endBalances[1]->toDecimalString());
         $this->assertSame('5.00', $result->endBalances[2]->toDecimalString());
     }
+
+    public function test_a_fixed_fill_on_a_cycle_bucket_is_topped_up_once_per_cycle_in_the_simulation(): void
+    {
+        $result = (new ForecastEngine(new Waterfall))->run(
+            new EngineInput($this->date(self::START), $this->date('2026-11-30'), [
+                $this->bucket(1, 0, FillRule::Fixed, 150, savings: false, cycle: BudgetPeriodType::Monthly),
+                $this->bucket(2, 0, default: true),
+            ], [
+                $this->income('2026-10-02', 1000),
+                $this->income('2026-10-10', 1000),
+                $this->income('2026-11-02', 1000),
+            ]),
+            [],
+        );
+
+        $this->assertSame('300.00', $result->endBalances[1]->toDecimalString());
+    }
 }

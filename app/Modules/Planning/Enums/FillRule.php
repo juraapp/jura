@@ -9,6 +9,7 @@ enum FillRule: string
 {
     case Fixed = 'fixed';
     case Percent = 'percent';
+    case PercentOfRemaining = 'of_remaining';
     case FillToTarget = 'fill_to_target';
 
     public function label(): string
