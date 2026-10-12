@@ -73,6 +73,13 @@ class SavingsGoalController extends Controller
             'goals' => $goals,
             'currencies' => $currencies,
             'iconChoices' => self::ICON_CHOICES,
+            'trashedGoals' => SavingsGoal::onlyTrashed()->latest('deleted_at')->get()
+                ->map(fn (SavingsGoal $goal) => [
+                    'id' => $goal->id,
+                    'name' => $goal->name,
+                    'targetAmount' => $goal->target_amount->toFloat(),
+                    'currency' => $goal->currency,
+                ])->values(),
         ]);
     }
 
@@ -97,6 +104,26 @@ class SavingsGoalController extends Controller
         $savingsGoal->delete();
 
         return back()->with('success', __('savings-goals.deleted'));
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $goal = SavingsGoal::onlyTrashed()->findOrFail($id);
+        $this->authorize('delete', $goal);
+
+        $goal->restore();
+
+        return back()->with('success', __('savings-goals.restored'));
+    }
+
+    public function forceDestroy(int $id): RedirectResponse
+    {
+        $goal = SavingsGoal::onlyTrashed()->findOrFail($id);
+        $this->authorize('delete', $goal);
+
+        $goal->forceDelete();
+
+        return back()->with('success', __('savings-goals.purged'));
     }
 
     public function contribute(StoreSavingsGoalContributionRequest $request, SavingsGoal $savingsGoal): RedirectResponse

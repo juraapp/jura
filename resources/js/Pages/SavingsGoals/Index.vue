@@ -13,18 +13,26 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
-import { store, update, destroy, contribute } from '@/actions/App/Modules/Planning/Http/Controllers/SavingsGoalController';
+import { store, update, destroy, contribute, restore, forceDestroy } from '@/actions/App/Modules/Planning/Http/Controllers/SavingsGoalController';
 
 defineProps({
     goals: { type: Array, required: true },
     currencies: { type: Array, required: true },
     iconChoices: { type: Array, required: true },
+    trashedGoals: { type: Array, default: () => [] },
 });
 
 const page = usePage();
 const showModal = ref(false);
 const editingGoal = ref(null);
 const confirmingDeleteGoal = ref(null);
+const confirmingPurgeGoal = ref(null);
+const purgeGoal = () => {
+    router.delete(forceDestroy.url(confirmingPurgeGoal.value.id), {
+        preserveScroll: true,
+        onFinish: () => (confirmingPurgeGoal.value = null),
+    });
+};
 const showContributionModal = ref(false);
 const contributingGoal = ref(null);
 
@@ -221,6 +229,21 @@ const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { day: '
                     </button>
                 </div>
             </div>
+                    <section v-if="trashedGoals.length" class="mt-8">
+                <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Deleted goals</h3>
+                <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
+                    <li v-for="goal in trashedGoals" :key="goal.id" class="flex items-center gap-3 px-4 py-3">
+                        <p class="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">{{ goal.name }}</p>
+                        <Money :amount="goal.targetAmount" :currency="goal.currency" class="text-sm text-gray-500" />
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" title="Restore" @click="router.post(restore.url(goal.id), {}, { preserveScroll: true })">
+                            <DynamicIcon name="arrow-path" class="h-4 w-4" />
+                        </button>
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" title="Delete permanently" @click="confirmingPurgeGoal = goal">
+                            <DynamicIcon name="trash" class="h-4 w-4" />
+                        </button>
+                    </li>
+                </ul>
+            </section>
         </div>
 
         <ModalForm
@@ -332,6 +355,17 @@ const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { day: '
                 <div class="mt-6 flex justify-end gap-3">
                     <SecondaryButton type="button" @click="confirmingDeleteGoal = null">Cancel</SecondaryButton>
                     <DangerButton type="button" @click="deleteGoal">Delete</DangerButton>
+                </div>
+            </div>
+        </Modal>
+
+        <Modal :show="confirmingPurgeGoal !== null" @close="confirmingPurgeGoal = null">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Delete "{{ confirmingPurgeGoal?.name }}" permanently?</h2>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Its contributions are deleted too. This action cannot be undone.</p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <SecondaryButton type="button" @click="confirmingPurgeGoal = null">Cancel</SecondaryButton>
+                    <DangerButton type="button" @click="purgeGoal">Delete permanently</DangerButton>
                 </div>
             </div>
         </Modal>

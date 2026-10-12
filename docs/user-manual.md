@@ -142,7 +142,9 @@ income, planned expenses and your projected balance, per currency. Today's balan
   amount, date, account and category first.
 - If you already recorded a similar transaction yourself, the plan shows **Looks done: ...** with a **Yes, link
   it** button. Nothing is ever linked without your confirmation.
-- Press **Skip** for something that will not happen.
+- Press **Skip** for something that will not happen. A skipped plan stays in the list (dimmed) with **Reopen**
+  to plan it again and **Delete** to remove it.
+- **Delete** removes a plan for good. Deleting one occurrence of a repeating event never brings it back.
 
 **Changing repeating events.** Editing or deleting one occurrence asks whether it is **only this one** or **this
 and all future ones**. Earlier occurrences, and ones already done, are never touched. When you change "all future",
@@ -264,6 +266,7 @@ A goal is something you are saving toward, with a target amount and an optional 
 - **Add a contribution** whenever you set money aside. A contribution can be linked to a transaction.
 - The goal shows progress toward its target. When contributions reach the target it is marked **completed**.
 - Goals can be **active**, **completed** or **archived**.
+- A deleted goal appears under **Deleted goals** at the bottom, where you can restore it or delete it permanently.
 - If a goal is falling behind its target date you get a notification.
 
 ## Recurring expenses
@@ -322,6 +325,9 @@ You are notified once per crossing; an unread alert is not repeated.
   control how amounts, dates and text appear everywhere.
 - **Settings → Profile & security**: change your name, email and password, or delete your account.
 - **Dark mode**: switch between light and dark from the top bar. The top bar also shows your net worth and the notification bell.
+- **Trash** (Settings → Trash): deleted transactions, accounts and categories wait here. **Restore** brings them back
+  (both legs of a transfer together) and **Delete permanently** removes them for good. An account or category that
+  is still used by other records, including deleted ones, cannot be removed permanently yet.
 - **Export my data**: not available yet.
 
 ## Common questions
