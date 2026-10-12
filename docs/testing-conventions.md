@@ -8,6 +8,10 @@ vendor/bin/sail artisan test --compact tests/Feature/BucketsTest.php # one file
 vendor/bin/sail artisan test --compact --filter=test_user_can_create_a_budget
 ```
 
+## JavaScript unit tests
+`resources/js/format.js` is covered by Node's built-in runner: `vendor/bin/sail npm run test:js` (files in
+`tests/js`). No extra dependency; keep browser-free logic in plain modules so it can be tested this way.
+
 ## Asserting Inertia responses
 
 ```php

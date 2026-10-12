@@ -329,6 +329,12 @@ You are notified once per crossing; an unread alert is not repeated.
 
 - **Settings → Preferences**: default **currency**, **language** (English or Spanish) and **time zone**. These
   control how amounts, dates and text appear everywhere.
+  Below them, **How dates, times and numbers look** lets you pick the date style (2026-03-09, 03/09/2026,
+  09/03/2026 or 9 Mar 2026), 12- or 24-hour time, the decimal and thousands separators, the number of decimals, and
+  whether the currency shows as a symbol (`$`), a code (`COP`) or not at all, before or after the amount. The number
+  buttons set common combinations in one click and the preview shows the result. Every option can stay on
+  **Follow my language**. The choice applies to every page, chart, PDF report and notification; CSV exports always keep
+  ISO dates and plain numbers so other programs can read them.
 - **Settings → Profile & security**: change your name, email and password, or delete your account.
 - **Dark mode**: switch between light and dark from the top bar. The top bar also shows your net worth and the notification bell.
 - **Trash** (Settings → Trash): deleted transactions, accounts and categories wait here. **Restore** brings them back

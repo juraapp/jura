@@ -28,6 +28,9 @@ import {
     reopen,
     link,
 } from '@/actions/App/Modules/Planning/Http/Controllers/PlannedEventController';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     events: { type: Array, required: true },
@@ -61,7 +64,7 @@ const changeView = (value) => {
 
 const monthLabel = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 const shortMonth = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-const formatDate = (date) => new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+const formatDate = (date) => format.date(date, { year: false });
 
 const groupedEvents = computed(() => {
     const groups = new Map();

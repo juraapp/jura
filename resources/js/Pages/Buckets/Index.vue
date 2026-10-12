@@ -28,6 +28,9 @@ import {
     allocations,
     destroyAllocation,
 } from '@/actions/App/Modules/Planning/Http/Controllers/BucketController';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     buckets: { type: Array, required: true },
@@ -43,7 +46,7 @@ const props = defineProps({
 const page = usePage();
 const locale = () => page.props.auth.user?.locale ?? 'en';
 const money = (value, currency) => formatMoney(value, currency, locale());
-const formatDate = (date) => new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+const formatDate = (date) => format.date(date, { year: false });
 
 const barColor = (status) => ({ exceeded: 'bg-red-500', near_limit: 'bg-orange-400', on_track: 'bg-green-500' }[status] ?? 'bg-green-500');
 
@@ -267,7 +270,7 @@ const deleteBucket = () => {
                                 <div class="h-full bg-primary-500 transition-all" :style="{ width: targetPercent(bucket) + '%' }"></div>
                             </div>
                             <p class="mt-1 text-xs text-gray-400">
-                                {{ targetPercent(bucket).toFixed(0) }}% of <Money :amount="bucket.cap" :currency="bucket.currency" />
+                                {{ format.number(targetPercent(bucket), 0) }}% of <Money :amount="bucket.cap" :currency="bucket.currency" />
                             </p>
                         </template>
                     </div>
@@ -281,7 +284,7 @@ const deleteBucket = () => {
                             <div class="h-full transition-all" :class="barColor(bucket.status)" :style="{ width: Math.min(bucket.percentage, 100) + '%' }"></div>
                         </div>
                         <div class="mt-1.5 flex items-center justify-between text-xs">
-                            <span class="text-gray-400">{{ bucket.percentage.toFixed(0) }}% used</span>
+                            <span class="text-gray-400">{{ format.number(bucket.percentage, 0) }}% used</span>
                             <span v-if="bucket.status === 'exceeded'" class="font-medium text-red-600 dark:text-red-400">Limit exceeded</span>
                             <span v-else-if="bucket.status === 'near_limit'" class="font-medium text-orange-500">Near limit</span>
                             <span v-else class="text-gray-400"><Money :amount="bucket.remaining" :currency="bucket.currency" /> left</span>

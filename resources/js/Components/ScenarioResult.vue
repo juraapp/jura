@@ -2,6 +2,9 @@
 import { computed } from 'vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import Money from '@/Components/Money.vue';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     result: { type: Object, required: true },
@@ -9,7 +12,7 @@ const props = defineProps({
     horizonMonths: { type: Number, required: true },
 });
 
-const formatDate = (date) => new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDate = (date) => format.date(date);
 
 const waiting = (days) => {
     if (days === 0) return 'Today';

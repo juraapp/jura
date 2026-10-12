@@ -17,6 +17,9 @@ import { withCsrfHeader } from '@/csrf';
 import { index as bucketsIndex } from '@/routes/buckets';
 import { index as wishlistIndex } from '@/routes/wishlist';
 import { store, destroy, suggest, simulate } from '@/actions/App/Modules/Planning/Http/Controllers/PlannerController';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     items: { type: Array, required: true },
@@ -54,7 +57,7 @@ const toggle = (id) => {
 };
 
 const importance = (n) => '●'.repeat(n) + '○'.repeat(5 - n);
-const formatDate = (date) => new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDate = (date) => format.date(date);
 
 /* ---- JSON helper ---- */
 const loading = ref(false);

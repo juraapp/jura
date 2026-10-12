@@ -15,6 +15,9 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import { store, update, destroy, toggleActive } from '@/actions/App/Modules/Planning/Http/Controllers/RecurringTransactionController';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     recurrences: { type: Array, required: true },
@@ -96,7 +99,7 @@ const deleteRecurring = () => {
     });
 };
 
-const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDate = (date) => format.date(date);
 </script>
 
 <template>

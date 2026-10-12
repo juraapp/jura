@@ -28,6 +28,9 @@ import {
     update as updateProject,
     destroy as destroyProject,
 } from '@/actions/App/Modules/Planning/Http/Controllers/ProjectController';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     projects: { type: Array, required: true },
@@ -42,7 +45,7 @@ const props = defineProps({
 const page = usePage();
 const locale = () => page.props.auth.user?.locale ?? 'en';
 const money = (value, currency) => formatMoney(value, currency, locale());
-const formatDate = (date) => new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDate = (date) => format.date(date);
 const today = new Date().toISOString().slice(0, 10);
 
 const showClosed = ref(false);
@@ -299,7 +302,7 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                                         <div class="h-1.5 w-40 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                                             <div class="h-full bg-green-500" :style="{ width: item.fundedPercent + '%' }"></div>
                                         </div>
-                                        <span class="text-xs text-gray-400">{{ item.fundedPercent.toFixed(0) }}% funded</span>
+                                        <span class="text-xs text-gray-400">{{ format.number(item.fundedPercent, 0) }}% funded</span>
                                     </div>
                                 </div>
 

@@ -10,6 +10,9 @@ import StatCard from '@/Components/StatCard.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { custom as customReport } from '@/routes/reports';
 import { csv as customCsv } from '@/routes/reports/custom';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     from: { type: String, required: true },
@@ -31,7 +34,7 @@ const amountClass = (type) => ({
     expense: 'text-red-600 dark:text-red-400',
 }[type] ?? 'text-gray-500 dark:text-gray-400');
 
-const formatDate = (date) => new Date(date).toLocaleDateString('en-GB');
+const formatDate = (date) => format.date(date);
 </script>
 
 <template>

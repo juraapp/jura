@@ -8,6 +8,9 @@ import Money from '@/Components/Money.vue';
 import StatCard from '@/Components/StatCard.vue';
 import { monthly as monthlyReport } from '@/routes/reports';
 import { pdf as monthlyPdf } from '@/routes/reports/monthly';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     year: { type: Number, required: true },
@@ -71,7 +74,7 @@ const pdfUrl = computed(() => monthlyPdf.url({ query: { year: props.year, month:
                     </StatCard>
                     <StatCard label="Savings" icon="chart-pie">
                         <Money :amount="currencySummary.savings" :currency="currencySummary.currency" />
-                        <template #footer>{{ currencySummary.savingsRate.toFixed(1) }}% savings rate</template>
+                        <template #footer>{{ format.number(currencySummary.savingsRate, 1) }}% savings rate</template>
                     </StatCard>
                     <StatCard label="Fixed expenses" icon="arrow-path">
                         <Money :amount="currencySummary.fixedExpense" :currency="currencySummary.currency" />
@@ -107,7 +110,7 @@ const pdfUrl = computed(() => monthlyPdf.url({ query: { year: props.year, month:
                                     {{ row.category?.name ?? 'Uncategorized' }}
                                 </span>
                                 <span class="font-medium text-gray-900 dark:text-white">
-                                    <Money :amount="row.total" :currency="currencySummary.currency" /> ({{ row.percentage.toFixed(1) }}%)
+                                    <Money :amount="row.total" :currency="currencySummary.currency" /> ({{ format.number(row.percentage, 1) }}%)
                                 </span>
                             </div>
                             <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { useFormat } from '@/composables/useFormat';
 
 const props = defineProps({
     amount: {
@@ -21,16 +22,9 @@ const page = usePage();
 
 const value = computed(() => Number(props.amount));
 const currencyCode = computed(() => props.currency ?? page.props.auth.user?.currency_default ?? 'COP');
-const locale = computed(() => page.props.auth.user?.locale ?? 'en');
+const format = useFormat();
 
-const formatted = computed(() => {
-    const prefix = props.signed && value.value > 0 ? '+' : '';
-
-    return prefix + new Intl.NumberFormat(locale.value, {
-        style: 'currency',
-        currency: currencyCode.value,
-    }).format(value.value);
-});
+const formatted = computed(() => format.money(value.value, currencyCode.value, { signed: props.signed }));
 </script>
 
 <template>

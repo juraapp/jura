@@ -1,5 +1,10 @@
 # i18n Conventions
 
+## Display formats
+Language (`locale`) decides the words; the separate display preferences (`date_format`, `time_format`, separators,
+`fraction_digits`, `currency_display`, `currency_position`, all "auto" by default) decide how dates and numbers
+look. Do not format numbers or dates by hand: use `useFormat()` in Vue and `$user->formatter()` (`UserFormat`) in PHP.
+
 ## Structure
 
 `lang/` is directory-based PHP arrays, not the old flat `lang/es.json`:

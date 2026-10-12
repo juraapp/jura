@@ -16,6 +16,9 @@ import {
     restoreCategory,
     purgeCategory,
 } from '@/actions/App/Modules/Ledger/Http/Controllers/TrashController';
+import { useFormat } from '@/composables/useFormat';
+
+const format = useFormat();
 
 const props = defineProps({
     transactions: { type: Array, required: true },
@@ -34,7 +37,7 @@ const confirmPurge = () => {
         onFinish: () => (confirmingPurge.value = null),
     });
 };
-const formatDate = (date) => new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+const formatDate = (date) => format.date(date);
 </script>
 
 <template>
