@@ -192,13 +192,14 @@ income arrives:
 - **Percent of income**: for example 20% of every income.
 - **Fixed amount**: for example 150,000 from every income. If the bucket has a cycle, the amount is per cycle instead:
   income tops the bucket up to it, so three payments in a month still give 150,000 in total, not 450,000.
-- **Raise it later** (advanced options): from the cycle *after* another bucket reaches its target (or is completed),
-  a fixed or percent fill switches to a new value. Example: General savings 150,000 per month, then 300,000 once the
-  Purchase fund is full. It takes effect from the following cycle, never mid-cycle.
 - **Share of what is left**: a percentage of the income that is still unclaimed when this bucket is reached in the
   priority order. Put it after the fixed buckets: for example Purchase 80.95% of what is left (17/21) and
   Restoration 100% of what is left; anything the Purchase bucket cannot take (it is full) flows on to Restoration.
 - **Fill up to its target**: tops up whatever is missing.
+
+- **Raise it later** (advanced options): from the cycle *after* another bucket reaches its target (or is completed),
+  a fixed or percent fill switches to a new value. Example: General savings 150,000 per month, then 300,000 once the
+  Purchase fund is full. It takes effect from the following cycle, never mid-cycle.
 
 Buckets are offered each income in **priority order** (P0 first, then P1, and so on), so the important ones are filled before
 the rest. A bucket with a target stops filling once the target is reached. Whatever no bucket claims goes to the
@@ -256,10 +257,34 @@ example a "Physical money" stash. Income in other accounts skips it.
 **planned**, with what would remain **after plans**.
 
 **Completing a bucket.** When a goal is done, a savings bucket can be **completed**: what is left in it moves to
-its "Move leftover to" bucket (or the default bucket) and it stops receiving income. Tick *Close this bucket when a
-wish-list item paid from it is bought* and buying the item does this for you (the planner does it too, on the
-purchase date). Use **Mark as completed** on the card to do it by hand and **Reopen** to undo it. Undoing a
-purchase reopens the bucket, but the leftover that already moved stays where it went.
+its "Move leftover to" bucket (or the default bucket) and it stops receiving income, so income flows on to the next
+buckets. There are two ways:
+- **Automatically**: in the bucket form (*Filling and advanced options*) tick *Close this bucket when a wish-list item
+  paid from it is bought*, and set *Leftover at the end of the cycle* to *Move it to another bucket* and choose where. Buying the item from the
+  wish list then completes the bucket. The **Planner** does the same on the purchase date when it simulates.
+- **By hand**: **Mark as completed** on the bucket card. **Reopen** puts it back to work.
+
+Undoing a wish-list purchase reopens the bucket, but the leftover that already moved stays where it went.
+
+**Worked example: saving for a car.** You earn 4,500,000 in month 1 (three payments) and 2,000,000 a month after
+that, and want leisure money, a general savings pot, a 10,000,000 car fund and a pot for repairs:
+
+| Bucket | Kind | Setup |
+| --- | --- | --- |
+| Leisure | Spending limit | Category *Leisure*, limit 150,000 a month, **P0**, fill: fixed 150,000 |
+| General savings | Savings | Cycle: every 1 month, **P1**, fill: fixed 150,000, *Raise it later*: 300,000 when *Purchase fund* is full |
+| Purchase fund | Savings | Target 10,000,000, **P2**, no cycle, fill: share of what is left 80.95% (that is 17/21), tick *Close this bucket when a wish-list item paid from it is bought*, leftover moves to *Restoration* |
+| Restoration | Savings | **P3**, no cycle, fill: share of what is left 100% |
+
+Then add a **Renault 21** to the wish list at 10,000,000 using the *Purchase fund* bucket, and plan your incomes in
+**Cash flow**. What you will see:
+- Each month, Leisure and General savings take 150,000 once, however many payments arrive. What remains is split 17/21
+  to the Purchase fund and the rest to Restoration. When the Purchase fund is full, the remainder goes to Restoration.
+- In the **Planner**, *Suggest the best order* gives the month you can buy the car. When you really buy it from the
+  wish list, the Purchase fund closes, anything above 10,000,000 moves to Restoration, and General savings steps up to
+  300,000 from the next month.
+- In **Cash flow**, an account with an interest rate (see *Accounts*) adds a projected *Interest* column, so the
+  forecast includes what your bank "boxes" earn.
 
 ## Wish list and projects
 
@@ -292,7 +317,8 @@ Menu: **Planning → Planner**.
 
 The planner answers "what should I buy first, and when can I afford each thing?". It replays the income you have
 planned through your buckets' filling rules and tells you the earliest date each wish-list item can be paid for.
-Nothing in the planner changes your real money.
+Nothing in the planner changes your real money. It follows the same rules as the live buckets, including fixed fills
+per cycle, *share of what is left*, step-ups, and buckets that close when their item is bought.
 
 **How to use it.**
 1. Choose **how sure the income should be**: *Conservative* (only confirmed income), *Expected* (confirmed and
@@ -420,6 +446,9 @@ mixes them.
 
 ## Limits of this version
 
+- Interest exists on accounts only, never on buckets, and is only projected; record it as a real transaction when the
+  bank pays it. A bucket's fill amount cannot differ in just the first month, and a step-up always starts at the
+  next cycle.
 - Jura never converts between currencies. Each currency is planned, projected and reported on its own.
 - Planned expenses reduce your projected account balance but do not take money out of buckets, and spending in a
   category is not predicted when the planner looks ahead.
