@@ -63,4 +63,30 @@ return [
         'expected' => 'Esperado',
         'optimistic' => 'Optimista',
     ],
+
+    'fill_rule' => [
+        'fixed' => 'Monto fijo',
+        'percent' => 'Porcentaje del ingreso',
+        'fill_to_target' => 'Llenar hasta su meta',
+    ],
+
+    'carry_over' => [
+        'carry' => 'Dejarlo en este balde',
+        'release' => 'Devolverlo al balde por defecto',
+        'overflow' => 'Moverlo a otro balde',
+    ],
+
+    'bucket_kind' => [
+        'spending' => 'Límite de gasto',
+        'savings' => 'Ahorro',
+    ],
+
+    'allocation_source' => [
+        'income' => 'Ingreso',
+        'planned' => 'Ingreso planeado',
+        'transfer' => 'Movido entre baldes',
+        'carry' => 'Fin de ciclo',
+        'spend' => 'Compra',
+        'adjustment' => 'Ajuste manual',
+    ],
 ];

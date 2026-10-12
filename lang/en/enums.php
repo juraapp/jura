@@ -63,4 +63,30 @@ return [
         'expected' => 'Expected',
         'optimistic' => 'Optimistic',
     ],
+
+    'fill_rule' => [
+        'fixed' => 'Fixed amount',
+        'percent' => 'Percent of income',
+        'fill_to_target' => 'Fill up to its target',
+    ],
+
+    'carry_over' => [
+        'carry' => 'Keep it in this bucket',
+        'release' => 'Return it to the default bucket',
+        'overflow' => 'Move it to another bucket',
+    ],
+
+    'bucket_kind' => [
+        'spending' => 'Spending limit',
+        'savings' => 'Savings',
+    ],
+
+    'allocation_source' => [
+        'income' => 'Income',
+        'planned' => 'Planned income',
+        'transfer' => 'Moved between buckets',
+        'carry' => 'End of cycle',
+        'spend' => 'Purchase',
+        'adjustment' => 'Manual adjustment',
+    ],
 ];
