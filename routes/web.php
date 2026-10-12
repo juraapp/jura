@@ -18,8 +18,11 @@ use App\Modules\Planning\Http\Controllers\WishlistItemController;
 use App\Modules\Reporting\Http\Controllers\DashboardController;
 use App\Modules\Reporting\Http\Controllers\ReportController;
 use App\Modules\Reporting\Http\Controllers\Reports\AnnualReportPdfController;
+use App\Modules\Reporting\Http\Controllers\Reports\BucketsReportController;
 use App\Modules\Reporting\Http\Controllers\Reports\CustomReportCsvController;
+use App\Modules\Reporting\Http\Controllers\Reports\ForecastReportController;
 use App\Modules\Reporting\Http\Controllers\Reports\MonthlyReportPdfController;
+use App\Modules\Reporting\Http\Controllers\Reports\ProjectsReportController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -102,6 +105,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('reports/annual', [ReportController::class, 'annual'])->name('reports.annual');
     Route::get('reports/annual/pdf', AnnualReportPdfController::class)->name('reports.annual.pdf');
+
+    Route::get('reports/forecast', ForecastReportController::class)->name('reports.forecast');
+    Route::get('reports/buckets', BucketsReportController::class)->name('reports.buckets');
+    Route::get('reports/projects', ProjectsReportController::class)->name('reports.projects');
 
     Route::get('reports/custom', [ReportController::class, 'custom'])->name('reports.custom');
     Route::get('reports/custom/csv', CustomReportCsvController::class)->name('reports.custom.csv');

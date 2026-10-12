@@ -5,3 +5,16 @@
 .tabular-nums {
     font-variant-numeric: tabular-nums;
 }
+
+/*
+ * Flowbite's ApexCharts theme sets `font-size: 0 !important` on legend labels,
+ * which hides every chart legend. Restore a readable size and colour (light and dark).
+ */
+.apexcharts-canvas .apexcharts-legend-text {
+    font-size: 0.8125rem !important;
+    color: #52514e !important;
+}
+
+.dark .apexcharts-canvas .apexcharts-legend-text {
+    color: #c3c2b7 !important;
+}

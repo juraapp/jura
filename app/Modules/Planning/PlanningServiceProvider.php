@@ -7,10 +7,14 @@ use App\Modules\Ledger\Events\IncomeRemoved;
 use App\Modules\Planning\Console\Commands\CloseBucketCycles;
 use App\Modules\Planning\Console\Commands\ExtendPlannedEventSeries;
 use App\Modules\Planning\Contracts\BucketProgress;
+use App\Modules\Planning\Contracts\CashFlowForecast;
+use App\Modules\Planning\Contracts\PlanningOverview;
 use App\Modules\Planning\Listeners\AllocateIncome;
 use App\Modules\Planning\Listeners\ReleaseIncomeAllocations;
 use App\Modules\Planning\Services\BucketService;
+use App\Modules\Planning\Services\CashFlowProjector;
 use App\Modules\Planning\Services\IncomeAllocator;
+use App\Modules\Planning\Services\PlanningOverviewService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -19,6 +23,8 @@ class PlanningServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(BucketProgress::class, BucketService::class);
+        $this->app->bind(CashFlowForecast::class, CashFlowProjector::class);
+        $this->app->bind(PlanningOverview::class, PlanningOverviewService::class);
         $this->app->singleton(IncomeAllocator::class);
     }
 

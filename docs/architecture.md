@@ -50,6 +50,8 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
    - `Ledger\Contracts\LedgerQuery`: expense totals, account/category option lists, account currency and similar-transaction lookups.
    - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record`, `recordRecurring`).
    - `Planning\Contracts\BucketProgress`: spending-bucket spent/remaining/status.
+   - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances and planned money in a date window.
+   - `Planning\Contracts\PlanningOverview`: bucket balances, allocation history, projected bucket balances and project summaries for reports.
 4. Contracts are bound in each module's service provider; providers are listed in `bootstrap/providers.php`.
 
 To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to `bootstrap/providers.php` if it binds contracts or registers listeners/commands, and run the architecture test. Listeners and commands inside modules are **not auto-discovered**; register them in the module provider.
