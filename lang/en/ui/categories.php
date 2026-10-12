@@ -1,0 +1,22 @@
+<?php
+
+return [
+    'title' => 'Categories',
+    'new' => 'New category',
+    'edit' => 'Edit category',
+    'empty_title' => 'You don\'t have any categories yet',
+    'empty_hint' => 'Create categories to organize your income and expenses.',
+    'create_first' => 'Create my first category',
+    'expenses' => 'Expenses',
+    'income' => 'Income',
+    'system' => 'System category',
+    'name' => 'Name',
+    'type' => 'Type',
+    'expense' => 'Expense',
+    'income_one' => 'Income',
+    'icon' => 'Icon',
+    'color' => 'Color',
+    'preview' => 'Preview',
+    'save' => 'Save',
+    'delete_title' => 'Delete this category?',
+];

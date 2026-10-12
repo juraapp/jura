@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
@@ -21,6 +22,7 @@ defineProps({
     iconChoices: { type: Array, required: true },
 });
 
+const { t } = useI18n();
 const showModal = ref(false);
 const editingCategory = ref(null);
 const confirmingDeleteCategory = ref(null);
@@ -80,17 +82,17 @@ const deleteCategory = () => {
 </script>
 
 <template>
-    <Head title="Categories" />
+    <Head :title="$t('ui.categories.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Categories
+                    {{ $t('ui.categories.title') }}
                 </h2>
                 <PrimaryButton type="button" @click="openCreateModal">
                     <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                    New category
+                    {{ $t('ui.categories.new') }}
                 </PrimaryButton>
             </div>
         </template>
@@ -99,19 +101,19 @@ const deleteCategory = () => {
             <EmptyState
                 v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
                 icon="tag"
-                title="You don't have any categories yet"
-                description="Create categories to organize your income and expenses."
+                :title="$t('ui.categories.empty_title')"
+                :description="$t('ui.categories.empty_hint')"
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
                         <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                        Create my first category
+                        {{ $t('ui.categories.create_first') }}
                     </PrimaryButton>
                 </template>
             </EmptyState>
 
             <div v-else class="space-y-8">
-                <div v-for="section in [{ label: 'Expenses', items: expenseCategories }, { label: 'Income', items: incomeCategories }]" :key="section.label">
+                <div v-for="section in [{ label: t('ui.categories.expenses'), items: expenseCategories }, { label: t('ui.categories.income'), items: incomeCategories }]" :key="section.label">
                     <h3 v-if="section.items.length > 0" class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                         {{ section.label }}
                     </h3>
@@ -125,7 +127,7 @@ const deleteCategory = () => {
                                 <CategoryIcon :category="category" size="h-9 w-9" />
                                 <div>
                                     <p class="text-sm font-medium text-gray-900 dark:text-white">{{ category.name }}</p>
-                                    <span v-if="category.is_system" class="text-xs text-gray-400">System category</span>
+                                    <span v-if="category.is_system" class="text-xs text-gray-400">{{ $t('ui.categories.system') }}</span>
                                 </div>
                             </div>
 
@@ -153,33 +155,33 @@ const deleteCategory = () => {
 
         <ModalForm
             :show="showModal"
-            :title="editingCategory ? 'Edit category' : 'New category'"
+            :title="editingCategory ? $t('ui.categories.edit') : $t('ui.categories.new')"
             @close="closeModal"
         >
             <form id="category-form" class="space-y-4" @submit.prevent="submit">
                 <div>
-                    <InputLabel for="name" value="Name" />
+                    <InputLabel for="name" :value="$t('ui.categories.name')" />
                     <TextInput id="name" v-model="form.name" type="text" class="mt-1 block w-full" placeholder="Groceries" />
                     <InputError class="mt-1" :message="form.errors.name" />
                 </div>
 
                 <div>
-                    <InputLabel for="type" value="Type" />
+                    <InputLabel for="type" :value="$t('ui.categories.type')" />
                     <select
                         id="type"
                         v-model="form.type"
                         :disabled="editingCategory !== null"
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:disabled:bg-gray-800"
                     >
-                        <option value="expense">Expense</option>
-                        <option value="income">Income</option>
+                        <option value="expense">{{ $t('ui.categories.expense') }}</option>
+                        <option value="income">{{ $t('ui.categories.income_one') }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.type" />
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <InputLabel for="icon" value="Icon" />
+                        <InputLabel for="icon" :value="$t('ui.categories.icon')" />
                         <select
                             id="icon"
                             v-model="form.icon"
@@ -190,7 +192,7 @@ const deleteCategory = () => {
                         <InputError class="mt-1" :message="form.errors.icon" />
                     </div>
                     <div>
-                        <InputLabel for="color" value="Color" />
+                        <InputLabel for="color" :value="$t('ui.categories.color')" />
                         <input id="color" v-model="form.color" type="color" class="mt-1 block h-10 w-full rounded-lg border-gray-300 dark:border-gray-600" />
                         <InputError class="mt-1" :message="form.errors.color" />
                     </div>
@@ -203,26 +205,26 @@ const deleteCategory = () => {
                     >
                         <DynamicIcon :name="form.icon" class="h-4 w-4" />
                     </span>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">Preview</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ $t('ui.categories.preview') }}</span>
                 </div>
             </form>
 
             <template #footer>
-                <SecondaryButton type="button" @click="closeModal">Cancel</SecondaryButton>
-                <PrimaryButton form="category-form" type="submit" :disabled="form.processing">Save</PrimaryButton>
+                <SecondaryButton type="button" @click="closeModal">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                <PrimaryButton form="category-form" type="submit" :disabled="form.processing">{{ $t('ui.categories.save') }}</PrimaryButton>
             </template>
         </ModalForm>
 
         <Modal :show="confirmingDeleteCategory !== null" @close="confirmingDeleteCategory = null">
             <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Delete this category?</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.categories.delete_title') }}</h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    This action cannot be undone.
+                    {{ $t('ui.common.cannot_be_undone') }}
                 </p>
 
                 <div class="mt-6 flex justify-end gap-3">
-                    <SecondaryButton type="button" @click="confirmingDeleteCategory = null">Cancel</SecondaryButton>
-                    <DangerButton type="button" @click="deleteCategory">Delete</DangerButton>
+                    <SecondaryButton type="button" @click="confirmingDeleteCategory = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <DangerButton type="button" @click="deleteCategory">{{ $t('ui.common.delete') }}</DangerButton>
                 </div>
             </div>
         </Modal>
