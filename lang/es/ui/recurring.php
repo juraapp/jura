@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'title' => 'Transacciones recurrentes',
+    'new' => 'Nueva recurrente',
+    'empty_title' => 'Controla tus pagos recurrentes',
+    'empty_hint' => 'Netflix, arriendo, servicios... regístralos una vez y los generaremos automáticamente cuando venzan.',
+    'create_first' => 'Crear mi primera recurrente',
+    'noun' => 'transacciones recurrentes',
+    'description' => 'Descripción',
+    'frequency' => 'Frecuencia',
+    'next' => 'Próximo pago',
+    'amount' => 'Monto',
+    'pause' => 'Pausar',
+    'reactivate' => 'Reactivar',
+    'edit' => 'Editar recurrente',
+    'expense' => 'Gasto',
+    'income' => 'Ingreso',
+    'account' => 'Cuenta',
+    'select_account' => 'Selecciona una cuenta',
+    'category' => 'Categoría',
+    'select_category' => 'Selecciona una categoría',
+    'ends' => 'Termina (opcional)',
+    'description_placeholder' => 'Netflix, arriendo...',
+    'save' => 'Guardar',
+    'delete_title' => '¿Eliminar esta transacción recurrente?',
+];
