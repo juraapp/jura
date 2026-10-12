@@ -38,7 +38,7 @@ const setEvolutionMonths = (months) => {
 };
 
 const expenseByCategoryOptions = (currency) => ({
-    chart: { type: 'donut', height: 288, fontFamily: 'Figtree, sans-serif' },
+    chart: { type: 'donut', height: 288, fontFamily: 'Roboto, sans-serif' },
     labels: currency.expenseByCategory.map((row) => row.name ?? 'Uncategorized'),
     colors: currency.expenseByCategory.map((row) => row.color),
     legend: { position: 'bottom', labels: { colors: palette().text } },
@@ -48,7 +48,7 @@ const expenseByCategoryOptions = (currency) => ({
 });
 
 const monthlyEvolutionOptions = (currency) => ({
-    chart: { type: 'line', height: 288, fontFamily: 'Figtree, sans-serif', toolbar: { show: false } },
+    chart: { type: 'line', height: 288, fontFamily: 'Roboto, sans-serif', toolbar: { show: false } },
     colors: [palette().income, palette().expense, palette().savings],
     xaxis: { categories: currency.monthlyEvolution.map((row) => row.label), labels: { style: { colors: palette().text } } },
     yaxis: { labels: { style: { colors: palette().text }, formatter: (v) => formatCompact(v, locale()) } },
@@ -65,7 +65,7 @@ const monthlyEvolutionSeries = (currency) => [
 ];
 
 const expenseByAccountOptions = (currency) => ({
-    chart: { type: 'bar', height: 288, fontFamily: 'Figtree, sans-serif', toolbar: { show: false } },
+    chart: { type: 'bar', height: 288, fontFamily: 'Roboto, sans-serif', toolbar: { show: false } },
     plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: '55%' } },
     colors: currency.expenseByAccount.map((row) => row.color),
     xaxis: {
@@ -80,7 +80,7 @@ const expenseByAccountOptions = (currency) => ({
 });
 
 const moneyDistributionOptions = (currency) => ({
-    chart: { type: 'donut', height: 288, fontFamily: 'Figtree, sans-serif' },
+    chart: { type: 'donut', height: 288, fontFamily: 'Roboto, sans-serif' },
     labels: currency.moneyDistribution.map((row) => row.name),
     colors: currency.moneyDistribution.map((row) => row.color),
     legend: { position: 'bottom', labels: { colors: palette().text } },
@@ -90,7 +90,7 @@ const moneyDistributionOptions = (currency) => ({
 });
 
 const netWorthEvolutionOptions = (currency) => ({
-    chart: { type: 'area', height: 260, fontFamily: 'Figtree, sans-serif', toolbar: { show: false } },
+    chart: { type: 'area', height: 260, fontFamily: 'Roboto, sans-serif', toolbar: { show: false } },
     colors: [palette().series[0]],
     fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
     xaxis: { categories: currency.netWorthEvolution.map((row) => row.label), labels: { style: { colors: palette().text } } },

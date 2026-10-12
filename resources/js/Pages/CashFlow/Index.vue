@@ -93,7 +93,7 @@ const certaintyClass = (value) => ({
 
 /* ---- projection chart ---- */
 const chartOptions = (currency) => ({
-    chart: { height: 280, fontFamily: 'Figtree, sans-serif', toolbar: { show: false }, stacked: false },
+    chart: { height: 280, fontFamily: 'Roboto, sans-serif', toolbar: { show: false }, stacked: false },
     colors: [palette().income, palette().expense, palette().savings],
     stroke: { width: [0, 0, 3], curve: 'smooth' },
     plotOptions: { bar: { columnWidth: '45%', borderRadius: 3 } },

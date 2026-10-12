@@ -39,7 +39,7 @@ const series = computed(() => [
 ]);
 
 const options = computed(() => ({
-    chart: { type: 'line', height: 320, fontFamily: 'Figtree, sans-serif', toolbar: { show: false }, stacked: false },
+    chart: { type: 'line', height: 320, fontFamily: 'Roboto, sans-serif', toolbar: { show: false }, stacked: false },
     colors: [palette().income, palette().expense, palette().series[3], palette().savings],
     stroke: { width: [0, 0, 0, 3] },
     plotOptions: { bar: { columnWidth: '55%' } },
