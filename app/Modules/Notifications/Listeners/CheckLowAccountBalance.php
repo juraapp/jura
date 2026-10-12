@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Listeners;
+namespace App\Modules\Notifications\Listeners;
 
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Ledger\Models\Transaction;
-use App\Modules\Ledger\Services\BalanceCalculator;
+use App\Modules\Ledger\Contracts\Balances;
 use App\Modules\Shared\Support\Money;
-use App\Notifications\LowAccountBalance;
+use App\Modules\Notifications\Notifications\LowAccountBalance;
 
 /**
  * Flags an account as "low" when its balance can't cover ~3 days of the
@@ -16,7 +16,7 @@ use App\Notifications\LowAccountBalance;
  */
 class CheckLowAccountBalance
 {
-    public function __construct(private readonly BalanceCalculator $balances) {}
+    public function __construct(private readonly Balances $balances) {}
 
     public function handle(TransactionsMutated $event): void
     {

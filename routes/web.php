@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\NotificationController;
 use App\Modules\Identity\Http\Controllers\PreferenceController;
 use App\Modules\Identity\Http\Controllers\ProfileController;
 use App\Modules\Ledger\Http\Controllers\AccountController;
@@ -8,6 +7,7 @@ use App\Modules\Ledger\Http\Controllers\CategoryController;
 use App\Modules\Ledger\Http\Controllers\TransactionController;
 use App\Modules\Ledger\Http\Controllers\TransactionImportController;
 use App\Modules\Ledger\Http\Controllers\TransactionImportTemplateController;
+use App\Modules\Notifications\Http\Controllers\NotificationController;
 use App\Modules\Planning\Http\Controllers\BudgetController;
 use App\Modules\Planning\Http\Controllers\BudgetForecastController;
 use App\Modules\Planning\Http\Controllers\RecurringTransactionController;

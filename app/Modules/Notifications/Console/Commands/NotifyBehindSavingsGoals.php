@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Modules\Notifications\Console\Commands;
 
 use App\Modules\Planning\Enums\SavingsGoalStatus;
 use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Shared\Support\Money;
-use App\Notifications\GoalBehindSchedule;
+use App\Modules\Notifications\Notifications\GoalBehindSchedule;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;

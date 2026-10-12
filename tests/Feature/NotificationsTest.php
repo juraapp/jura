@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Notifications\Notifications\LowAccountBalance;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -16,7 +18,7 @@ class NotificationsTest extends TestCase
     {
         return DatabaseNotification::create([
             'id' => (string) Str::uuid(),
-            'type' => 'App\\Notifications\\LowAccountBalance',
+            'type' => 'App\\Modules\\Notifications\\Notifications\\LowAccountBalance',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
             'data' => ['message' => 'Low balance', 'severity' => 'warning', 'url' => '#'],
@@ -64,5 +66,26 @@ class NotificationsTest extends TestCase
         $response = $this->patch('/notifications/read-all');
 
         $response->assertRedirect('/login');
+    }
+
+    public function test_legacy_notification_types_are_renamed_by_the_module_migration(): void
+    {
+        $user = User::factory()->create();
+
+        DB::table('notifications')->insert([
+            'id' => (string) Str::uuid(),
+            'type' => 'App\\Notifications\\LowAccountBalance',
+            'notifiable_type' => User::class,
+            'notifiable_id' => $user->id,
+            'data' => '{}',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $migration = require database_path('migrations/2026_10_12_000000_rename_notification_types_for_modules.php');
+        $migration->up();
+
+        $this->assertDatabaseHas('notifications', ['type' => LowAccountBalance::class]);
+        $this->assertDatabaseMissing('notifications', ['type' => 'App\\Notifications\\LowAccountBalance']);
     }
 }
