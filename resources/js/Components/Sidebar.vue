@@ -15,7 +15,7 @@ import { index as expensesIndex } from '@/routes/expenses';
 import { index as incomesIndex } from '@/routes/incomes';
 import { edit as preferencesEdit } from '@/routes/preferences';
 import { index as recurringTransactionsIndex } from '@/routes/recurring-transactions';
-import { annual as reportsAnnual, custom as reportsCustom, monthly as reportsMonthly } from '@/routes/reports';
+import { annual as reportsAnnual, buckets as reportsBuckets, custom as reportsCustom, forecast as reportsForecast, monthly as reportsMonthly, projects as reportsProjects } from '@/routes/reports';
 import { index as savingsGoalsIndex } from '@/routes/savings-goals';
 import { importMethod as transactionsImport, index as transactionsIndex } from '@/routes/transactions';
 import { index as transfersIndex } from '@/routes/transfers';
@@ -64,6 +64,9 @@ const sections = [
             { label: 'Monthly', route: reportsMonthly, icon: 'document-chart-bar' },
             { label: 'Annual', route: reportsAnnual, icon: 'document-chart-bar' },
             { label: 'Custom', route: reportsCustom, icon: 'document-chart-bar' },
+            { label: 'Forecast', route: reportsForecast, icon: 'arrow-trending-up' },
+            { label: 'Buckets', route: reportsBuckets, icon: 'chart-pie' },
+            { label: 'Projects', route: reportsProjects, icon: 'flag' },
         ],
     },
     {

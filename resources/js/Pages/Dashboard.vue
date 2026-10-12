@@ -9,6 +9,7 @@ import Money from '@/Components/Money.vue';
 import { useDarkMode } from '@/composables/useDarkMode';
 import { CHART_PALETTE, formatCompact, formatMoney } from '@/chartPalette';
 import { index as accountsIndex } from '@/routes/accounts';
+import { index as plannedEventsIndex } from '@/routes/planned-events';
 import { index as transactionsIndex } from '@/routes/transactions';
 import { dashboard } from '@/routes';
 
@@ -17,6 +18,7 @@ const props = defineProps({
     hasAnyAccount: { type: Boolean, required: true },
     hasAnyTransaction: { type: Boolean, required: true },
     currencies: { type: Array, required: true },
+    upcoming: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -150,6 +152,30 @@ const netWorthEvolutionOptions = (currency) => ({
                             <Money :amount="currency.netWorth" :currency="currency.currency" />
                         </div>
                     </StatCard>
+                </div>
+
+                <!-- Projected, not recorded: kept visually apart from the real figures below -->
+                <div v-if="upcoming.length" class="rounded-xl border border-dashed border-primary-300 bg-primary-50/40 p-4 dark:border-primary-500/40 dark:bg-primary-500/5">
+                    <div class="mb-2 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-primary-800 dark:text-primary-300">Next 30 days (planned, not yet real)</h3>
+                        <Link :href="plannedEventsIndex.url()" class="text-xs font-medium text-primary-700 hover:underline dark:text-primary-400">Open cash flow</Link>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <div v-for="item in upcoming" :key="item.currency" class="contents">
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Expected income <span v-if="upcoming.length > 1">({{ item.currency }})</span></p>
+                                <p class="text-lg font-semibold text-green-600 dark:text-green-400"><Money :amount="item.income" :currency="item.currency" /></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Planned expenses</p>
+                                <p class="text-lg font-semibold text-red-600 dark:text-red-400"><Money :amount="item.expense" :currency="item.currency" /></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Net</p>
+                                <p class="text-lg font-semibold text-gray-900 dark:text-white"><Money :amount="item.net" :currency="item.currency" signed /></p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- The rest of the dashboard repeats per currency you use, so amounts in different currencies are never summed -->

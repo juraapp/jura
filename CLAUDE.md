@@ -15,6 +15,11 @@ allowed only inside `Models/` (relationships) and in the read-side modules Repor
 `tests/Architecture` enforces this. Listeners and commands are registered in module providers, not
 auto-discovered. See `docs/architecture.md`.
 
+## Project budgeting domain (Planning module)
+Actual data is `Ledger`'s `Transaction`; projected data never touches balances. Concepts: `PlannedEvent` (future income/expense with
+certainty), `Bucket` + `Allocation` (virtual earmarked money filled from income by a priority waterfall), `Project`/`WishlistItem`,
+and the planner (`ForecastEngine`, `ScenarioSuggester`: pure, unit-tested logic in `Planning/Support`). Keep pure logic framework-free.
+
 ## Where to read first
 - `docs/architecture.md`, `docs/domain-model.md`: layout, request lifecycle, entities.
 - `docs/frontend-conventions.md`, `docs/i18n-conventions.md`, `docs/dark-mode.md`, `docs/testing-conventions.md`.

@@ -5,6 +5,7 @@ namespace App\Modules\Reporting\Http\Controllers;
 use App\Modules\Ledger\Contracts\Balances;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Reporting\Services\InsightService;
+use App\Modules\Reporting\Services\PlanningReportService;
 use App\Modules\Reporting\Services\ReportService;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Support\Money;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request, ReportService $reports, Balances $balances, InsightService $insights): Response
+    public function index(Request $request, ReportService $reports, Balances $balances, InsightService $insights, PlanningReportService $planning): Response
     {
         $user = $request->user();
         $evolutionMonths = $request->integer('evolutionMonths', 6) === 12 ? 12 : 6;
@@ -30,6 +31,7 @@ class DashboardController extends Controller
                 'hasAnyAccount' => $hasAnyAccount,
                 'hasAnyTransaction' => $hasAnyTransaction,
                 'currencies' => [],
+                'upcoming' => [],
             ]);
         }
 
@@ -77,6 +79,7 @@ class DashboardController extends Controller
             'hasAnyAccount' => true,
             'hasAnyTransaction' => true,
             'currencies' => $currencies,
+            'upcoming' => $planning->upcoming($user),
         ]);
     }
 

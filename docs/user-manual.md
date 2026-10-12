@@ -23,7 +23,7 @@ for everyday use. Sections marked **Advanced** are optional extras.
 14. [Notifications](#notifications)
 15. [Preferences, profile and appearance](#preferences-profile-and-appearance)
 16. [Common questions](#common-questions)
-17. [Coming soon](#coming-soon)
+17. [Limits of this version](#limits-of-this-version)
 
 ---
 
@@ -45,6 +45,8 @@ The first page after you sign in. It answers "how am I doing this month?" at a g
 - **Average daily expense**, **Biggest expense this month** and **Top spending category**.
 - **Days of financial autonomy**: how many days your available money would last at your current spending pace
   if no new income arrived.
+- A **Next 30 days** card with planned income, planned expenses and the net, clearly marked as planned and not yet real
+  (it appears only when you have planned events; income counts when it is confirmed or expected).
 - Short plain-language **insights**, for example "You spent 12% more than last month".
 - Charts: **Expenses by category** and the **Monthly evolution**.
 
@@ -285,8 +287,23 @@ Menu: **Reports**.
 | **Monthly** | totals, spending by category and by account for one month | PDF |
 | **Annual** | the year month by month, with trends | PDF |
 | **Custom** | any date range you choose | CSV |
+| **Forecast** | your real net worth month by month, followed by projected balances | none |
+| **Buckets** | how your buckets are funded, money moving in and out, and where they are heading | none |
+| **Projects** | each project's wanted, bought and funded totals and when it could be completed | none |
 
-Reports show **real, recorded** data. Totals are kept separate per currency.
+Monthly, Annual and Custom show **real, recorded** data. Totals are kept separate per currency.
+
+**Forecast.** A solid line shows your real net worth for the last six months. Dashed lines continue from "Today" for
+the next six months, one for each way of trusting your planned income (Conservative, Expected, Optimistic). The table
+below lists the planned income, planned expenses and each view's balance per month. Dashed always means *estimate*.
+
+**Buckets report.** *Available funds today* compares your buckets, *Money in and out, by month* shows allocations and
+spending from buckets over six months, and the table projects each bucket 12 months ahead using the view you choose at
+the top (it replays your planned income through your fill rules, like the planner).
+
+**Projects report.** For each project (and items with no project): what is still wanted, what you already bought, how
+much is funded today, and the month everything could be bought if you follow the planner's best order over the next 24
+months, using the chosen view of your income. Shared buckets are counted once per item, so percentages can overlap.
 
 ## Notifications
 
@@ -323,7 +340,10 @@ accurate.
 **Why do I see separate totals for each currency?** Jura does not convert between currencies, so it never
 mixes them.
 
-## Coming soon
+## Limits of this version
 
-Project budgeting is being built in stages. Planned cash flow, buckets, the wish list and the planner are available now (see above).
-Still to come: forecast reports. This manual will gain a section for each as it ships.
+- Jura never converts between currencies. Each currency is planned, projected and reported on its own.
+- Planned expenses reduce your projected account balance but do not take money out of buckets, and spending in a
+  category is not predicted when the planner looks ahead.
+- Items that share a bucket each compare themselves with the same pot, so their "funded" bars can overlap.
+- The Vue screens are in English; messages, labels and exports follow your language preference (English or Spanish).
