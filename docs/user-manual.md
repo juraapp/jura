@@ -206,9 +206,29 @@ goes to each bucket for that income only. The rest goes to the default bucket.
   **Reset to zero** empties the bucket. Entries created by income or by closing a cycle cannot be removed.
 - Deleting a bucket returns its money to the default bucket.
 
-**End of the month or year (advanced).** For a bucket that resets, choose what happens to what is left:
-**keep it** in the bucket, **return it** to the default bucket, or **move it** to another bucket. This is applied
-automatically after the cycle ends.
+**Cycles.** A spending bucket works in cycles: set **Cycle: repeats every N days / weeks / months / years**, and
+optionally a **starting date** (for example the 15th, to follow your payday; empty means calendar months). A short
+month never breaks it: a cycle that starts on the 31st starts on the 28th in February.
+
+**What happens during a cycle.** Say you earn 1000 a month, **Groceries** has a limit of 500 at **P0** that fills up to
+its target and sends its leftover to **Emergency** (target 1000, **P10**):
+1. When the month starts, the bucket card shows what is **expected** (in italics): 500 for groceries and 500 for the
+   emergency fund, taken from the income you planned in Cash flow. It is an estimate only, nothing is saved yet. When
+   the real income arrives it fills the buckets for real and the estimate disappears.
+2. During the month you spend, say, 100 on groceries. The card shows that about 400 will move on at the end.
+3. When the cycle ends, the 400 that was not spent moves to the emergency fund, which starts the next month with 900.
+   Next month's income tops groceries back up to 500 and only adds the 100 the emergency fund is missing.
+
+**Cycle history.** **Cycle history** on a bucket card lists every finished cycle (what it started with, what filled it,
+what moved in or out, what was spent, what overflowed and what was left) with a chart. Each cycle is saved when it
+closes, so the history stays correct even if you change the bucket later. Cycles that ended while Jura was not running
+are closed in order the next time it runs.
+
+**A different limit for one cycle.** On the history page, **Limit for this cycle only** changes the limit for the
+current cycle (for example a holiday month). Clear it to go back to the usual limit.
+
+**End of the cycle (advanced).** Choose what happens to what is left: **keep it** in the bucket, **return it** to the
+default bucket, or **move it** to another bucket (the overflow bucket).
 
 **Only from certain accounts (advanced).** Tick accounts to make a bucket fill only from income that lands there, for
 example a "Physical money" stash. Income in other accounts skips it.

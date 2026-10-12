@@ -157,4 +157,59 @@ class BucketCycleHistoryTest extends TestCase
         $this->assertSame(300.0, $this->funded($this->groceries));
         $this->assertSame(700.0, $this->funded($this->savings));
     }
+
+    public function test_the_history_page_lists_closed_cycles_and_the_open_one(): void
+    {
+        $this->receive('2026-10-01');
+        $this->spend('2026-10-10', 100);
+        $this->closeAt('2026-11-02');
+        Carbon::setTestNow('2026-11-03 08:00:00');
+
+        $this->get("/planning/buckets/{$this->groceries->id}/history")->assertOk()->assertInertia(fn ($page) => $page
+            ->component('Buckets/History')
+            ->where('bucket.cycleDescription', 'Every month from the 1st')
+            ->has('cycles', 1)
+            ->where('cycles.0.filled', 500)
+            ->where('cycles.0.spent', 100)
+            ->where('cycles.0.released', 400)
+            ->where('current.start', '2026-11-01')
+            ->where('current.isOpen', true)
+        );
+    }
+
+    public function test_the_history_of_another_users_bucket_is_not_reachable(): void
+    {
+        $foreign = Bucket::factory()->create();
+
+        $this->get("/planning/buckets/{$foreign->id}/history")->assertNotFound();
+        $this->post("/planning/buckets/{$foreign->id}/cycle-limit", ['cap_amount' => 10])->assertNotFound();
+    }
+
+    public function test_a_limit_can_be_set_and_cleared_for_the_current_cycle(): void
+    {
+        $this->post("/planning/buckets/{$this->groceries->id}/cycle-limit", ['cap_amount' => 300])->assertRedirect()->assertSessionHas('success');
+        $this->assertSame('300.00', BucketCycle::firstOrFail()->cap_override->toDecimalString());
+        $this->assertSame('2026-10-01', BucketCycle::firstOrFail()->starts_on->toDateString());
+
+        $this->post("/planning/buckets/{$this->groceries->id}/cycle-limit", ['cap_amount' => null])->assertRedirect();
+        $this->assertNull(BucketCycle::firstOrFail()->cap_override);
+
+        $this->post("/planning/buckets/{$this->groceries->id}/cycle-limit", ['cap_amount' => -5])->assertSessionHasErrors('cap_amount');
+        $this->post("/planning/buckets/{$this->savings->id}/cycle-limit", ['cap_amount' => 5])->assertNotFound();
+    }
+
+    public function test_a_cycle_can_be_configured_when_saving_a_bucket(): void
+    {
+        $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
+
+        $this->post('/planning/buckets', [
+            'kind' => 'spending', 'category_id' => $category->id, 'currency' => 'COP', 'cap_amount' => 100,
+            'cycle' => 'weekly', 'cycle_every' => 2, 'cycle_anchor' => '2026-10-05',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $bucket = Bucket::where('category_id', $category->id)->firstOrFail();
+        $this->assertSame(2, $bucket->cycle_every);
+        $this->assertSame('2026-10-05', $bucket->cycle_anchor->toDateString());
+        $this->assertSame('Every 2 weeks from Monday', $bucket->cyclePeriod()->describe());
+    }
 }

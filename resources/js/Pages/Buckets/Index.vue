@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
@@ -25,6 +25,7 @@ import {
     move,
     adjust,
     reset,
+    history,
     allocations,
     destroyAllocation,
     bulkDestroy,
@@ -76,6 +77,8 @@ const blank = () => ({
     currency: props.currencies[0],
     category_id: '',
     cycle: 'monthly',
+    cycle_every: 1,
+    cycle_anchor: '',
     cap_amount: '',
     priority: '',
     opening_balance: '',
@@ -108,6 +111,8 @@ const openEditModal = (bucket) => {
     form.currency = bucket.currency;
     form.category_id = bucket.category?.id ?? '';
     form.cycle = bucket.cycle ?? '';
+    form.cycle_every = bucket.cycleEvery ?? 1;
+    form.cycle_anchor = bucket.cycleAnchor ?? '';
     form.cap_amount = bucket.cap !== null ? String(bucket.cap) : '';
     form.priority = String(bucket.priority);
     form.opening_balance = bucket.openingBalance > 0 ? String(bucket.openingBalance) : '';
@@ -320,7 +325,19 @@ const deleteBucket = () => {
                     <ul class="mt-4 space-y-1 text-xs text-gray-500 dark:text-gray-400">
                         <li class="flex items-center gap-1.5"><DynamicIcon name="arrow-down-circle" class="h-3.5 w-3.5" /> {{ ruleText(bucket) }}</li>
                         <li v-if="bucket.cycle" class="flex items-center gap-1.5">
-                            <DynamicIcon name="arrow-path" class="h-3.5 w-3.5" /> At the end of the cycle: {{ bucket.carryOverLabel.toLowerCase() }}
+                            <DynamicIcon name="arrow-path" class="h-3.5 w-3.5" /> {{ bucket.cycleDescription }}. At the end: {{ bucket.carryOverLabel.toLowerCase() }}
+                        </li>
+                        <li v-if="bucket.cycleView && (bucket.cycleView.provisional > 0 || bucket.cycleView.projectedIn > 0 || bucket.cycleView.projectedRelease > 0)" class="rounded-lg bg-gray-50 px-2.5 py-2 italic dark:bg-gray-900/40">
+                            Expected this cycle, until {{ formatDate(bucket.cycleView.end) }}:
+                            <template v-if="bucket.cycleView.provisional > 0">+<Money :amount="bucket.cycleView.provisional" :currency="bucket.currency" /> from planned income. </template>
+                            <template v-if="bucket.cycleView.projectedRelease > 0"><Money :amount="bucket.cycleView.projectedRelease" :currency="bucket.currency" /> moves on at the end if unspent. </template>
+                            <template v-if="bucket.cycleView.projectedIn > 0">+<Money :amount="bucket.cycleView.projectedIn" :currency="bucket.currency" /> overflow arriving.</template>
+                        </li>
+                        <li v-if="bucket.cycleView && bucket.cycleView.capOverride" class="text-amber-600 dark:text-amber-400">
+                            Limit this cycle only: <Money :amount="bucket.cycleView.capOverride" :currency="bucket.currency" />
+                        </li>
+                        <li v-if="bucket.cycle">
+                            <Link :href="history.url(bucket.id)" class="font-medium text-primary-600 hover:underline dark:text-primary-400">Cycle history</Link>
                         </li>
                         <li v-if="bucket.allowedAccounts.length" class="flex flex-wrap items-center gap-1.5">
                             <DynamicIcon name="wallet" class="h-3.5 w-3.5" /> Only from:
@@ -385,11 +402,23 @@ const deleteBucket = () => {
                 </div>
 
                 <div v-if="isSpending">
-                    <InputLabel for="cycle" value="Resets" />
-                    <SelectInput id="cycle" v-model="form.cycle">
-                        <option v-for="cycle in cycles" :key="cycle.value" :value="cycle.value">{{ cycle.label }}</option>
-                    </SelectInput>
-                    <InputError class="mt-1" :message="form.errors.cycle" />
+                    <InputLabel for="cycle_every" value="Cycle: repeats every" />
+                    <div class="mt-1 flex gap-2">
+                        <TextInput id="cycle_every" v-model="form.cycle_every" type="number" min="1" max="366" class="block w-20" />
+                        <SelectInput id="cycle" v-model="form.cycle">
+                            <option value="daily">{{ Number(form.cycle_every) === 1 ? 'day' : 'days' }}</option>
+                            <option value="weekly">{{ Number(form.cycle_every) === 1 ? 'week' : 'weeks' }}</option>
+                            <option value="monthly">{{ Number(form.cycle_every) === 1 ? 'month' : 'months' }}</option>
+                            <option value="yearly">{{ Number(form.cycle_every) === 1 ? 'year' : 'years' }}</option>
+                        </SelectInput>
+                    </div>
+                    <InputError class="mt-1" :message="form.errors.cycle || form.errors.cycle_every" />
+                    <InputLabel for="cycle_anchor" class="mt-3" value="Starting on (optional)" />
+                    <TextInput id="cycle_anchor" v-model="form.cycle_anchor" type="date" class="mt-1 block w-full" />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Pick a date to start cycles on it, for example the 15th to follow your payday. Empty means calendar months or years, and Mondays for weeks.
+                    </p>
+                    <InputError class="mt-1" :message="form.errors.cycle_anchor" />
                 </div>
 
                 <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700" :open="Boolean(form.fill_rule) || form.is_default">

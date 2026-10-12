@@ -18,7 +18,7 @@ auto-discovered. See `docs/architecture.md`.
 ## Project budgeting domain (Planning module)
 Actual data is `Ledger`'s `Transaction`; projected data never touches balances. Concepts: `PlannedEvent` (future income/expense with
 certainty), `Bucket` + `Allocation` (virtual earmarked money filled from income by a priority waterfall), `Project`/`WishlistItem`,
-and the planner (`ForecastEngine`, `ScenarioSuggester`: pure, unit-tested logic in `Planning/Support`). Keep pure logic framework-free.
+`BucketCycle` (stored history of each bucket cycle), and the planner (`ForecastEngine`, `ScenarioSuggester`, `CyclePeriod`: pure, unit-tested logic in `Planning/Support`). Display formats come from the user's preferences: use `useFormat()` (Vue) / `$user->formatter()` (PHP), never `toLocale*`/`number_format` by hand. Keep pure logic framework-free.
 
 ## Where to read first
 - `docs/architecture.md`, `docs/domain-model.md`: layout, request lifecycle, entities.

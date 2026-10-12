@@ -14,4 +14,5 @@ return [
     'reset' => 'Fondos restablecidos a cero.',
     'allocation_locked' => 'Este movimiento viene de tus ingresos o de un ciclo cerrado y no se puede eliminar aquí.',
     'allocation_removed' => 'Movimiento eliminado.',
+    'cycle_limit_saved' => 'Límite de este ciclo guardado.',
 ];

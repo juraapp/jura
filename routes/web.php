@@ -80,6 +80,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('planning/buckets/{bucket}', [BucketController::class, 'destroy'])->name('buckets.destroy');
     Route::post('planning/buckets/bulk-delete', [BucketController::class, 'bulkDestroy'])->name('buckets.bulk-delete');
     Route::post('planning/buckets/{bucket}/move', [BucketController::class, 'move'])->name('buckets.move');
+    Route::get('planning/buckets/{bucket}/history', [BucketController::class, 'history'])->name('buckets.history');
+    Route::post('planning/buckets/{bucket}/cycle-limit', [BucketController::class, 'cycleLimit'])->name('buckets.cycle-limit');
     Route::post('planning/buckets/{bucket}/reset', [BucketController::class, 'reset'])->name('buckets.reset');
     Route::get('planning/buckets/{bucket}/allocations', [BucketController::class, 'allocations'])->name('buckets.allocations');
     Route::delete('planning/buckets/{bucket}/allocations/{allocation}', [BucketController::class, 'destroyAllocation'])->name('buckets.allocations.destroy');

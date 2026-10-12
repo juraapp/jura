@@ -10,20 +10,25 @@ use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Http\Requests\Buckets\AdjustBucketFundsRequest;
+use App\Modules\Planning\Http\Requests\Buckets\CycleLimitRequest;
 use App\Modules\Planning\Http\Requests\Buckets\MoveBucketFundsRequest;
 use App\Modules\Planning\Http\Requests\Buckets\StoreBucketRequest;
 use App\Modules\Planning\Http\Requests\Buckets\UpdateBucketRequest;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Models\BucketCycle;
+use App\Modules\Planning\Services\BucketCycleService;
 use App\Modules\Planning\Services\BucketLedger;
 use App\Modules\Planning\Services\BucketManager;
 use App\Modules\Planning\Services\BucketService;
+use App\Modules\Planning\Services\CycleProjector;
 use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -31,7 +36,7 @@ use Inertia\Response;
 
 class BucketController extends Controller
 {
-    public function index(BucketService $limits, BucketLedger $funds, PlannedEventService $planned, LedgerQuery $ledger): Response
+    public function index(BucketService $limits, BucketLedger $funds, PlannedEventService $planned, LedgerQuery $ledger, CycleProjector $projector): Response
     {
         $this->authorize('viewAny', Bucket::class);
 
@@ -40,8 +45,9 @@ class BucketController extends Controller
 
         $buckets = Bucket::with('category')->inPriorityOrder()->get();
         $recent = $this->recentAllocations($buckets);
+        $projections = $buckets->pluck('currency')->unique()->mapWithKeys(fn (string $currency) => [$currency => $projector->project(Auth::user(), $currency)]);
 
-        $cards = $buckets->map(function (Bucket $bucket) use ($limits, $funds, $planned, $accountNames, $recent) {
+        $cards = $buckets->map(function (Bucket $bucket) use ($limits, $funds, $planned, $accountNames, $recent, $projections) {
             $card = [
                 'id' => $bucket->id,
                 'name' => $bucket->name,
@@ -77,6 +83,7 @@ class BucketController extends Controller
                 'hasFunding' => $funds->hasFunding($bucket),
                 'tracksLimit' => $bucket->tracksLimit(),
                 'recentAllocations' => $recent->get($bucket->id, collect())->values(),
+                'cycleView' => $this->cycleView($bucket, $projections->get($bucket->currency, [])[$bucket->id] ?? null),
             ];
 
             if (! $bucket->tracksLimit()) {
@@ -172,6 +179,111 @@ class BucketController extends Controller
         $funds->credit($bucket, $amount, AllocationSource::Adjustment, null, null, $request->validated('description'));
 
         return back()->with('success', __('buckets.adjusted'));
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $row  the projector's row for this bucket
+     * @return array<string, mixed>|null
+     */
+    private function cycleView(Bucket $bucket, ?array $row): ?array
+    {
+        if ($row === null) {
+            return null;
+        }
+
+        return [
+            'start' => $row['start']->toDateString(),
+            'end' => $row['end']->toDateString(),
+            'provisional' => $row['provisional']->toFloat(),
+            'projectedRelease' => $row['projectedRelease']->toFloat(),
+            'projectedIn' => $row['projectedIn']->toFloat(),
+            'projectedClose' => $row['projectedClose']->toFloat(),
+            'capOverride' => $bucket->cyclePeriod() !== null
+                ? BucketCycle::where('bucket_id', $bucket->id)->where('starts_on', $row['start']->toDateString())->first()?->cap_override?->toFloat()
+                : null,
+        ];
+    }
+
+    public function history(Bucket $bucket, BucketLedger $funds, BucketCycleService $cycles, CycleProjector $projector): Response
+    {
+        $this->authorize('view', $bucket);
+
+        $closed = BucketCycle::where('bucket_id', $bucket->id)->where('status', BucketCycle::CLOSED)->orderByDesc('starts_on')->get()
+            ->map(fn (BucketCycle $cycle) => $this->presentCycle($cycle->starts_on, $cycle->ends_on, [
+                'opening' => $cycle->opening, 'filled' => $cycle->filled, 'moved_in' => $cycle->moved_in, 'moved_out' => $cycle->moved_out,
+                'spent' => $cycle->spent, 'released' => $cycle->released, 'closing' => $cycle->closing,
+            ], $cycle->cap, false));
+
+        $period = $bucket->cyclePeriod();
+        $current = null;
+        if ($period !== null) {
+            $now = today();
+            $start = Carbon::instance($period->startOf($now->toDateTimeImmutable()));
+            $end = Carbon::instance($period->endOf($now->toDateTimeImmutable()));
+            $row = $projector->project(Auth::user(), $bucket->currency)[$bucket->id] ?? null;
+            $figures = $cycles->figures($bucket, $start, $now);
+            $current = $this->presentCycle($start, $end, $figures + [
+                'released' => $row['projectedRelease'] ?? Money::zero(),
+                'closing' => $row['projectedClose'] ?? Money::zero(),
+            ], $bucket->effectiveCap($now), true) + [
+                'provisional' => ($row['provisional'] ?? Money::zero())->toFloat(),
+                'capOverride' => BucketCycle::where('bucket_id', $bucket->id)->where('starts_on', $start->toDateString())->first()?->cap_override?->toFloat(),
+            ];
+        }
+
+        return Inertia::render('Buckets/History', [
+            'bucket' => [
+                'id' => $bucket->id,
+                'name' => $bucket->name,
+                'currency' => $bucket->currency,
+                'kind' => $bucket->kind->value,
+                'cap' => $bucket->cap_amount?->toFloat(),
+                'cycleDescription' => $period?->describe(),
+                'carryOverLabel' => $bucket->carry_over->label(),
+                'overflowBucket' => $bucket->overflowBucket?->name,
+                'balance' => $funds->balance($bucket)->toFloat(),
+            ],
+            'current' => $current,
+            'cycles' => $closed->values(),
+        ]);
+    }
+
+    public function cycleLimit(CycleLimitRequest $request, Bucket $bucket): RedirectResponse
+    {
+        $period = $bucket->cyclePeriod();
+        abort_if($period === null, 404);
+
+        $start = $period->startOf(today()->toDateTimeImmutable())->format('Y-m-d');
+        $end = $period->endOf(today()->toDateTimeImmutable())->format('Y-m-d');
+
+        $cycle = BucketCycle::where('bucket_id', $bucket->id)->where('starts_on', $start)->first()
+            ?? new BucketCycle(['bucket_id' => $bucket->id, 'starts_on' => $start, 'ends_on' => $end, 'status' => BucketCycle::OPEN]);
+        $cycle->user_id = $bucket->user_id;
+        $cycle->cap_override = $request->filled('cap_amount') ? Money::of($request->validated('cap_amount')) : null;
+        $cycle->save();
+
+        return back()->with('success', __('buckets.cycle_limit_saved'));
+    }
+
+    /**
+     * @param  array<string, Money>  $figures
+     * @return array<string, mixed>
+     */
+    private function presentCycle($start, $end, array $figures, ?Money $cap, bool $isOpen): array
+    {
+        return [
+            'start' => $start->toDateString(),
+            'end' => $end->toDateString(),
+            'isOpen' => $isOpen,
+            'cap' => $cap?->toFloat(),
+            'opening' => $figures['opening']->toFloat(),
+            'filled' => $figures['filled']->toFloat(),
+            'movedIn' => $figures['moved_in']->toFloat(),
+            'movedOut' => $figures['moved_out']->toFloat(),
+            'spent' => $figures['spent']->toFloat(),
+            'released' => $figures['released']->toFloat(),
+            'closing' => $figures['closing']->toFloat(),
+        ];
     }
 
     public function reset(Bucket $bucket, BucketLedger $funds): RedirectResponse
