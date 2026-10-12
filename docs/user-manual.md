@@ -60,6 +60,10 @@ An account is any place that holds money: a bank account, digital wallet, cash, 
 
 - **Add an account** with a name, type, starting balance and currency. You can also set an institution, colour,
   icon, masked number and notes.
+- **Interest (yield).** If the account earns interest, enter the **interest rate per year** and when it is added
+  (daily, monthly or yearly). The cash-flow forecast then shows a projected **Interest** column. Interest exists only
+  on real accounts, never on buckets, and is only a projection: nothing is recorded until you add the interest as a
+  real transaction yourself. Do not also plan the same interest as a planned income, or it counts twice.
 - **The balance is calculated for you** from the starting balance plus every transaction. You never type the
   current balance directly. To correct it, add a transaction.
 - **Deleting an account:** if it has no transactions it is removed. If it has transactions it is **archived**
@@ -164,6 +168,9 @@ income, planned expenses and your projected balance, per currency. Today's balan
 **Changing repeating events.** Editing or deleting one occurrence asks whether it is **only this one** or **this
 and all future ones**. Earlier occurrences, and ones already done, are never touched. When you change "all future",
 the dates stay as they are; to move a date, edit that single occurrence.
+
+**Interest.** Accounts with an interest rate add a projected interest line to each month (planned incomes and
+expenses on that account move its balance on their dates, so the interest follows them).
 
 **Advanced.** An overdue plan that is still open counts in the current month. Different currencies are projected
 separately and never added together.

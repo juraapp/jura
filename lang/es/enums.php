@@ -66,6 +66,12 @@ return [
         'optimistic' => 'Optimista',
     ],
 
+    'yield_compounding' => [
+        'daily' => 'Diaria',
+        'monthly' => 'Mensual',
+        'yearly' => 'Anual',
+    ],
+
     'fill_rule' => [
         'fixed' => 'Monto fijo',
         'percent' => 'Porcentaje del ingreso',

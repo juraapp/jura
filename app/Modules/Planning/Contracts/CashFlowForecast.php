@@ -16,7 +16,7 @@ interface CashFlowForecast
     /**
      * Month-by-month projected balances per currency, starting with the current month.
      *
-     * @return Collection<string, array{currency: string, opening: Money, months: list<array{month: string, income: Money, expense: Money, net: Money, closing: Money}>}>
+     * @return Collection<string, array{currency: string, opening: Money, months: list<array{month: string, income: Money, expense: Money, interest: Money, net: Money, closing: Money}>}>
      */
     public function monthly(User $user, ForecastView $view, int $months): Collection;
 

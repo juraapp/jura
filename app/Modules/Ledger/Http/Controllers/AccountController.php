@@ -3,6 +3,7 @@
 namespace App\Modules\Ledger\Http\Controllers;
 
 use App\Modules\Ledger\Enums\AccountType;
+use App\Modules\Ledger\Enums\YieldCompounding;
 use App\Modules\Ledger\Http\Requests\Accounts\StoreAccountRequest;
 use App\Modules\Ledger\Http\Requests\Accounts\UpdateAccountRequest;
 use App\Modules\Ledger\Models\Account;
@@ -27,6 +28,8 @@ class AccountController extends Controller
                 'institution' => $account->institution,
                 'initial_balance' => $account->initial_balance->toFloat(),
                 'currency' => $account->currency,
+                'yield_rate' => $account->yield_rate !== null ? (float) $account->yield_rate : null,
+                'yield_compounding' => $account->yield_compounding->value,
                 'color' => $account->color,
                 'masked_number' => $account->masked_number,
                 'is_active' => $account->is_active,
@@ -36,6 +39,7 @@ class AccountController extends Controller
 
         return Inertia::render('Accounts/Index', [
             'accounts' => $accounts,
+            'yieldCompoundings' => collect(YieldCompounding::cases())->map(fn (YieldCompounding $case) => ['value' => $case->value, 'label' => $case->label()]),
             'accountTypes' => collect(AccountType::cases())->map(fn (AccountType $type) => [
                 'value' => $type->value,
                 'label' => $type->label(),

@@ -104,6 +104,7 @@ const chartOptions = (currency) => ({
     legend: { labels: { colors: [palette().text, palette().text, palette().text], useSeriesColors: false } },
     tooltip: { y: { formatter: (v) => formatMoney(v, currency.currency, locale()) } },
 });
+const hasInterest = (currency) => currency.months.some((m) => m.interest > 0);
 const chartSeries = (currency) => [
     { name: 'Planned income', type: 'column', data: currency.months.map((m) => m.income) },
     { name: 'Planned expenses', type: 'column', data: currency.months.map((m) => m.expense) },
@@ -271,6 +272,7 @@ const deleteEvent = () => {
                                     <th class="py-2 pr-4 font-semibold">Month</th>
                                     <th class="px-4 py-2 text-right font-semibold">Income</th>
                                     <th class="px-4 py-2 text-right font-semibold">Expenses</th>
+                                    <th v-if="hasInterest(currency)" class="px-4 py-2 text-right font-semibold" title="Projected interest from accounts with a yield rate">Interest</th>
                                     <th class="px-4 py-2 text-right font-semibold">Net</th>
                                     <th class="py-2 pl-4 text-right font-semibold">Balance</th>
                                 </tr>
@@ -280,6 +282,7 @@ const deleteEvent = () => {
                                     <td class="py-2 pr-4">{{ monthLabel(row.month) }}</td>
                                     <td class="px-4 py-2 text-right text-green-600 dark:text-green-400"><Money :amount="row.income" :currency="currency.currency" /></td>
                                     <td class="px-4 py-2 text-right text-red-600 dark:text-red-400"><Money :amount="row.expense" :currency="currency.currency" /></td>
+                                    <td v-if="hasInterest(currency)" class="px-4 py-2 text-right italic text-green-600 dark:text-green-400"><Money :amount="row.interest" :currency="currency.currency" /></td>
                                     <td class="px-4 py-2 text-right"><Money :amount="row.net" :currency="currency.currency" signed /></td>
                                     <td class="py-2 pl-4 text-right font-semibold" :class="row.closing < 0 ? 'text-red-600 dark:text-red-400' : ''">
                                         <Money :amount="row.closing" :currency="currency.currency" />

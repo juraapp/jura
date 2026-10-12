@@ -110,4 +110,23 @@ class CashFlowProjectorTest extends TestCase
         $this->assertSame('0.00', $projection['USD']['opening']->toDecimalString());
         $this->assertSame('100.00', $projection['USD']['months'][1]['closing']->toDecimalString());
     }
+
+    public function test_yield_bearing_accounts_add_projected_interest_to_the_forecast(): void
+    {
+        Account::query()->update(['yield_rate' => 9.3, 'yield_compounding' => 'daily']);
+
+        $months = $this->months(ForecastView::Conservative);
+
+        $this->assertTrue($months[0]['interest']->isPositive());
+        $this->assertTrue($months[1]['interest']->toFloat() > $months[0]['interest']->toFloat() * 0.9);
+        $this->assertSame(
+            $months[0]['income']->subtract($months[0]['expense'])->add($months[0]['interest'])->toDecimalString(),
+            $months[0]['net']->toDecimalString(),
+        );
+    }
+
+    public function test_accounts_without_a_rate_earn_nothing(): void
+    {
+        $this->assertSame('0.00', $this->months(ForecastView::Conservative)[0]['interest']->toDecimalString());
+    }
 }

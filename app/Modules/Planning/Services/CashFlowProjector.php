@@ -8,7 +8,9 @@ use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Contracts\CashFlowForecast;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Support\YieldSimulator;
 use App\Modules\Shared\Support\Money;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -20,10 +22,13 @@ use Illuminate\Support\Collection;
  */
 class CashFlowProjector implements CashFlowForecast
 {
-    public function __construct(private readonly Balances $balances) {}
+    public function __construct(
+        private readonly Balances $balances,
+        private readonly YieldSimulator $yield,
+    ) {}
 
     /**
-     * @return Collection<string, array{currency: string, opening: Money, months: list<array{month: string, income: Money, expense: Money, net: Money, closing: Money}>}>
+     * @return Collection<string, array{currency: string, opening: Money, months: list<array{month: string, income: Money, expense: Money, interest: Money, net: Money, closing: Money}>}>
      */
     public function monthly(User $user, ForecastView $view, int $months): Collection
     {
@@ -71,9 +76,10 @@ class CashFlowProjector implements CashFlowForecast
             ->get();
 
         $opening = $this->balances->netWorthByCurrency($user);
+        $interest = $this->interestByMonth($user, $view, $events, $today, $horizonEnd);
         $currencies = $opening->keys()->merge($events->pluck('currency'))->unique()->sort()->values();
 
-        return $currencies->mapWithKeys(function (string $currency) use ($events, $opening, $view, $months, $firstMonth, $today) {
+        return $currencies->mapWithKeys(function (string $currency) use ($events, $opening, $view, $months, $firstMonth, $today, $interest) {
             $running = $opening->get($currency, Money::zero());
             $currencyEvents = $events->where('currency', $currency);
 
@@ -97,13 +103,15 @@ class CashFlowProjector implements CashFlowForecast
                     }
                 }
 
-                $net = $income->subtract($expense);
+                $earned = $interest[$currency][$monthStart->format('Y-m')] ?? Money::zero();
+                $net = $income->subtract($expense)->add($earned);
                 $running = $running->add($net);
 
                 $series[] = [
                     'month' => $monthStart->format('Y-m'),
                     'income' => $income,
                     'expense' => $expense,
+                    'interest' => $earned,
                     'net' => $net,
                     'closing' => $running,
                 ];
@@ -125,5 +133,38 @@ class CashFlowProjector implements CashFlowForecast
         $date = $event->date->lt($today) ? $today : $event->date;
 
         return $date->copy()->startOfMonth();
+    }
+
+    /**
+     * Interest the yield-bearing accounts are projected to earn, by currency and month, with the
+     * open planned events that hit each account moving its balance on their dates.
+     *
+     * @param  Collection<int, PlannedEvent>  $events
+     * @return array<string, array<string, Money>>
+     */
+    private function interestByMonth(User $user, ForecastView $view, Collection $events, Carbon $today, Carbon $horizonEnd): array
+    {
+        $totals = [];
+
+        foreach ($this->balances->yieldBearing($user) as $account) {
+            $flows = [];
+            foreach ($events->where('account_id', $account['id']) as $event) {
+                $isIncome = $event->type === TransactionType::Income;
+                if ($isIncome && ! $view->includesIncome($event->certainty)) {
+                    continue;
+                }
+
+                $date = ($event->date->lt($today) ? $today : $event->date)->toDateString();
+                $flows[$date] = ($flows[$date] ?? Money::zero())->add($isIncome ? $event->amount : $event->amount->negate());
+            }
+
+            $months = $this->yield->run($account['balance'], $account['rate'], $account['compounding'], CarbonImmutable::instance($today), CarbonImmutable::instance($horizonEnd), $flows);
+
+            foreach ($months as $month => $row) {
+                $totals[$account['currency']][$month] = ($totals[$account['currency']][$month] ?? Money::zero())->add($row['interest']);
+            }
+        }
+
+        return $totals;
     }
 }

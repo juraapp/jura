@@ -9,6 +9,7 @@ import ModalForm from '@/Components/ModalForm.vue';
 import Modal from '@/Components/Modal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
+import SelectInput from '@/Components/SelectInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -18,6 +19,7 @@ import { store, update, destroy } from '@/actions/App/Modules/Ledger/Http/Contro
 defineProps({
     accounts: { type: Array, required: true },
     accountTypes: { type: Array, required: true },
+    yieldCompoundings: { type: Array, required: true },
 });
 
 const page = usePage();
@@ -30,6 +32,8 @@ const form = useForm({
     type: 'bank',
     institution: '',
     initial_balance: '0',
+    yield_rate: '',
+    yield_compounding: 'daily',
     currency: page.props.auth.user?.currency_default ?? 'COP',
     color: '#2563eb',
     masked_number: '',
@@ -51,6 +55,8 @@ const openEditModal = (account) => {
     form.type = account.type;
     form.institution = account.institution ?? '';
     form.initial_balance = String(account.initial_balance);
+    form.yield_rate = account.yield_rate === null ? '' : String(account.yield_rate);
+    form.yield_compounding = account.yield_compounding;
     form.currency = account.currency;
     form.color = account.color;
     form.masked_number = account.masked_number ?? '';
@@ -220,6 +226,20 @@ const deleteAccount = () => {
                     <div>
                         <InputLabel for="color" value="Color" />
                         <input id="color" v-model="form.color" type="color" class="mt-1 block h-10 w-full rounded-lg border-gray-300 dark:border-gray-600" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <InputLabel for="yield_rate" value="Interest rate per year, % (optional)" />
+                        <TextInput id="yield_rate" v-model="form.yield_rate" type="number" step="0.0001" min="0" class="mt-1 block w-full" placeholder="9.3" />
+                        <InputError class="mt-1" :message="form.errors.yield_rate" />
+                    </div>
+                    <div>
+                        <InputLabel for="yield_compounding" value="Interest is added" />
+                        <SelectInput id="yield_compounding" v-model="form.yield_compounding">
+                            <option v-for="option in yieldCompoundings" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </SelectInput>
                     </div>
                 </div>
 

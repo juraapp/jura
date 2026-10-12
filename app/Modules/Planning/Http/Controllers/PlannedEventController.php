@@ -53,6 +53,7 @@ class PlannedEventController extends Controller
                 'month' => $month['month'],
                 'income' => $month['income']->toFloat(),
                 'expense' => $month['expense']->toFloat(),
+                'interest' => $month['interest']->toFloat(),
                 'net' => $month['net']->toFloat(),
                 'closing' => $month['closing']->toFloat(),
             ])->values(),

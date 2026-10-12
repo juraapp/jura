@@ -154,4 +154,24 @@ class AccountsTest extends TestCase
 
         $response->assertRedirect('/login');
     }
+
+    public function test_user_can_set_an_interest_rate_on_an_account(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+
+        $this->actingAs($user)->patch("/accounts/{$account->id}", [
+            'name' => $account->name,
+            'type' => $account->type->value,
+            'initial_balance' => (string) $account->initial_balance,
+            'currency' => $account->currency,
+            'color' => $account->color,
+            'yield_rate' => '9.3',
+            'yield_compounding' => 'monthly',
+        ])->assertRedirect();
+
+        $account->refresh();
+        $this->assertSame('9.3000', (string) $account->yield_rate);
+        $this->assertSame('monthly', $account->yield_compounding->value);
+    }
 }

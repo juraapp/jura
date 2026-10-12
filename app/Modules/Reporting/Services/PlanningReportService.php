@@ -63,6 +63,7 @@ class PlanningReportService
                         'label' => Carbon::createFromFormat('Y-m-d', $month['month'].'-01')->translatedFormat('M Y'),
                         'income' => $month['income']->toFloat(),
                         'expense' => $month['expense']->toFloat(),
+                        'interest' => $month['interest']->toFloat(),
                         'net' => $month['net']->toFloat(),
                         'closing' => $month['closing']->toFloat(),
                     ])

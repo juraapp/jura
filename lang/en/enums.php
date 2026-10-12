@@ -66,6 +66,12 @@ return [
         'optimistic' => 'Optimistic',
     ],
 
+    'yield_compounding' => [
+        'daily' => 'Daily',
+        'monthly' => 'Monthly',
+        'yearly' => 'Yearly',
+    ],
+
     'fill_rule' => [
         'fixed' => 'Fixed amount',
         'percent' => 'Percent of income',

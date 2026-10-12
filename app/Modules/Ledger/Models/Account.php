@@ -3,6 +3,7 @@
 namespace App\Modules\Ledger\Models;
 
 use App\Modules\Ledger\Enums\AccountType;
+use App\Modules\Ledger\Enums\YieldCompounding;
 use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Shared\Casts\AsMoney;
 use App\Modules\Shared\Concerns\BelongsToUser;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'name', 'type', 'institution', 'initial_balance', 'currency',
-    'color', 'icon', 'masked_number', 'is_active', 'notes',
+    'color', 'icon', 'masked_number', 'is_active', 'notes', 'yield_rate', 'yield_compounding',
 ])]
 class Account extends Model
 {
@@ -26,6 +27,8 @@ class Account extends Model
         return [
             'type' => AccountType::class,
             'initial_balance' => AsMoney::class,
+            'yield_rate' => 'decimal:4',
+            'yield_compounding' => YieldCompounding::class,
             'is_active' => 'boolean',
         ];
     }
