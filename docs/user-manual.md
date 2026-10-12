@@ -414,7 +414,7 @@ You are notified once per crossing; an unread alert is not repeated.
 ## Preferences, profile and appearance
 
 - **Settings → Preferences**: default **currency**, **language** (English or Spanish) and **time zone**. These
-  control how amounts, dates and text appear everywhere.
+  control how amounts, dates and text appear everywhere. Changing the language applies right after you save, with no reload.
   Below them, **How dates, times and numbers look** lets you pick the date style (2026-03-09, 03/09/2026,
   09/03/2026 or 9 Mar 2026), 12- or 24-hour time, the decimal and thousands separators, the number of decimals, and
   whether the currency shows as a symbol (`$`), a code (`COP`) or not at all, before or after the amount. The number
@@ -453,4 +453,4 @@ mixes them.
 - Planned expenses reduce your projected account balance but do not take money out of buckets, and spending in a
   category is not predicted when the planner looks ahead.
 - Items that share a bucket each compare themselves with the same pot, so their "funded" bars can overlap.
-- The Vue screens are in English; messages, labels and exports follow your language preference (English or Spanish).
+- Screens, messages, labels, exports and PDFs follow your language preference (English or Spanish). Names you type yourself (accounts, categories, buckets) are shown as you wrote them.
