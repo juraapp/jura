@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'title' => 'Banks & wallets',
+    'new' => 'New account',
+    'empty_title' => 'You don\'t have any accounts yet',
+    'empty_hint' => 'Add your banks, digital wallets, or cash to start tracking transactions.',
+    'create_first' => 'Create my first account',
+    'archived' => 'Archived',
+    'edit' => 'Edit account',
+    'name' => 'Name',
+    'type' => 'Type',
+    'currency' => 'Currency',
+    'institution' => 'Bank or institution',
+    'initial_balance' => 'Initial balance',
+    'color' => 'Color',
+    'yield_rate' => 'Interest rate per year, % (optional)',
+    'yield_compounding' => 'Interest is added',
+    'masked_number' => 'Number (optional, partially hidden)',
+    'notes' => 'Notes',
+    'active' => 'Active account',
+    'save' => 'Save',
+    'delete_title' => 'Delete this account?',
+    'delete_hint' => 'If it has recorded transactions or recurring entries linked to it, it will be archived instead of deleted to preserve your history.',
+];

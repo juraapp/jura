@@ -36,6 +36,18 @@ createInertiaApp({
             fallbackWarn: false,
         });
 
+        // Saving a new language redirects with the new strings: swap them in without a full reload.
+        const syncLanguage = (event) => {
+            const next = event.detail.page.props.i18n;
+
+            if (next && i18n.global.locale.value !== next.locale) {
+                i18n.global.setLocaleMessage(next.locale, next.messages);
+                i18n.global.locale.value = next.locale;
+            }
+        };
+        router.on('navigate', syncLanguage);
+        router.on('success', syncLanguage);
+
         return createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(i18n)
