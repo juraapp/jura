@@ -9,6 +9,7 @@ use App\Http\Requests\Transactions\UpdateTransactionRequest;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Modules\Shared\Http\Controllers\Controller;
 use App\Services\TransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;

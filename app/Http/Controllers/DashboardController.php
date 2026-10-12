@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Support\Money;
 use App\Services\BalanceCalculator;
 use App\Services\InsightService;
 use App\Services\ReportService;
-use App\Support\Money;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;

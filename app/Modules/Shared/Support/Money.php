@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support;
+namespace App\Modules\Shared\Support;
 
 use InvalidArgumentException;
 use Stringable;

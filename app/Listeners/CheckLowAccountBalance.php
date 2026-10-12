@@ -4,10 +4,10 @@ namespace App\Listeners;
 
 use App\Enums\TransactionType;
 use App\Events\TransactionsMutated;
+use App\Models\Transaction;
+use App\Modules\Shared\Support\Money;
 use App\Notifications\LowAccountBalance;
 use App\Services\BalanceCalculator;
-use App\Support\Money;
-use App\Models\Transaction;
 
 /**
  * Flags an account as "low" when its balance can't cover ~3 days of the

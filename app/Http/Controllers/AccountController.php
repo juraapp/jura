@@ -6,6 +6,7 @@ use App\Enums\AccountType;
 use App\Http\Requests\Accounts\StoreAccountRequest;
 use App\Http\Requests\Accounts\UpdateAccountRequest;
 use App\Models\Account;
+use App\Modules\Shared\Http\Controllers\Controller;
 use App\Services\BalanceCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;

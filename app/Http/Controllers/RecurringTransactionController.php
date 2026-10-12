@@ -9,6 +9,7 @@ use App\Http\Requests\RecurringTransactions\UpdateRecurringTransactionRequest;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\RecurringTransaction;
+use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;

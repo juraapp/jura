@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\TransactionImportException;
 use App\Models\Transaction;
+use App\Modules\Shared\Http\Controllers\Controller;
 use App\Services\TransactionImportService;
 use App\Services\TransactionService;
 use Illuminate\Http\JsonResponse;

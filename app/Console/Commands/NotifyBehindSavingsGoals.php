@@ -4,8 +4,8 @@ namespace App\Console\Commands;
 
 use App\Enums\SavingsGoalStatus;
 use App\Models\SavingsGoal;
+use App\Modules\Shared\Support\Money;
 use App\Notifications\GoalBehindSchedule;
-use App\Support\Money;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
