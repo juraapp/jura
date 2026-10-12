@@ -79,6 +79,7 @@ const blank = () => ({
     cycle: 'monthly',
     cycle_every: 1,
     cycle_anchor: '',
+    cycle_goal: '',
     cap_amount: '',
     priority: '',
     opening_balance: '',
@@ -92,6 +93,11 @@ const blank = () => ({
 
 const form = useForm(blank());
 const isSpending = computed(() => form.kind === 'spending');
+// A spending bucket always has a cycle; a savings bucket may have none.
+watch(() => form.kind, (kind) => {
+    if (kind === 'spending' && !form.cycle) form.cycle = 'monthly';
+    if (kind === 'savings' && !editingBucket.value) form.cycle = '';
+});
 const needsValue = computed(() => ['fixed', 'percent'].includes(form.fill_rule));
 const overflowChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === form.currency && bucket.id !== editingBucket.value?.id));
 
@@ -113,6 +119,7 @@ const openEditModal = (bucket) => {
     form.cycle = bucket.cycle ?? '';
     form.cycle_every = bucket.cycleEvery ?? 1;
     form.cycle_anchor = bucket.cycleAnchor ?? '';
+    form.cycle_goal = bucket.cycleGoal !== null && bucket.cycleGoal !== undefined ? String(bucket.cycleGoal) : '';
     form.cap_amount = bucket.cap !== null ? String(bucket.cap) : '';
     form.priority = String(bucket.priority);
     form.opening_balance = bucket.openingBalance > 0 ? String(bucket.openingBalance) : '';
@@ -333,6 +340,9 @@ const deleteBucket = () => {
                             <template v-if="bucket.cycleView.projectedRelease > 0"><Money :amount="bucket.cycleView.projectedRelease" :currency="bucket.currency" /> moves on at the end if unspent. </template>
                             <template v-if="bucket.cycleView.projectedIn > 0">+<Money :amount="bucket.cycleView.projectedIn" :currency="bucket.currency" /> overflow arriving.</template>
                         </li>
+                        <li v-if="bucket.cycleView && bucket.cycleGoal" class="flex items-center gap-1.5">
+                            <DynamicIcon name="flag" class="h-3.5 w-3.5" /> This cycle: <Money :amount="bucket.cycleView.receivedSoFar" :currency="bucket.currency" /> of <Money :amount="bucket.cycleGoal" :currency="bucket.currency" /> goal
+                        </li>
                         <li v-if="bucket.cycleView && bucket.cycleView.capOverride" class="text-amber-600 dark:text-amber-400">
                             Limit this cycle only: <Money :amount="bucket.cycleView.capOverride" :currency="bucket.currency" />
                         </li>
@@ -401,11 +411,12 @@ const deleteBucket = () => {
                     </div>
                 </div>
 
-                <div v-if="isSpending">
-                    <InputLabel for="cycle_every" value="Cycle: repeats every" />
+                <div>
+                    <InputLabel for="cycle_every" :value="isSpending ? 'Cycle: repeats every' : 'Cycle (optional): repeats every'" />
                     <div class="mt-1 flex gap-2">
                         <TextInput id="cycle_every" v-model="form.cycle_every" type="number" min="1" max="366" class="block w-20" />
                         <SelectInput id="cycle" v-model="form.cycle">
+                            <option v-if="!isSpending" value="">No cycle</option>
                             <option value="daily">{{ Number(form.cycle_every) === 1 ? 'day' : 'days' }}</option>
                             <option value="weekly">{{ Number(form.cycle_every) === 1 ? 'week' : 'weeks' }}</option>
                             <option value="monthly">{{ Number(form.cycle_every) === 1 ? 'month' : 'months' }}</option>
@@ -413,6 +424,11 @@ const deleteBucket = () => {
                         </SelectInput>
                     </div>
                     <InputError class="mt-1" :message="form.errors.cycle || form.errors.cycle_every" />
+                    <template v-if="!isSpending && form.cycle">
+                        <InputLabel for="cycle_goal" class="mt-3" value="Goal to save each cycle (optional)" />
+                        <TextInput id="cycle_goal" v-model="form.cycle_goal" type="number" step="0.01" min="0.01" class="mt-1 block w-full" placeholder="For example 200" />
+                        <InputError class="mt-1" :message="form.errors.cycle_goal" />
+                    </template>
                     <InputLabel for="cycle_anchor" class="mt-3" value="Starting on (optional)" />
                     <TextInput id="cycle_anchor" v-model="form.cycle_anchor" type="date" class="mt-1 block w-full" />
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">

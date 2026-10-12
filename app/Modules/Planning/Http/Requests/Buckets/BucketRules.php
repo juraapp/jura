@@ -46,6 +46,7 @@ trait BucketRules
             'cycle' => [Rule::requiredIf($spending), 'nullable', Rule::enum(BudgetPeriodType::class)],
             'cycle_every' => ['nullable', 'integer', 'between:1,366'],
             'cycle_anchor' => ['nullable', 'date'],
+            'cycle_goal' => ['nullable', 'numeric', 'gt:0'],
             'cap_amount' => [Rule::requiredIf(fn () => $spending() || $needsTarget()), 'nullable', 'numeric', 'gt:0'],
             'fill_rule' => ['nullable', Rule::enum(FillRule::class)],
             'fill_value' => [
