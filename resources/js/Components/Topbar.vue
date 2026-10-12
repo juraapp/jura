@@ -29,7 +29,7 @@ const initial = ref(page.props.auth.user.name.charAt(0).toUpperCase());
             @click="toggleSidebar"
         >
             <DynamicIcon name="bars-3" class="h-6 w-6" />
-            <span class="sr-only">Open menu</span>
+            <span class="sr-only">{{ $t('ui.shell.topbar.open_menu') }}</span>
         </button>
 
         <NetWorthBadge />
@@ -41,7 +41,7 @@ const initial = ref(page.props.auth.user.name.charAt(0).toUpperCase());
                 @click="openTransactionModal(null, 'expense')"
             >
                 <DynamicIcon name="plus" class="h-4 w-4" />
-                <span class="hidden sm:inline">New transaction</span>
+                <span class="hidden sm:inline">{{ $t('ui.shell.topbar.new_transaction') }}</span>
             </button>
 
             <button
@@ -51,7 +51,7 @@ const initial = ref(page.props.auth.user.name.charAt(0).toUpperCase());
             >
                 <DynamicIcon v-if="isDark" name="sun" class="h-5 w-5" />
                 <DynamicIcon v-else name="moon" class="h-5 w-5" />
-                <span class="sr-only">Toggle theme</span>
+                <span class="sr-only">{{ $t('ui.shell.topbar.toggle_theme') }}</span>
             </button>
 
             <NotificationBell />
@@ -75,15 +75,15 @@ const initial = ref(page.props.auth.user.name.charAt(0).toUpperCase());
                         <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ page.props.auth.user.email }}</p>
                     </div>
 
-                    <DropdownLink :href="profileEdit.url()">Profile & security</DropdownLink>
-                    <DropdownLink :href="preferencesEdit.url()">Preferences</DropdownLink>
+                    <DropdownLink :href="profileEdit.url()">{{ $t('ui.shell.nav.profile_security') }}</DropdownLink>
+                    <DropdownLink :href="preferencesEdit.url()">{{ $t('ui.shell.nav.preferences') }}</DropdownLink>
 
                     <Link
                         :href="logout()"
                         as="button"
                         class="block w-full px-4 py-2 text-start text-sm text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-700"
                     >
-                        Log out
+                        {{ $t('ui.shell.topbar.log_out') }}
                     </Link>
                 </template>
             </Dropdown>

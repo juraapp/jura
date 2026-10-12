@@ -29,55 +29,55 @@ const { isOpen, close } = useSidebar();
 const sections = [
     {
         items: [
-            { label: 'Dashboard', route: dashboard, icon: 'home' },
+            { label: 'ui.shell.nav.dashboard', route: dashboard, icon: 'home' },
         ],
     },
     {
-        title: 'Finances',
+        title: 'ui.shell.nav.finances',
         items: [
-            { label: 'Transactions', route: transactionsIndex, icon: 'list-bullet' },
-            { label: 'Import CSV', route: transactionsImport, icon: 'arrow-up-tray' },
-            { label: 'Incomes', route: incomesIndex, icon: 'arrow-up-circle' },
-            { label: 'Expenses', route: expensesIndex, icon: 'arrow-down-circle' },
-            { label: 'Transfers', route: transfersIndex, icon: 'arrows-right-left' },
+            { label: 'ui.shell.nav.transactions', route: transactionsIndex, icon: 'list-bullet' },
+            { label: 'ui.shell.nav.import_csv', route: transactionsImport, icon: 'arrow-up-tray' },
+            { label: 'ui.shell.nav.incomes', route: incomesIndex, icon: 'arrow-up-circle' },
+            { label: 'ui.shell.nav.expenses', route: expensesIndex, icon: 'arrow-down-circle' },
+            { label: 'ui.shell.nav.transfers', route: transfersIndex, icon: 'arrows-right-left' },
         ],
     },
     {
-        title: 'Accounts',
+        title: 'ui.shell.nav.accounts',
         items: [
-            { label: 'Banks & wallets', route: accountsIndex, icon: 'wallet' },
+            { label: 'ui.shell.nav.banks_wallets', route: accountsIndex, icon: 'wallet' },
         ],
     },
     {
-        title: 'Planning',
+        title: 'ui.shell.nav.planning',
         items: [
-            { label: 'Cash flow', route: plannedEventsIndex, icon: 'calendar' },
-            { label: 'Buckets', route: bucketsIndex, icon: 'chart-pie' },
-            { label: 'Wish list', route: wishlistIndex, icon: 'flag' },
-            { label: 'Planner', route: plannerIndex, icon: 'scale' },
-            { label: 'Savings goals', route: savingsGoalsIndex, icon: 'flag' },
-            { label: 'Recurring expenses', route: recurringTransactionsIndex, icon: 'arrow-path' },
+            { label: 'ui.shell.nav.cash_flow', route: plannedEventsIndex, icon: 'calendar' },
+            { label: 'ui.shell.nav.buckets', route: bucketsIndex, icon: 'chart-pie' },
+            { label: 'ui.shell.nav.wish_list', route: wishlistIndex, icon: 'flag' },
+            { label: 'ui.shell.nav.planner', route: plannerIndex, icon: 'scale' },
+            { label: 'ui.shell.nav.savings_goals', route: savingsGoalsIndex, icon: 'flag' },
+            { label: 'ui.shell.nav.recurring_expenses', route: recurringTransactionsIndex, icon: 'arrow-path' },
         ],
     },
     {
-        title: 'Reports',
+        title: 'ui.shell.nav.reports',
         items: [
-            { label: 'Monthly', route: reportsMonthly, icon: 'document-chart-bar' },
-            { label: 'Annual', route: reportsAnnual, icon: 'document-chart-bar' },
-            { label: 'Custom', route: reportsCustom, icon: 'document-chart-bar' },
-            { label: 'Forecast', route: reportsForecast, icon: 'arrow-trending-up' },
-            { label: 'Buckets', route: reportsBuckets, icon: 'chart-pie' },
-            { label: 'Projects', route: reportsProjects, icon: 'flag' },
+            { label: 'ui.shell.nav.monthly', route: reportsMonthly, icon: 'document-chart-bar' },
+            { label: 'ui.shell.nav.annual', route: reportsAnnual, icon: 'document-chart-bar' },
+            { label: 'ui.shell.nav.custom', route: reportsCustom, icon: 'document-chart-bar' },
+            { label: 'ui.shell.nav.forecast', route: reportsForecast, icon: 'arrow-trending-up' },
+            { label: 'ui.shell.nav.buckets', route: reportsBuckets, icon: 'chart-pie' },
+            { label: 'ui.shell.nav.projects', route: reportsProjects, icon: 'flag' },
         ],
     },
     {
-        title: 'Settings',
+        title: 'ui.shell.nav.settings',
         items: [
-            { label: 'Profile & security', route: profileEdit, icon: 'user-circle' },
-            { label: 'Categories', route: categoriesIndex, icon: 'tag' },
-            { label: 'Preferences', route: preferencesEdit, icon: 'adjustments' },
-            { label: 'Trash', route: trashIndex, icon: 'trash' },
-            { label: 'Export my data', route: dataExportIndex, icon: 'arrow-down-tray' },
+            { label: 'ui.shell.nav.profile_security', route: profileEdit, icon: 'user-circle' },
+            { label: 'ui.shell.nav.categories', route: categoriesIndex, icon: 'tag' },
+            { label: 'ui.shell.nav.preferences', route: preferencesEdit, icon: 'adjustments' },
+            { label: 'ui.shell.nav.trash', route: trashIndex, icon: 'trash' },
+            { label: 'ui.shell.nav.export_data', route: dataExportIndex, icon: 'arrow-down-tray' },
         ],
     },
 ];
@@ -101,7 +101,7 @@ const isActive = (routeFn) => computed(() => page.url === routeFn.url());
                     v-if="section.title"
                     class="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                 >
-                    {{ section.title }}
+                    {{ $t(section.title) }}
                 </p>
 
                 <ul class="space-y-1">
@@ -115,7 +115,7 @@ const isActive = (routeFn) => computed(() => page.url === routeFn.url());
                             @click="close"
                         >
                             <DynamicIcon :name="item.icon" class="h-5 w-5 shrink-0" />
-                            {{ item.label }}
+                            {{ $t(item.label) }}
                         </Link>
                     </li>
                 </ul>

@@ -3,8 +3,8 @@
 namespace App\Modules\Shared\Http\Middleware;
 
 use App\Modules\Ledger\Contracts\Balances;
+use App\Modules\Shared\Support\UiMessages;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Lang;
 use Inertia\Inertia;
 use Inertia\Middleware;
 
@@ -37,7 +37,7 @@ class HandleInertiaRequests extends Middleware
             'appName' => config('app.name'),
             'i18n' => [
                 'locale' => app()->getLocale(),
-                'messages' => Lang::get('messages'),
+                'messages' => UiMessages::for(app()->getLocale()),
             ],
             'auth' => [
                 'user' => $request->user(),

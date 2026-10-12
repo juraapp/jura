@@ -1,9 +1,11 @@
 <script setup>
 import { watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { router, usePage } from '@inertiajs/vue3';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import { useToast } from '@/composables/useToast';
 
+const { t } = useI18n();
 const { toasts, push, remove } = useToast();
 const page = usePage();
 
@@ -20,7 +22,7 @@ watch(
             push({
                 type,
                 message: flash[type],
-                action: undo ? { label: 'Undo', onClick: () => router.post(undo.url, { ids: undo.ids }, { preserveScroll: true }) } : null,
+                action: undo ? { label: t('ui.common.undo'), onClick: () => router.post(undo.url, { ids: undo.ids }, { preserveScroll: true }) } : null,
             });
         });
     },

@@ -26,32 +26,19 @@ lang/es/   (mirrors lang/en/ exactly, same keys)
 
 ## Server → client bridge
 
-`HandleInertiaRequests::share()` puts Laravel's translations directly on every Inertia response:
+`HandleInertiaRequests::share()` puts the active language's strings on every Inertia response through
+`UiMessages::for($locale)`: `lang/{locale}/messages.php` plus every file in `lang/{locale}/ui/` (one file per area,
+exposed as `ui.<file>.<key>`). English fills any key missing in Spanish. `resources/js/app.js` boots vue-i18n from it.
 
-```php
-'i18n' => [
-    'locale' => app()->getLocale(),
-    'messages' => Lang::get('messages'),
-],
-```
+## Translating Vue pages
 
-`resources/js/app.js` boots vue-i18n from this shared prop — `lang/{en,es}/messages.php` is the **single source of truth** for both server- and client-rendered strings; there's no separate JSON translation file to keep in sync:
+Vue pages and components use `$t('ui.<area>.<key>')` in templates and `const { t } = useI18n()` in scripts.
 
-```js
-const { locale, messages } = props.initialPage.props.i18n;
-const i18n = createI18n({ legacy: false, locale, fallbackLocale: 'en', messages: { [locale]: messages } });
-```
-
-Validation errors arrive already-localized via Inertia's `usePage().props.errors` — no separate client-side handling needed.
-
-## Current state: Vue pages are English-hardcoded
-
-**None of the Vue pages actually call `$t()`/`useI18n()`.** The vue-i18n bootstrap above is wired and functional, and it's fed from `messages.php`, but every `Pages/*.vue` and `Components/*.vue` built during the Inertia migration writes its UI strings as plain English literals directly in the template (`<h2>Budgets</h2>`, not `<h2>{{ $t('budgets.title') }}</h2>`). Only the **Laravel-side** strings (flash messages via `__()`, enum labels, PDF/CSV content) are genuinely bilingual right now.
-
-If you're adding a new user-facing string in a Vue component and want it translated:
-
-1. Add the key to both `lang/en/messages.php` and `lang/es/messages.php` (or a more specific domain file if one fits).
-2. Use `$t('your.key')` in the template — `useI18n()` is already globally installed (`app.use(i18n)` in `app.js`), no per-component setup needed.
-3. Existing hardcoded strings are not required to be migrated as a prerequisite — just don't hardcode a *new* string if you're touching a component seriously, and prefer converting the page's other strings to `$t()` while you're in there rather than mixing hardcoded and translated text.
-
-Grep to check for it: `grep -rL '\$t(' resources/js/Pages` lists every Page file with zero translation calls — currently that's all of them.
+- Add the key to both `lang/en/ui/<area>.php` and `lang/es/ui/<area>.php` (`common.php` for shared words like Cancel,
+  `shell.php` for navigation, topbar, notifications and bulk bars, one file per page area otherwise).
+- Placeholders use vue-i18n braces (`'Delete {label}?'`), not Laravel's `:label`. Avoid `@`, `|` and `{`/`}` as literal text
+  in a value (they are message syntax); plurals use `'one item | {count} items'` with `t(key, { count }, count)`.
+- Spanish says "balde" for bucket.
+- `tests/Feature/UiTranslationsTest.php` fails when `en` and `es` differ in keys or a page uses a key that does not exist.
+  It cannot see English text left hard-coded in a template, so reviewing a page means grepping it for literals.
+- Pages not yet migrated still show English literals; see the open `i18n:` issues for what remains.
