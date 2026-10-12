@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Enums\TransactionType;
 use App\Models\Budget;
-use App\Models\Transaction;
+use App\Modules\Ledger\Enums\TransactionType;
+use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Carbon;
 

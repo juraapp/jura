@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Account;
-use App\Models\Category;
-use App\Models\Transaction;
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Models\Account;
+use App\Modules\Ledger\Models\Category;
+use App\Modules\Ledger\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;

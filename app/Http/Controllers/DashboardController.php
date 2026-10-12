@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Transaction;
+use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Ledger\Services\BalanceCalculator;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Support\Money;
-use App\Services\BalanceCalculator;
 use App\Services\InsightService;
 use App\Services\ReportService;
 use Illuminate\Http\Request;

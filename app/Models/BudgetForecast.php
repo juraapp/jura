@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Ledger\Models\Category;
 use App\Modules\Shared\Casts\AsMoney;
 use App\Modules\Shared\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

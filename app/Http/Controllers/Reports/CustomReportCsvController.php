@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Reports;
 
-use App\Models\Transaction;
+use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;

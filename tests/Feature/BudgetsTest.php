@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Budget;
-use App\Models\Category;
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Models\Category;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
