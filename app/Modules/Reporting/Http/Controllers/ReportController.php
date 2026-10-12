@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Modules\Reporting\Http\Controllers;
 
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Support\Money;
-use App\Services\InsightService;
-use App\Services\ReportService;
+use App\Modules\Reporting\Services\InsightService;
+use App\Modules\Reporting\Services\ReportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;

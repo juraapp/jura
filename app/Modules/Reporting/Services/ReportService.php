@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services;
+namespace App\Modules\Reporting\Services;
 
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
-use App\Modules\Ledger\Services\BalanceCalculator;
+use App\Modules\Ledger\Contracts\Balances;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -23,7 +23,7 @@ use Illuminate\Support\Collection;
  */
 class ReportService
 {
-    public function __construct(private readonly BalanceCalculator $balances) {}
+    public function __construct(private readonly Balances $balances) {}
 
     /**
      * Currencies the user actually has accounts in, so aggregates only
