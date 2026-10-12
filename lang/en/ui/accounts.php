@@ -22,4 +22,6 @@ return [
     'save' => 'Save',
     'delete_title' => 'Delete this account?',
     'delete_hint' => 'If it has recorded transactions or recurring entries linked to it, it will be archived instead of deleted to preserve your history.',
+    'name_placeholder' => 'Chase Checking',
+    'institution_placeholder' => 'Chase, Wells Fargo, PayPal...',
 ];

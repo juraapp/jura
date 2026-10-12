@@ -161,7 +161,7 @@ const deleteCategory = () => {
             <form id="category-form" class="space-y-4" @submit.prevent="submit">
                 <div>
                     <InputLabel for="name" :value="$t('ui.categories.name')" />
-                    <TextInput id="name" v-model="form.name" type="text" class="mt-1 block w-full" placeholder="Groceries" />
+                    <TextInput id="name" v-model="form.name" type="text" class="mt-1 block w-full" :placeholder="$t('ui.categories.name_placeholder')" />
                     <InputError class="mt-1" :message="form.errors.name" />
                 </div>
 

@@ -19,4 +19,5 @@ return [
     'preview' => 'Vista previa',
     'save' => 'Guardar',
     'delete_title' => '¿Eliminar esta categoría?',
+    'name_placeholder' => 'Mercado',
 ];

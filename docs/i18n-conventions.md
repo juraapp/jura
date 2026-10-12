@@ -41,4 +41,4 @@ Vue pages and components use `$t('ui.<area>.<key>')` in templates and `const { t
 - Spanish says "balde" for bucket.
 - `tests/Feature/UiTranslationsTest.php` fails when `en` and `es` differ in keys or a page uses a key that does not exist.
   It cannot see English text left hard-coded in a template, so reviewing a page means grepping it for literals.
-- Pages not yet migrated still show English literals; see the open `i18n:` issues for what remains.
+- Every page and component is migrated. Free-text examples (placeholders) are translated too; names users type are shown as entered.

@@ -184,7 +184,7 @@ const deleteAccount = () => {
             <form id="account-form" class="space-y-4" @submit.prevent="submit">
                 <div>
                     <InputLabel for="name" :value="$t('ui.accounts.name')" />
-                    <TextInput id="name" v-model="form.name" type="text" class="mt-1 block w-full" placeholder="Chase Checking" />
+                    <TextInput id="name" v-model="form.name" type="text" class="mt-1 block w-full" :placeholder="$t('ui.accounts.name_placeholder')" />
                     <InputError class="mt-1" :message="form.errors.name" />
                 </div>
 
@@ -212,7 +212,7 @@ const deleteAccount = () => {
 
                 <div>
                     <InputLabel for="institution" :value="$t('ui.accounts.institution')" />
-                    <TextInput id="institution" v-model="form.institution" type="text" class="mt-1 block w-full" placeholder="Chase, Wells Fargo, PayPal..." />
+                    <TextInput id="institution" v-model="form.institution" type="text" class="mt-1 block w-full" :placeholder="$t('ui.accounts.institution_placeholder')" />
                     <InputError class="mt-1" :message="form.errors.institution" />
                 </div>
 
