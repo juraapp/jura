@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'edit' => 'Editar transacción',
+    'new' => 'Nueva transacción',
+    'expense' => 'Gasto',
+    'income' => 'Ingreso',
+    'transfer' => 'Transferencia',
+    'from_account' => 'Cuenta de origen',
+    'to_account' => 'Cuenta de destino',
+    'select_account' => 'Selecciona una cuenta',
+    'account' => 'Cuenta',
+    'category' => 'Categoría',
+    'select_category' => 'Selecciona una categoría',
+    'amount' => 'Monto',
+    'date' => 'Fecha',
+    'time' => 'Hora (opcional)',
+    'payment_method' => 'Método de pago',
+    'unspecified' => 'Sin especificar',
+    'cash' => 'Efectivo',
+    'debit_card' => 'Tarjeta débito',
+    'credit_card' => 'Tarjeta de crédito',
+    'bank_transfer' => 'Transferencia bancaria',
+    'other' => 'Otro',
+    'description' => 'Descripción',
+    'notes' => 'Notas',
+    'save' => 'Guardar',
+];

@@ -1,4 +1,5 @@
 <script setup>
+import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -10,6 +11,8 @@ import { withCsrfHeader } from '@/csrf';
 import { parse as parseImport, store as storeImport } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionImportController';
 import { index as transactionsIndex } from '@/routes/transactions';
 import { template as importTemplate } from '@/routes/transactions/import';
+
+const { t } = useI18n();
 
 const step = ref('idle');
 const dragging = ref(false);
@@ -41,14 +44,14 @@ const uploadFile = async (file) => {
         const data = await response.json();
 
         if (!response.ok) {
-            parseError.value = data.error ?? 'Something went wrong while parsing the file.';
+            parseError.value = data.error ?? t('ui.import.parse_error');
             return;
         }
 
         rows.value = data.rows;
         step.value = 'preview';
     } catch {
-        parseError.value = 'Something went wrong while parsing the file.';
+        parseError.value = t('ui.import.parse_error');
     } finally {
         processing.value = false;
         if (fileInput.value) {
@@ -103,26 +106,26 @@ const startOver = () => {
 const doneDescription = computed(() => {
     const parts = [];
     if (result.value.skipped > 0) {
-        parts.push(`${result.value.skipped} row(s) were skipped due to errors.`);
+        parts.push(t('ui.import.skipped', { count: result.value.skipped }));
     }
     if (result.value.duplicateSkipped > 0) {
-        parts.push(`${result.value.duplicateSkipped} possible duplicate(s) were not imported.`);
+        parts.push(t('ui.import.dupes_skipped', { count: result.value.duplicateSkipped }));
     }
     return parts.join(' ') || null;
 });
 </script>
 
 <template>
-    <Head title="Import transactions" />
+    <Head :title="$t('ui.import.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Import transactions
+                    {{ $t('ui.import.title') }}
                 </h2>
                 <Link :href="transactionsIndex.url()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                    Back to transactions
+                    {{ $t('ui.import.back') }}
                 </Link>
             </div>
         </template>
@@ -141,23 +144,23 @@ const doneDescription = computed(() => {
                 <DynamicIcon name="arrow-up-tray" class="mx-auto h-10 w-10 text-gray-400" />
 
                 <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                    Drag your CSV file here or
+                    {{ $t('ui.import.drag') }}
                     <button type="button" class="font-medium text-primary-600 hover:underline" @click="fileInput.click()">
-                        choose a file
+                        {{ $t('ui.import.choose') }}
                     </button>
                 </p>
 
-                <div v-if="processing" class="mt-3 text-sm text-gray-500">Processing file…</div>
+                <div v-if="processing" class="mt-3 text-sm text-gray-500">{{ $t('ui.import.processing') }}</div>
 
                 <InputError class="mt-3" :message="parseError" />
 
                 <div class="mt-6 space-y-2">
                     <a :href="importTemplate.url()" class="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:underline">
                         <DynamicIcon name="arrow-down-tray" class="h-4 w-4" />
-                        Download CSV template
+                        {{ $t('ui.import.template') }}
                     </a>
                     <p class="text-xs text-gray-400">
-                        Replace the sample rows with your real data, using the exact names of your existing accounts and categories.
+                        {{ $t('ui.import.template_hint') }}
                     </p>
                 </div>
             </div>
@@ -166,23 +169,23 @@ const doneDescription = computed(() => {
                 <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <p class="text-sm text-gray-600 dark:text-gray-400">
-                            <span class="font-semibold text-green-600 dark:text-green-400">{{ validCount }} new</span>
+                            <span class="font-semibold text-green-600 dark:text-green-400">{{ $t('ui.import.new_count', { count: validCount }) }}</span>
                             &middot;
-                            <span class="font-semibold text-amber-600 dark:text-amber-400">{{ duplicateCount }} possible duplicates</span>
+                            <span class="font-semibold text-amber-600 dark:text-amber-400">{{ $t('ui.import.duplicates_count', { count: duplicateCount }) }}</span>
                             &middot;
-                            <span class="font-semibold text-red-600 dark:text-red-400">{{ errorCount }} with errors</span>
+                            <span class="font-semibold text-red-600 dark:text-red-400">{{ $t('ui.import.errors_count', { count: errorCount }) }}</span>
                         </p>
 
                         <div class="flex items-center gap-3">
                             <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                                 <input v-model="includeDuplicates" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600" />
-                                Also import duplicates
+                                {{ $t('ui.import.include_duplicates') }}
                             </label>
                             <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700" @click="startOver">
-                                Cancel
+                                {{ $t('ui.common.cancel') }}
                             </button>
                             <PrimaryButton type="button" :disabled="processing || (validCount === 0 && !includeDuplicates)" @click="confirmImport">
-                                Import
+                                {{ $t('ui.import.import') }}
                             </PrimaryButton>
                         </div>
                     </div>
@@ -193,13 +196,13 @@ const doneDescription = computed(() => {
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead class="bg-gray-50 dark:bg-gray-900/40">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Line</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Type</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Category</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Account</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.import.line') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.import.date') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.import.type') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.import.category') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.import.account') }}</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.import.amount') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.import.status') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -213,15 +216,15 @@ const doneDescription = computed(() => {
                                     <td class="px-4 py-2.5 text-sm">
                                         <span v-if="row.status === 'valid'" class="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
                                             <DynamicIcon name="check-circle" class="h-4 w-4" />
-                                            New
+                                            {{ $t('ui.import.new') }}
                                         </span>
                                         <span
                                             v-else-if="row.status === 'duplicate'"
                                             class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400"
-                                            title="A transaction with the same account, date, amount, and description already exists."
+                                            :title="$t('ui.import.duplicate_hint')"
                                         >
                                             <DynamicIcon name="exclamation-triangle" class="h-4 w-4" />
-                                            Possible duplicate
+                                            {{ $t('ui.import.duplicate') }}
                                         </span>
                                         <span v-else class="inline-flex items-start gap-1 text-red-600 dark:text-red-400">
                                             <DynamicIcon name="exclamation-triangle" class="mt-0.5 h-4 w-4 shrink-0" />
@@ -238,17 +241,17 @@ const doneDescription = computed(() => {
             <EmptyState
                 v-else
                 icon="check-circle"
-                :title="`${result.imported} transaction(s) imported.`"
+                :title="$t('ui.import.imported', { count: result.imported })"
                 :description="doneDescription"
             >
                 <template #action>
                     <div class="flex items-center gap-3">
                         <PrimaryButton type="button" @click="startOver">
                             <DynamicIcon name="arrow-up-tray" class="mr-1.5 h-4 w-4" />
-                            Import another file
+                            {{ $t('ui.import.another') }}
                         </PrimaryButton>
                         <Link :href="transactionsIndex.url()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                            View transactions
+                            {{ $t('ui.import.view') }}
                         </Link>
                     </div>
                 </template>
