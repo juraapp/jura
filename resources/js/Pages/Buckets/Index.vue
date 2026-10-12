@@ -24,6 +24,9 @@ import {
     destroy,
     move,
     adjust,
+    reset,
+    allocations,
+    destroyAllocation,
 } from '@/actions/App/Modules/Planning/Http/Controllers/BucketController';
 
 const props = defineProps({
@@ -65,6 +68,7 @@ const blank = () => ({
     cycle: 'monthly',
     cap_amount: '',
     priority: '',
+    opening_balance: '',
     fill_rule: '',
     fill_value: '',
     carry_over: 'carry',
@@ -96,6 +100,7 @@ const openEditModal = (bucket) => {
     form.cycle = bucket.cycle ?? '';
     form.cap_amount = bucket.cap !== null ? String(bucket.cap) : '';
     form.priority = String(bucket.priority);
+    form.opening_balance = bucket.openingBalance > 0 ? String(bucket.openingBalance) : '';
     form.fill_rule = bucket.fillRule ?? '';
     form.fill_value = bucket.fillValue !== null ? String(bucket.fillValue) : '';
     form.carry_over = bucket.carryOver;
@@ -127,6 +132,35 @@ const openMove = (bucket) => {
 
 const submitMove = () => {
     moveForm.submit(move(movingFrom.value.id), { preserveScroll: true, onSuccess: () => (movingFrom.value = null) });
+};
+
+/* ---- full history: every allocation, removable when entered by hand ---- */
+const historyBucket = ref(null);
+const historyRows = ref([]);
+const historyLoading = ref(false);
+
+const loadHistory = async () => {
+    historyLoading.value = true;
+    try {
+        const response = await fetch(allocations.url(historyBucket.value.id), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        historyRows.value = (await response.json()).allocations;
+    } finally {
+        historyLoading.value = false;
+    }
+};
+
+const openHistory = (bucket) => {
+    historyBucket.value = bucket;
+    historyRows.value = [];
+    loadHistory();
+};
+
+const removeEntry = (row) => {
+    router.delete(destroyAllocation.url({ bucket: historyBucket.value.id, allocation: row.id }), { preserveScroll: true, onSuccess: loadHistory });
+};
+
+const resetToZero = () => {
+    router.post(reset.url(historyBucket.value.id), {}, { preserveScroll: true, onSuccess: loadHistory });
 };
 
 const adjusting = ref(null);
@@ -280,6 +314,7 @@ const deleteBucket = () => {
 
                     <details v-if="bucket.recentAllocations.length" class="mt-3 text-xs">
                         <summary class="cursor-pointer font-medium text-gray-500 dark:text-gray-400">Recent activity</summary>
+                        <button type="button" class="mt-2 text-primary-600 hover:underline dark:text-primary-400" @click="openHistory(bucket)">All activity, edit or remove entries</button>
                         <ul class="mt-2 divide-y divide-gray-100 dark:divide-gray-700">
                             <li v-for="row in bucket.recentAllocations" :key="row.id" class="flex items-center justify-between py-1.5">
                                 <span class="text-gray-500 dark:text-gray-400">{{ formatDate(row.date) }} &middot; {{ row.description || row.sourceLabel }}</span>
@@ -363,6 +398,13 @@ const deleteBucket = () => {
                             <InputLabel for="priority" value="Priority (P0 fills first)" />
                             <TextInput id="priority" v-model="form.priority" type="number" min="0" max="9999" class="mt-1 block w-full" placeholder="100" />
                             <InputError class="mt-1" :message="form.errors.priority" />
+                        </div>
+
+                        <div>
+                            <InputLabel for="opening_balance" value="Opening balance (optional)" />
+                            <TextInput id="opening_balance" v-model="form.opening_balance" type="number" step="0.01" min="0" class="mt-1 block w-full" placeholder="0" />
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Money this bucket already holds. Clear it to remove it.</p>
+                            <InputError class="mt-1" :message="form.errors.opening_balance" />
                         </div>
 
                         <div>
@@ -469,6 +511,37 @@ const deleteBucket = () => {
                 <div class="mt-6 flex justify-end gap-3">
                     <SecondaryButton type="button" @click="confirmingDelete = null">Cancel</SecondaryButton>
                     <DangerButton type="button" @click="deleteBucket">Delete</DangerButton>
+                </div>
+            </div>
+        </Modal>
+
+        <Modal :show="historyBucket !== null" max-width="lg" @close="historyBucket = null">
+            <div v-if="historyBucket" class="p-6">
+                <div class="flex items-start justify-between gap-3">
+                    <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ historyBucket.name }}: all activity</h2>
+                    <SecondaryButton type="button" @click="resetToZero">Reset to zero</SecondaryButton>
+                </div>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Entries you made by hand (opening balance, adjustments, moves) can be removed. Income and end-of-cycle entries cannot.</p>
+                <p v-if="historyLoading" class="mt-4 text-sm text-gray-400">Loading...</p>
+                <ul v-else class="mt-3 max-h-96 divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
+                    <li v-for="row in historyRows" :key="row.id" class="flex items-center justify-between gap-3 py-2 text-sm">
+                        <span class="min-w-0 text-gray-600 dark:text-gray-300">
+                            <span class="block truncate">{{ row.description || row.sourceLabel }}</span>
+                            <span class="text-xs text-gray-400">{{ formatDate(row.date) }} &middot; {{ row.sourceLabel }}</span>
+                        </span>
+                        <span class="flex shrink-0 items-center gap-2">
+                            <span class="tabular-nums" :class="row.amount < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
+                                <Money :amount="row.amount" :currency="historyBucket.currency" signed />
+                            </span>
+                            <button v-if="row.deletable" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" title="Remove entry" @click="removeEntry(row)">
+                                <DynamicIcon name="trash" class="h-4 w-4" />
+                            </button>
+                        </span>
+                    </li>
+                    <li v-if="!historyRows.length" class="py-4 text-center text-sm text-gray-400">No activity yet.</li>
+                </ul>
+                <div class="mt-4 flex justify-end">
+                    <SecondaryButton type="button" @click="historyBucket = null">Close</SecondaryButton>
                 </div>
             </div>
         </Modal>

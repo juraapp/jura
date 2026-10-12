@@ -105,6 +105,71 @@ class BucketLedger
         });
     }
 
+    public function openingBalance(Bucket $bucket): Money
+    {
+        return Money::of(
+            Allocation::forUser($bucket->user_id)
+                ->where('bucket_id', $bucket->id)
+                ->where('source', AllocationSource::Opening->value)
+                ->sum('amount')
+        );
+    }
+
+    /**
+     * The money a bucket started with: a single allocation dated when tracking began.
+     * Zero removes it.
+     */
+    public function setOpeningBalance(Bucket $bucket, Money $amount): void
+    {
+        $existing = Allocation::forUser($bucket->user_id)
+            ->where('bucket_id', $bucket->id)
+            ->where('source', AllocationSource::Opening->value)
+            ->first();
+
+        if (! $amount->isPositive()) {
+            $existing?->delete();
+
+            return;
+        }
+
+        if ($existing !== null) {
+            $existing->update(['amount' => $amount]);
+
+            return;
+        }
+
+        $this->credit($bucket, $amount, AllocationSource::Opening, null, $bucket->tracking_started_on, __('buckets.opening_balance'));
+    }
+
+    /**
+     * Whether a bucket's allocation is something the user entered (and may therefore remove).
+     */
+    public function isRemovable(Allocation $allocation): bool
+    {
+        return in_array($allocation->source, [AllocationSource::Adjustment, AllocationSource::Opening, AllocationSource::Transfer], true);
+    }
+
+    /**
+     * Removes a manual allocation; a move between buckets is removed on both sides.
+     */
+    public function remove(Allocation $allocation): void
+    {
+        DB::transaction(function () use ($allocation) {
+            if ($allocation->source === AllocationSource::Transfer && $allocation->source_id !== null) {
+                Allocation::forUser($allocation->user_id)
+                    ->where('bucket_id', $allocation->source_id)
+                    ->where('source', AllocationSource::Transfer->value)
+                    ->where('source_id', $allocation->bucket_id)
+                    ->where('amount', $allocation->amount->negate()->toDecimalString())
+                    ->whereDate('date', $allocation->date->toDateString())
+                    ->limit(1)
+                    ->delete();
+            }
+
+            $allocation->delete();
+        });
+    }
+
     public function defaultBucket(User|int $user, string $currency): ?Bucket
     {
         return Bucket::forUser($user)->where('currency', $currency)->where('is_default', true)->first();

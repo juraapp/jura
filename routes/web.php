@@ -75,6 +75,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('planning/buckets/{bucket}', [BucketController::class, 'update'])->name('buckets.update');
     Route::delete('planning/buckets/{bucket}', [BucketController::class, 'destroy'])->name('buckets.destroy');
     Route::post('planning/buckets/{bucket}/move', [BucketController::class, 'move'])->name('buckets.move');
+    Route::post('planning/buckets/{bucket}/reset', [BucketController::class, 'reset'])->name('buckets.reset');
+    Route::get('planning/buckets/{bucket}/allocations', [BucketController::class, 'allocations'])->name('buckets.allocations');
+    Route::delete('planning/buckets/{bucket}/allocations/{allocation}', [BucketController::class, 'destroyAllocation'])->name('buckets.allocations.destroy');
     Route::post('planning/buckets/{bucket}/adjust', [BucketController::class, 'adjust'])->name('buckets.adjust');
     Route::get('planning/wishlist', [WishlistItemController::class, 'index'])->name('wishlist.index');
     Route::post('planning/wishlist', [WishlistItemController::class, 'store'])->name('wishlist.store');

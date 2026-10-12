@@ -88,6 +88,7 @@ return [
         'carry' => 'Fin de ciclo',
         'spend' => 'Compra',
         'adjustment' => 'Ajuste manual',
+        'opening' => 'Saldo inicial',
     ],
 
     'project_kind' => [

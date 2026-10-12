@@ -88,6 +88,7 @@ return [
         'carry' => 'End of cycle',
         'spend' => 'Purchase',
         'adjustment' => 'Manual adjustment',
+        'opening' => 'Opening balance',
     ],
 
     'project_kind' => [

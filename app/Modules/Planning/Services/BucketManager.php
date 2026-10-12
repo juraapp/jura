@@ -65,6 +65,10 @@ class BucketManager
                 $bucket->update($attributes);
             }
 
+            if (array_key_exists('opening_balance', $data)) {
+                $this->buckets->setOpeningBalance($bucket, Money::of($data['opening_balance'] ?? 0));
+            }
+
             if ($bucket->is_default) {
                 Bucket::forUser($user)
                     ->where('currency', $bucket->currency)

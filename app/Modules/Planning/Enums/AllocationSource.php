@@ -10,6 +10,7 @@ enum AllocationSource: string
     case Carry = 'carry';
     case Spend = 'spend';
     case Adjustment = 'adjustment';
+    case Opening = 'opening';
 
     public function label(): string
     {

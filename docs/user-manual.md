@@ -182,7 +182,13 @@ goes to each bucket for that income only. The rest goes to the default bucket.
 
 **Moving money around.**
 - **Move money** (the arrows icon) transfers funds from one bucket to another of the same currency.
-- **Add or remove funds** (the banknotes icon) corrects a balance by hand. Use a negative amount to remove.
+- **Opening balance** (in the bucket form) is the money a bucket already holds when you start. Change it or clear it
+  at any time; it only affects the bucket, never your real accounts.
+- **Add or remove funds** (the banknotes icon) corrects a balance by hand. Use a negative amount to remove, down to
+  the funded amount.
+- **All activity, edit or remove entries** (under *Recent activity*) lists everything that ever went in or out of the
+  bucket. Entries you made yourself (opening balance, adjustments, moves between buckets) have a trash button, and
+  **Reset to zero** empties the bucket. Entries created by income or by closing a cycle cannot be removed.
 - Deleting a bucket returns its money to the default bucket.
 
 **End of the month or year (advanced).** For a bucket that resets, choose what happens to what is left:
