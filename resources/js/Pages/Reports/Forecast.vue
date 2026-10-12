@@ -38,7 +38,7 @@ const seriesFor = (currency) => {
 };
 
 const optionsFor = (currency) => ({
-    chart: { type: 'line', height: 340, fontFamily: 'Figtree, sans-serif', toolbar: { show: false } },
+    chart: { type: 'line', height: 340, fontFamily: 'Roboto, sans-serif', toolbar: { show: false } },
     colors: [palette().series[0], viewColors().conservative, viewColors().expected, viewColors().optimistic],
     stroke: { width: [3, 2, 2, 2], dashArray: [0, 6, 6, 6], curve: 'smooth' },
     xaxis: { categories: labelsFor(currency), labels: { style: { colors: palette().text } } },

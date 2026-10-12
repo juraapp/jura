@@ -18,3 +18,49 @@
 .dark .apexcharts-canvas .apexcharts-legend-text {
     color: #c3c2b7 !important;
 }
+
+/*
+ * Roboto ships 300/400/500/700 (no 600), so semibold maps to bold. Give each kind of
+ * element a deliberate weight: light for secondary text, medium for labels and table
+ * heads, bold for titles; italics mark estimates and notes.
+ */
+body {
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+    font-weight: 500;
+    letter-spacing: -0.005em;
+}
+
+h2 {
+    font-weight: 700;
+}
+
+th,
+legend {
+    font-weight: 500;
+}
+
+.text-xs.text-gray-400,
+.text-xs.text-gray-500 {
+    font-weight: 300;
+}
+
+.dark .text-xs.text-gray-400,
+.dark .text-xs.text-gray-500 {
+    font-weight: 400;
+}
+
+button,
+.font-medium {
+    font-weight: 500;
+}
+
+em,
+.italic {
+    font-style: italic;
+}

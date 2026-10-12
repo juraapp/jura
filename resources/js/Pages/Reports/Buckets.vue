@@ -34,7 +34,7 @@ const viewHints = {
 };
 
 const balanceOptions = (currency) => ({
-    chart: { type: 'bar', height: Math.max(180, currency.buckets.length * 46), fontFamily: 'Figtree, sans-serif', toolbar: { show: false } },
+    chart: { type: 'bar', height: Math.max(180, currency.buckets.length * 46), fontFamily: 'Roboto, sans-serif', toolbar: { show: false } },
     plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: '55%' } },
     colors: palette().series,
     xaxis: { categories: currency.buckets.map((bucket) => bucket.name), labels: { style: { colors: palette().text }, formatter: (v) => formatCompact(v, locale()) } },
@@ -46,7 +46,7 @@ const balanceOptions = (currency) => ({
 });
 
 const historyOptions = (currency) => ({
-    chart: { type: 'bar', stacked: true, height: 300, fontFamily: 'Figtree, sans-serif', toolbar: { show: false } },
+    chart: { type: 'bar', stacked: true, height: 300, fontFamily: 'Roboto, sans-serif', toolbar: { show: false } },
     colors: palette().series,
     plotOptions: { bar: { columnWidth: '50%' } },
     xaxis: { categories: currency.history.labels, labels: { style: { colors: palette().text } } },
