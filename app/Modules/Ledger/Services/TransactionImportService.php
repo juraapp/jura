@@ -27,6 +27,8 @@ class TransactionImportService
     private const EXTRA_COLUMN_ALIASES = [
         'valor' => 'amount',
         'value' => 'amount',
+        'time' => 'time',
+        'hora' => 'time',
     ];
 
     private const REQUIRED_COLUMNS = ['date', 'account', 'category', 'type', 'amount'];
@@ -79,6 +81,7 @@ class TransactionImportService
                 $rows[] = [
                     'line' => $line,
                     'date' => $this->columnValue($data, $columnMap, 'date'),
+                    'time' => $this->columnValue($data, $columnMap, 'time'),
                     'description' => $this->columnValue($data, $columnMap, 'description'),
                     'category' => $this->columnValue($data, $columnMap, 'category'),
                     'account' => $this->columnValue($data, $columnMap, 'account'),
@@ -166,6 +169,11 @@ class TransactionImportService
             $errors[] = __('messages.import.invalid_date', ['value' => (string) $row['date']]);
         }
 
+        $time = $this->parseTime($row['time'] ?? null);
+        if (($row['time'] ?? null) !== null && $time === null) {
+            $errors[] = __('messages.import.invalid_time', ['value' => (string) $row['time']]);
+        }
+
         $description = $row['description'];
         if ($description !== null && mb_strlen($description) > 255) {
             $errors[] = __('messages.import.description_too_long');
@@ -186,6 +194,7 @@ class TransactionImportService
             'type' => $type,
             'amount' => $amount,
             'date' => $date->toDateString(),
+            'time' => $time,
             'description' => $description,
             'notes' => $notes,
         ];
@@ -240,6 +249,41 @@ class TransactionImportService
         $amount = Money::of($raw);
 
         return $amount->isPositive() ? $amount->toDecimalString() : null;
+    }
+
+    /**
+     * Accepts "14:30", "14:30:15", "2:05 PM"; returns "H:i" or null.
+     */
+    private function parseTime(?string $raw): ?string
+    {
+        $raw = trim((string) $raw);
+
+        if ($raw === '') {
+            return null;
+        }
+
+        if (! preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?$/', $raw, $match)) {
+            return null;
+        }
+
+        $hours = (int) $match[1];
+        $minutes = (int) $match[2];
+        $meridian = strtolower($match[4] ?? '');
+
+        if ($minutes > 59 || (isset($match[3]) && $match[3] !== '' && (int) $match[3] > 59)) {
+            return null;
+        }
+
+        if ($meridian !== '') {
+            if ($hours < 1 || $hours > 12) {
+                return null;
+            }
+            $hours = ($hours % 12) + ($meridian === 'pm' ? 12 : 0);
+        } elseif ($hours > 23) {
+            return null;
+        }
+
+        return sprintf('%02d:%02d', $hours, $minutes);
     }
 
     private function parseDate(?string $raw): ?Carbon

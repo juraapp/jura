@@ -22,7 +22,7 @@ class TransactionController extends Controller
 {
     public function index(Request $request, string $type = 'all'): Response
     {
-        $query = Auth::user()->transactions()->with(['account', 'category'])->latest('date')->latest('id');
+        $query = Auth::user()->transactions()->with(['account', 'category'])->latest('date')->orderByRaw('time is null')->latest('time')->latest('id');
 
         if ($type === 'transfer') {
             $query->where('type', 'transfer_out');
@@ -61,6 +61,7 @@ class TransactionController extends Controller
             'id' => $transaction->id,
             'type' => $transaction->type->value,
             'date' => $transaction->date->toDateString(),
+            'time' => $transaction->time,
             'description' => $transaction->description,
             'notes' => $transaction->notes,
             'amount' => $transaction->amount->toFloat(),
@@ -117,6 +118,7 @@ class TransactionController extends Controller
                 'to_account_id' => $in?->account_id,
                 'amount' => $transaction->amount->toFloat(),
                 'date' => $transaction->date->toDateString(),
+                'time' => $transaction->time,
                 'description' => $transaction->description,
                 'notes' => $transaction->notes,
             ]);
@@ -129,6 +131,7 @@ class TransactionController extends Controller
             'category_id' => $transaction->category_id,
             'amount' => $transaction->amount->toFloat(),
             'date' => $transaction->date->toDateString(),
+            'time' => $transaction->time,
             'description' => $transaction->description,
             'notes' => $transaction->notes,
             'payment_method' => $transaction->payment_method?->value,

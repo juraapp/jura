@@ -182,4 +182,28 @@ class TransactionImportTest extends TestCase
 
         $response->assertRedirect('/login');
     }
+
+    public function test_an_optional_time_column_is_read_in_24_and_12_hour_forms(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create(['name' => 'My Wallet']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id, 'name' => 'Groceries']);
+
+        $csv = "Date,Time,Description,Category,Account,Type,Notes,Amount\n"
+            ."2026-08-01,14:30,Late shop,{$category->name},{$account->name},Expense,,50000\n"
+            ."2026-08-01,2:05 PM,Afternoon,{$category->name},{$account->name},Expense,,10000\n"
+            ."2026-08-01,,No time,{$category->name},{$account->name},Expense,,5000\n"
+            ."2026-08-01,99:99,Bad time,{$category->name},{$account->name},Expense,,1000\n";
+
+        $rows = $this->actingAs($user)->post('/finances/transactions/import/parse', ['file' => $this->csvFile($csv)])->assertOk()->json('rows');
+
+        $this->assertSame(['valid', 'valid', 'valid', 'error'], array_column($rows, 'status'));
+        $this->assertStringContainsString('99:99', $rows[3]['errors'][0]);
+
+        $this->actingAs($user)->postJson('/finances/transactions/import', ['rows' => array_column(array_slice($rows, 0, 3), 'raw'), 'include_duplicates' => true])->assertOk();
+
+        $this->assertSame('14:30', Transaction::where('description', 'Late shop')->firstOrFail()->time);
+        $this->assertSame('14:05', Transaction::where('description', 'Afternoon')->firstOrFail()->time);
+        $this->assertNull(Transaction::where('description', 'No time')->firstOrFail()->time);
+    }
 }

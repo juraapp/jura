@@ -19,6 +19,7 @@ class UpdateTransactionRequest extends FormRequest
             return [
                 'amount' => ['required', 'numeric', 'gt:0'],
                 'date' => ['required', 'date'],
+                'time' => ['nullable', 'date_format:H:i'],
                 'description' => ['nullable', 'string', 'max:255'],
                 'notes' => ['nullable', 'string', 'max:2000'],
             ];
@@ -29,6 +30,7 @@ class UpdateTransactionRequest extends FormRequest
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $this->user()->id)->orWhereNull('user_id'))],
             'amount' => ['required', 'numeric', 'gt:0'],
             'date' => ['required', 'date'],
+            'time' => ['nullable', 'date_format:H:i'],
             'description' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],

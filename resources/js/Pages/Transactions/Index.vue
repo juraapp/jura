@@ -159,6 +159,7 @@ const formatDate = (date) => format.date(date);
                                 <tr v-for="transaction in transactions.data" :key="transaction.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
                                     <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                                         {{ formatDate(transaction.date) }}
+                                        <span v-if="transaction.time" class="block text-xs text-gray-400">{{ format.time(transaction.time) }}</span>
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center gap-2">
