@@ -8,6 +8,13 @@ Personal finance app: accounts, transactions, budgets, recurring transactions, s
 Laravel 13 + Inertia 3 + Vue 3 (`<script setup>`), Tailwind v3 + Flowbite, ApexCharts, Laravel Wayfinder for
 typed route helpers, PHPUnit, MariaDB + Redis, all through Laravel Sail. Pages live in `resources/js/Pages`.
 
+## Code layout
+Backend code lives in `app/Modules/{Shared,Identity,Ledger,Planning,Reporting,Notifications}` (namespace
+`App\Modules\<Module>`). Modules talk only through `Contracts`, `Events` and `Enums`; foreign models are
+allowed only inside `Models/` (relationships) and in the read-side modules Reporting and Notifications.
+`tests/Architecture` enforces this. Listeners and commands are registered in module providers, not
+auto-discovered. See `docs/architecture.md`.
+
 ## Where to read first
 - `docs/architecture.md`, `docs/domain-model.md`: layout, request lifecycle, entities.
 - `docs/frontend-conventions.md`, `docs/i18n-conventions.md`, `docs/dark-mode.md`, `docs/testing-conventions.md`.
@@ -16,7 +23,7 @@ typed route helpers, PHPUnit, MariaDB + Redis, all through Laravel Sail. Pages l
 
 ## Project conventions
 - Keep these docs and this section current as the code changes; do it in the same change, not later.
-- Money is `decimal(15,2)` via `Support/Money` and `AsMoney`. Actual data is `Transaction`; projected
+- Money is `decimal(15,2)` via `Shared/Support/Money` and `AsMoney`. Actual data is `Transaction`; projected
   (forecast) data must stay separate from actual data and be labelled as such.
 - Commits are atomic Conventional Commits with no `Co-Authored-By` trailer (`.ai/rules/general.md`).
 - Local ports: if 80/3306/6379/5173 are taken by another Sail project, set `APP_PORT`, `FORWARD_DB_PORT`,
