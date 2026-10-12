@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\TransactionType;
-use App\Models\Transaction;
+use App\Modules\Ledger\Enums\TransactionType;
+use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Support\Money;
 use App\Services\InsightService;

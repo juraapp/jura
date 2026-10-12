@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Enums\TransactionType;
-use App\Models\Account;
-use App\Models\Category;
-use App\Models\Transaction;
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Enums\TransactionType;
+use App\Modules\Ledger\Models\Account;
+use App\Modules\Ledger\Models\Category;
+use App\Modules\Ledger\Models\Transaction;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

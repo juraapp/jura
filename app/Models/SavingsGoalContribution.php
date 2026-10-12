@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Casts\AsMoney;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

@@ -2,12 +2,12 @@
 
 namespace App\Listeners;
 
-use App\Enums\TransactionType;
-use App\Events\TransactionsMutated;
-use App\Models\Transaction;
+use App\Modules\Ledger\Enums\TransactionType;
+use App\Modules\Ledger\Events\TransactionsMutated;
+use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Ledger\Services\BalanceCalculator;
 use App\Modules\Shared\Support\Money;
 use App\Notifications\LowAccountBalance;
-use App\Services\BalanceCalculator;
 
 /**
  * Flags an account as "low" when its balance can't cover ~3 days of the

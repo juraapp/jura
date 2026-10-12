@@ -2,7 +2,7 @@
 
 namespace App\Listeners;
 
-use App\Events\TransactionsMutated;
+use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Notifications\BudgetThresholdReached;
 use App\Services\BudgetService;
 use Illuminate\Support\Carbon;

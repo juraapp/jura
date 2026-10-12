@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BudgetPeriodType;
-use App\Enums\CategoryType;
 use App\Http\Requests\Budgets\StoreBudgetRequest;
 use App\Http\Requests\Budgets\UpdateBudgetRequest;
 use App\Models\Budget;
-use App\Models\Category;
+use App\Modules\Ledger\Enums\CategoryType;
+use App\Modules\Ledger\Models\Category;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Services\BudgetForecastService;
 use App\Services\BudgetService;

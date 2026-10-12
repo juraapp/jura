@@ -2,7 +2,7 @@
 
 namespace App\Modules\Shared\Http\Middleware;
 
-use App\Services\BalanceCalculator;
+use App\Modules\Ledger\Contracts\Balances;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
 use Inertia\Inertia;
@@ -52,7 +52,7 @@ class HandleInertiaRequests extends Middleware
                     return [];
                 }
 
-                return app(BalanceCalculator::class)
+                return app(Balances::class)
                     ->netWorthByCurrency($request->user())
                     ->map(fn ($money) => $money->toFloat())
                     ->all();

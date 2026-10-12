@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\Account;
+use App\Modules\Ledger\Models\Account;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;

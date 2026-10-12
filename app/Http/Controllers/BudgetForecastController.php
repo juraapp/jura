@@ -6,7 +6,7 @@ use App\Http\Requests\BudgetForecasts\StoreBudgetForecastRequest;
 use App\Http\Requests\BudgetForecasts\UpdateBudgetForecastRequest;
 use App\Models\Budget;
 use App\Models\BudgetForecast;
-use App\Models\Category;
+use App\Modules\Ledger\Models\Category;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;

@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Enums\CategoryType;
-use App\Models\Category;
+use App\Modules\Ledger\Enums\CategoryType;
+use App\Modules\Ledger\Models\Category;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Enums\AccountType;
-use App\Models\Account;
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Enums\AccountType;
+use App\Modules\Ledger\Models\Account;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
