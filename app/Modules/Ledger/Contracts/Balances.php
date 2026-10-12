@@ -21,5 +21,12 @@ interface Balances
      */
     public function netWorthByCurrency(User $user): Collection;
 
+    /**
+     * Active accounts that earn interest, with their current balance.
+     *
+     * @return Collection<int, array{id: int, currency: string, rate: string, compounding: string, balance: Money}>
+     */
+    public function yieldBearing(User $user): Collection;
+
     public function forgetAccount(Account $account): void;
 }

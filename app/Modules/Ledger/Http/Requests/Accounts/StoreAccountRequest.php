@@ -3,6 +3,7 @@
 namespace App\Modules\Ledger\Http\Requests\Accounts;
 
 use App\Modules\Ledger\Enums\AccountType;
+use App\Modules\Ledger\Enums\YieldCompounding;
 use App\Modules\Ledger\Models\Account;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,6 +26,8 @@ class StoreAccountRequest extends FormRequest
             'institution' => ['nullable', 'string', 'max:255'],
             'initial_balance' => ['required', 'numeric'],
             'currency' => ['required', 'string', 'size:3'],
+            'yield_rate' => ['nullable', 'numeric', 'min:0', 'max:1000'],
+            'yield_compounding' => ['nullable', Rule::enum(YieldCompounding::class)],
             'color' => ['required', 'string', 'max:7'],
             'masked_number' => ['nullable', 'string', 'max:32'],
             'is_active' => ['boolean'],

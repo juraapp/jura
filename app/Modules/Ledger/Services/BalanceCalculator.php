@@ -34,6 +34,22 @@ class BalanceCalculator implements Balances
         return Money::of($decimal);
     }
 
+    public function yieldBearing(User $user): Collection
+    {
+        return $user->accounts()
+            ->where('is_active', true)
+            ->where('yield_rate', '>', 0)
+            ->get()
+            ->map(fn (Account $account) => [
+                'id' => $account->id,
+                'currency' => $account->currency,
+                'rate' => (string) $account->yield_rate,
+                'compounding' => $account->yield_compounding->value,
+                'balance' => $this->accountBalance($account),
+            ])
+            ->values();
+    }
+
     public function netWorth(User $user): Money
     {
         $decimal = Cache::remember(
