@@ -2,7 +2,7 @@
 
 namespace App\Modules\Shared\Concerns;
 
-use App\Models\User;
+use App\Modules\Identity\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

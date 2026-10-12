@@ -1,6 +1,13 @@
 <?php
 
-namespace App\Models;
+namespace App\Modules\Identity\Models;
+
+use App\Models\Account;
+use App\Models\Budget;
+use App\Models\Category;
+use App\Models\RecurringTransaction;
+use App\Models\SavingsGoal;
+use App\Models\Transaction;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;

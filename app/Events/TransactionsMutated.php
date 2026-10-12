@@ -3,7 +3,7 @@
 namespace App\Events;
 
 use App\Models\Account;
-use App\Models\User;
+use App\Modules\Identity\Models\User;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Support\Collection;
 

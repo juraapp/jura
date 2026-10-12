@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Modules\Identity\Http\Controllers;
 
-use App\Http\Requests\Preferences\UpdatePreferencesRequest;
+use App\Modules\Identity\Http\Requests\Preferences\UpdatePreferencesRequest;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;

@@ -6,8 +6,6 @@ use App\Http\Controllers\BudgetForecastController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\PreferenceController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Reports\AnnualReportPdfController;
@@ -17,6 +15,8 @@ use App\Http\Controllers\SavingsGoalController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TransactionImportController;
 use App\Http\Controllers\TransactionImportTemplateController;
+use App\Modules\Identity\Http\Controllers\PreferenceController;
+use App\Modules\Identity\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
