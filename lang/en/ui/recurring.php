@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'title' => 'Recurring transactions',
+    'new' => 'New recurring',
+    'empty_title' => 'Track your recurring payments',
+    'empty_hint' => 'Netflix, rent, utilities... register them once and we\'ll generate them automatically as they come due.',
+    'create_first' => 'Create my first recurring',
+    'noun' => 'recurring transactions',
+    'description' => 'Description',
+    'frequency' => 'Frequency',
+    'next' => 'Next payment',
+    'amount' => 'Amount',
+    'pause' => 'Pause',
+    'reactivate' => 'Reactivate',
+    'edit' => 'Edit recurring',
+    'expense' => 'Expense',
+    'income' => 'Income',
+    'account' => 'Account',
+    'select_account' => 'Select an account',
+    'category' => 'Category',
+    'select_category' => 'Select a category',
+    'ends' => 'Ends (optional)',
+    'description_placeholder' => 'Netflix, Rent...',
+    'save' => 'Save',
+    'delete_title' => 'Delete this recurring transaction?',
+];

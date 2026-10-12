@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
@@ -21,6 +22,7 @@ import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
 import { useBulkSelection } from '@/composables/useBulkSelection';
 
 const format = useFormat();
+const { t } = useI18n();
 
 const props = defineProps({
     recurrences: { type: Array, required: true },
@@ -109,17 +111,17 @@ const formatDate = (date) => format.date(date);
 </script>
 
 <template>
-    <Head title="Recurring transactions" />
+    <Head :title="$t('ui.recurring.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Recurring transactions
+                    {{ $t('ui.recurring.title') }}
                 </h2>
                 <PrimaryButton type="button" @click="openCreateModal">
                     <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                    New recurring
+                    {{ $t('ui.recurring.new') }}
                 </PrimaryButton>
             </div>
         </template>
@@ -128,28 +130,28 @@ const formatDate = (date) => format.date(date);
             <EmptyState
                 v-if="recurrences.length === 0"
                 icon="arrow-path"
-                title="Track your recurring payments"
-                description="Netflix, rent, utilities... register them once and we'll generate them automatically as they come due."
+                :title="$t('ui.recurring.empty_title')"
+                :description="$t('ui.recurring.empty_hint')"
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
                         <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                        Create my first recurring
+                        {{ $t('ui.recurring.create_first') }}
                     </PrimaryButton>
                 </template>
             </EmptyState>
 
             <div v-else>
-            <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" noun="recurring transactions" />
+            <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" :noun="$t('ui.recurring.noun')" />
             <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-900/40">
                         <tr>
                             <th class="w-10 px-4 py-3"><BulkCheckbox :bulk="bulk" page /></th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Frequency</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Next payment</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.recurring.description') }}</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.recurring.frequency') }}</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.recurring.next') }}</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.recurring.amount') }}</th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
@@ -183,7 +185,7 @@ const formatDate = (date) => format.date(date);
                                     <button
                                         type="button"
                                         class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
-                                        :title="recurring.isActive ? 'Pause' : 'Reactivate'"
+                                        :title="recurring.isActive ? $t('ui.recurring.pause') : $t('ui.recurring.reactivate')"
                                         @click="toggle(recurring)"
                                     >
                                         <DynamicIcon :name="recurring.isActive ? 'check-circle' : 'arrow-path'" class="h-4 w-4" />
@@ -213,13 +215,13 @@ const formatDate = (date) => format.date(date);
 
         <ModalForm
             :show="showModal"
-            :title="editingRecurring ? 'Edit recurring' : 'New recurring'"
+            :title="editingRecurring ? $t('ui.recurring.edit') : $t('ui.recurring.new')"
             @close="closeModal"
         >
             <form id="recurring-form" class="space-y-4" @submit.prevent="submit">
                 <div class="flex gap-2">
                     <button
-                        v-for="option in [{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]"
+                        v-for="option in [{ value: 'expense', label: t('ui.recurring.expense') }, { value: 'income', label: t('ui.recurring.income') }]"
                         :key="option.value"
                         type="button"
                         class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium"
@@ -233,26 +235,26 @@ const formatDate = (date) => format.date(date);
                 </div>
 
                 <div>
-                    <InputLabel for="account_id" value="Account" />
+                    <InputLabel for="account_id" :value="$t('ui.recurring.account')" />
                     <select
                         id="account_id"
                         v-model="form.account_id"
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
-                        <option value="">Select an account</option>
+                        <option value="">{{ $t('ui.recurring.select_account') }}</option>
                         <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.account_id" />
                 </div>
 
                 <div>
-                    <InputLabel for="category_id" value="Category" />
+                    <InputLabel for="category_id" :value="$t('ui.recurring.category')" />
                     <select
                         id="category_id"
                         v-model="form.category_id"
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
-                        <option value="">Select a category</option>
+                        <option value="">{{ $t('ui.recurring.select_category') }}</option>
                         <option v-for="category in categoriesForType" :key="category.id" :value="category.id">{{ category.name }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.category_id" />
@@ -260,12 +262,12 @@ const formatDate = (date) => format.date(date);
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <InputLabel for="amount" value="Amount" />
+                        <InputLabel for="amount" :value="$t('ui.recurring.amount')" />
                         <TextInput id="amount" v-model="form.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                         <InputError class="mt-1" :message="form.errors.amount" />
                     </div>
                     <div>
-                        <InputLabel for="frequency" value="Frequency" />
+                        <InputLabel for="frequency" :value="$t('ui.recurring.frequency')" />
                         <select
                             id="frequency"
                             v-model="form.frequency"
@@ -278,39 +280,39 @@ const formatDate = (date) => format.date(date);
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <InputLabel for="next_due_date" value="Next payment" />
+                        <InputLabel for="next_due_date" :value="$t('ui.recurring.next')" />
                         <TextInput id="next_due_date" v-model="form.next_due_date" type="date" class="mt-1 block w-full" />
                         <InputError class="mt-1" :message="form.errors.next_due_date" />
                     </div>
                     <div>
-                        <InputLabel for="end_date" value="Ends (optional)" />
+                        <InputLabel for="end_date" :value="$t('ui.recurring.ends')" />
                         <TextInput id="end_date" v-model="form.end_date" type="date" class="mt-1 block w-full" />
                         <InputError class="mt-1" :message="form.errors.end_date" />
                     </div>
                 </div>
 
                 <div>
-                    <InputLabel for="description" value="Description" />
-                    <TextInput id="description" v-model="form.description" type="text" class="mt-1 block w-full" placeholder="Netflix, Rent..." />
+                    <InputLabel for="description" :value="$t('ui.recurring.description')" />
+                    <TextInput id="description" v-model="form.description" type="text" class="mt-1 block w-full" :placeholder="$t('ui.recurring.description_placeholder')" />
                 </div>
             </form>
 
             <template #footer>
-                <SecondaryButton type="button" @click="closeModal">Cancel</SecondaryButton>
-                <PrimaryButton form="recurring-form" type="submit" :disabled="form.processing">Save</PrimaryButton>
+                <SecondaryButton type="button" @click="closeModal">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                <PrimaryButton form="recurring-form" type="submit" :disabled="form.processing">{{ $t('ui.recurring.save') }}</PrimaryButton>
             </template>
         </ModalForm>
 
         <Modal :show="confirmingDeleteRecurring !== null" @close="confirmingDeleteRecurring = null">
             <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Delete this recurring transaction?</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.recurring.delete_title') }}</h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    This action cannot be undone.
+                    {{ $t('ui.common.cannot_be_undone') }}
                 </p>
 
                 <div class="mt-6 flex justify-end gap-3">
-                    <SecondaryButton type="button" @click="confirmingDeleteRecurring = null">Cancel</SecondaryButton>
-                    <DangerButton type="button" @click="deleteRecurring">Delete</DangerButton>
+                    <SecondaryButton type="button" @click="confirmingDeleteRecurring = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <DangerButton type="button" @click="deleteRecurring">{{ $t('ui.common.delete') }}</DangerButton>
                 </div>
             </div>
         </Modal>

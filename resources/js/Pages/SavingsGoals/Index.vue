@@ -130,17 +130,17 @@ const formatDate = (date) => format.date(date);
 </script>
 
 <template>
-    <Head title="Savings goals" />
+    <Head :title="$t('ui.savings_goals.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Savings goals
+                    {{ $t('ui.savings_goals.title') }}
                 </h2>
                 <PrimaryButton type="button" @click="openCreateModal">
                     <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                    New goal
+                    {{ $t('ui.savings_goals.new') }}
                 </PrimaryButton>
             </div>
         </template>
@@ -149,21 +149,21 @@ const formatDate = (date) => format.date(date);
             <EmptyState
                 v-if="goals.length === 0"
                 icon="flag"
-                title="Set your first savings goal"
-                description="Give it a name, a target amount, and a date, and we'll tell you how much to save each month."
+                :title="$t('ui.savings_goals.empty_title')"
+                :description="$t('ui.savings_goals.empty_hint')"
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
                         <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                        Create my first goal
+                        {{ $t('ui.savings_goals.create_first') }}
                     </PrimaryButton>
                 </template>
             </EmptyState>
 
             <div v-else>
             <div class="mb-3 space-y-2">
-                <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> Select all</label>
-                <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" noun="goals" note="Deleted goals move to the Deleted goals list below, where you can restore them." />
+                <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> {{ $t('ui.savings_goals.select_all') }}</label>
+                <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" :noun="$t('ui.savings_goals.noun')" :note="$t('ui.savings_goals.bulk_note')" />
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div
@@ -182,7 +182,7 @@ const formatDate = (date) => format.date(date);
                             <div>
                                 <p class="font-semibold text-gray-900 dark:text-white">{{ goal.name }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    <template v-if="goal.targetDate">Target: {{ formatDate(goal.targetDate) }} &middot; </template>
+                                    <template v-if="goal.targetDate">{{ $t('ui.savings_goals.target', { date: formatDate(goal.targetDate) }) }} &middot; </template>
                                     {{ goal.currency }}
                                 </p>
                             </div>
@@ -211,7 +211,7 @@ const formatDate = (date) => format.date(date);
                                 <Money :amount="goal.saved" :currency="goal.currency" />
                             </span>
                             <span class="text-gray-400">
-                                of <Money :amount="goal.targetAmount" :currency="goal.currency" />
+                                {{ $t('ui.savings_goals.of') }} <Money :amount="goal.targetAmount" :currency="goal.currency" />
                             </span>
                         </div>
                         <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
@@ -219,13 +219,13 @@ const formatDate = (date) => format.date(date);
                         </div>
                         <div class="mt-1.5 flex items-center justify-between text-xs">
                             <span class="text-gray-400">{{ format.number(goal.percentage, 0) }}%</span>
-                            <span v-if="goal.status === 'completed'" class="font-medium text-green-600 dark:text-green-400">Goal completed!</span>
-                            <span v-else-if="goal.schedule === 'behind'" class="font-medium text-orange-500">Behind schedule</span>
-                            <span v-else-if="goal.schedule === 'ahead'" class="font-medium text-green-600 dark:text-green-400">On track</span>
+                            <span v-if="goal.status === 'completed'" class="font-medium text-green-600 dark:text-green-400">{{ $t('ui.savings_goals.completed') }}</span>
+                            <span v-else-if="goal.schedule === 'behind'" class="font-medium text-orange-500">{{ $t('ui.savings_goals.behind') }}</span>
+                            <span v-else-if="goal.schedule === 'ahead'" class="font-medium text-green-600 dark:text-green-400">{{ $t('ui.savings_goals.on_track') }}</span>
                         </div>
 
                         <p v-if="goal.suggestedMonthly" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            Suggested monthly contribution:
+                            {{ $t('ui.savings_goals.suggested') }}
                             <span class="font-medium text-gray-700 dark:text-gray-300">
                                 <Money :amount="goal.suggestedMonthly" :currency="goal.currency" />
                             </span>
@@ -239,21 +239,21 @@ const formatDate = (date) => format.date(date);
                         @click="openContributionModal(goal)"
                     >
                         <DynamicIcon name="plus" class="h-3.5 w-3.5" />
-                        Record contribution
+                        {{ $t('ui.savings_goals.contribute') }}
                     </button>
                 </div>
             </div>
             </div>
                     <section v-if="trashedGoals.length" class="mt-8">
-                <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Deleted goals</h3>
+                <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $t('ui.savings_goals.deleted') }}</h3>
                 <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
                     <li v-for="goal in trashedGoals" :key="goal.id" class="flex items-center gap-3 px-4 py-3">
                         <p class="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">{{ goal.name }}</p>
                         <Money :amount="goal.targetAmount" :currency="goal.currency" class="text-sm text-gray-500" />
-                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" title="Restore" @click="router.post(restore.url(goal.id), {}, { preserveScroll: true })">
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.common.restore')" @click="router.post(restore.url(goal.id), {}, { preserveScroll: true })">
                             <DynamicIcon name="arrow-path" class="h-4 w-4" />
                         </button>
-                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" title="Delete permanently" @click="confirmingPurgeGoal = goal">
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete_permanently')" @click="confirmingPurgeGoal = goal">
                             <DynamicIcon name="trash" class="h-4 w-4" />
                         </button>
                     </li>
@@ -263,24 +263,24 @@ const formatDate = (date) => format.date(date);
 
         <ModalForm
             :show="showModal"
-            :title="editingGoal ? 'Edit goal' : 'New goal'"
+            :title="editingGoal ? $t('ui.savings_goals.edit') : $t('ui.savings_goals.new')"
             @close="closeModal"
         >
             <form id="savings-goal-form" class="space-y-4" @submit.prevent="submit">
                 <div>
-                    <InputLabel for="name" value="Name" />
-                    <TextInput id="name" v-model="form.name" type="text" class="mt-1 block w-full" placeholder="Buy a laptop" />
+                    <InputLabel for="name" :value="$t('ui.savings_goals.name')" />
+                    <TextInput id="name" v-model="form.name" type="text" class="mt-1 block w-full" :placeholder="$t('ui.savings_goals.name_placeholder')" />
                     <InputError class="mt-1" :message="form.errors.name" />
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <InputLabel for="target_amount" value="Target amount" />
+                        <InputLabel for="target_amount" :value="$t('ui.savings_goals.target_amount')" />
                         <TextInput id="target_amount" v-model="form.target_amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                         <InputError class="mt-1" :message="form.errors.target_amount" />
                     </div>
                     <div>
-                        <InputLabel for="goal_currency" value="Currency" />
+                        <InputLabel for="goal_currency" :value="$t('ui.savings_goals.currency')" />
                         <select
                             id="goal_currency"
                             v-model="form.currency"
@@ -295,14 +295,14 @@ const formatDate = (date) => format.date(date);
                 </div>
 
                 <div>
-                    <InputLabel for="target_date" value="Target date (optional)" />
+                    <InputLabel for="target_date" :value="$t('ui.savings_goals.target_date')" />
                     <TextInput id="target_date" v-model="form.target_date" type="date" class="mt-1 block w-full" />
                     <InputError class="mt-1" :message="form.errors.target_date" />
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <InputLabel for="icon" value="Icon" />
+                        <InputLabel for="icon" :value="$t('ui.savings_goals.icon')" />
                         <select
                             id="icon"
                             v-model="form.icon"
@@ -313,7 +313,7 @@ const formatDate = (date) => format.date(date);
                         <InputError class="mt-1" :message="form.errors.icon" />
                     </div>
                     <div>
-                        <InputLabel for="color" value="Color" />
+                        <InputLabel for="color" :value="$t('ui.savings_goals.color')" />
                         <input id="color" v-model="form.color" type="color" class="mt-1 block h-10 w-full rounded-lg border-gray-300 dark:border-gray-600" />
                         <InputError class="mt-1" :message="form.errors.color" />
                     </div>
@@ -326,61 +326,61 @@ const formatDate = (date) => format.date(date);
                     >
                         <DynamicIcon :name="form.icon" class="h-4 w-4" />
                     </span>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">Preview</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ $t('ui.savings_goals.preview') }}</span>
                 </div>
             </form>
 
             <template #footer>
-                <SecondaryButton type="button" @click="closeModal">Cancel</SecondaryButton>
-                <PrimaryButton form="savings-goal-form" type="submit" :disabled="form.processing">Save</PrimaryButton>
+                <SecondaryButton type="button" @click="closeModal">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                <PrimaryButton form="savings-goal-form" type="submit" :disabled="form.processing">{{ $t('ui.savings_goals.save') }}</PrimaryButton>
             </template>
         </ModalForm>
 
         <ModalForm
             :show="showContributionModal"
-            title="Record contribution"
+            :title="$t('ui.savings_goals.contribute')"
             @close="closeContributionModal"
         >
             <form id="contribution-form" class="space-y-4" @submit.prevent="submitContribution">
                 <div>
-                    <InputLabel for="contribution_amount" value="Amount" />
+                    <InputLabel for="contribution_amount" :value="$t('ui.savings_goals.amount')" />
                     <TextInput id="contribution_amount" v-model="contributionForm.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                     <InputError class="mt-1" :message="contributionForm.errors.amount" />
                 </div>
                 <div>
-                    <InputLabel for="contribution_date" value="Date" />
+                    <InputLabel for="contribution_date" :value="$t('ui.savings_goals.date')" />
                     <TextInput id="contribution_date" v-model="contributionForm.date" type="date" class="mt-1 block w-full" />
                     <InputError class="mt-1" :message="contributionForm.errors.date" />
                 </div>
             </form>
 
             <template #footer>
-                <SecondaryButton type="button" @click="closeContributionModal">Cancel</SecondaryButton>
-                <PrimaryButton form="contribution-form" type="submit" :disabled="contributionForm.processing">Save</PrimaryButton>
+                <SecondaryButton type="button" @click="closeContributionModal">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                <PrimaryButton form="contribution-form" type="submit" :disabled="contributionForm.processing">{{ $t('ui.savings_goals.save') }}</PrimaryButton>
             </template>
         </ModalForm>
 
         <Modal :show="confirmingDeleteGoal !== null" @close="confirmingDeleteGoal = null">
             <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Delete this goal?</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.savings_goals.delete_title') }}</h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    This action cannot be undone.
+                    {{ $t('ui.common.cannot_be_undone') }}
                 </p>
 
                 <div class="mt-6 flex justify-end gap-3">
-                    <SecondaryButton type="button" @click="confirmingDeleteGoal = null">Cancel</SecondaryButton>
-                    <DangerButton type="button" @click="deleteGoal">Delete</DangerButton>
+                    <SecondaryButton type="button" @click="confirmingDeleteGoal = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <DangerButton type="button" @click="deleteGoal">{{ $t('ui.common.delete') }}</DangerButton>
                 </div>
             </div>
         </Modal>
 
         <Modal :show="confirmingPurgeGoal !== null" @close="confirmingPurgeGoal = null">
             <div class="p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">Delete "{{ confirmingPurgeGoal?.name }}" permanently?</h2>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Its contributions are deleted too. This action cannot be undone.</p>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.savings_goals.purge_title', { name: confirmingPurgeGoal?.name }) }}</h2>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ $t('ui.savings_goals.purge_hint') }}</p>
                 <div class="mt-6 flex justify-end gap-3">
-                    <SecondaryButton type="button" @click="confirmingPurgeGoal = null">Cancel</SecondaryButton>
-                    <DangerButton type="button" @click="purgeGoal">Delete permanently</DangerButton>
+                    <SecondaryButton type="button" @click="confirmingPurgeGoal = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <DangerButton type="button" @click="purgeGoal">{{ $t('ui.common.delete_permanently') }}</DangerButton>
                 </div>
             </div>
         </Modal>
