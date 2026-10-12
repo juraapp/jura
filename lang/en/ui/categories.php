@@ -19,4 +19,5 @@ return [
     'preview' => 'Preview',
     'save' => 'Save',
     'delete_title' => 'Delete this category?',
+    'name_placeholder' => 'Groceries',
 ];
