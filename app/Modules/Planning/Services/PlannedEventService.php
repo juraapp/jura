@@ -71,8 +71,8 @@ class PlannedEventService
 
     /**
      * Creates the missing occurrences of a series up to a date (or its end date).
-     * Occurrences are computed from the series start, so deleted or skipped ones
-     * are never recreated and month-end dates do not drift.
+     * Occurrences are computed from the series start, so deleted ones (remembered in
+     * the series' excluded dates) are never recreated and month-end dates do not drift.
      */
     public function materialize(PlannedEventSeries $series, CarbonInterface $until): int
     {
@@ -95,6 +95,9 @@ class PlannedEventService
             $date = $series->frequency->occurrence($series->starts_on, $step);
             if ($date->gt($limit)) {
                 break;
+            }
+            if (in_array($date->toDateString(), $series->excluded_dates ?? [], true)) {
+                continue;
             }
 
             $event = new PlannedEvent([
@@ -181,7 +184,7 @@ class PlannedEventService
             DB::transaction(function () use ($event, $series) {
                 PlannedEvent::forUser($event->user_id)
                     ->where('series_id', $series->id)
-                    ->open()
+                    ->where('status', '!=', PlannedEventStatus::Realized->value)
                     ->where('date', '>=', $event->date->toDateString())
                     ->delete();
 
@@ -191,8 +194,16 @@ class PlannedEventService
             return;
         }
 
-        // A tombstone, not a delete, so extending the series never recreates it.
-        $event->update(['status' => PlannedEventStatus::Skipped]);
+        DB::transaction(function () use ($event, $series) {
+            $date = $event->date->toDateString();
+            $series->update(['excluded_dates' => collect($series->excluded_dates ?? [])->push($date)->unique()->sort()->values()->all()]);
+            $event->delete();
+        });
+    }
+
+    public function reopen(PlannedEvent $event): void
+    {
+        $event->update(['status' => PlannedEventStatus::Planned]);
     }
 
     public function skip(PlannedEvent $event): void

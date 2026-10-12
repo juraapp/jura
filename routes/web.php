@@ -93,6 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('planning/cash-flow/{plannedEvent}', [PlannedEventController::class, 'destroy'])->name('planned-events.destroy');
     Route::post('planning/cash-flow/{plannedEvent}/realize', [PlannedEventController::class, 'realize'])->name('planned-events.realize');
     Route::post('planning/cash-flow/{plannedEvent}/skip', [PlannedEventController::class, 'skip'])->name('planned-events.skip');
+    Route::post('planning/cash-flow/{plannedEvent}/reopen', [PlannedEventController::class, 'reopen'])->name('planned-events.reopen');
     Route::post('planning/cash-flow/{plannedEvent}/link', [PlannedEventController::class, 'link'])->name('planned-events.link');
     Route::get('planning/recurring', [RecurringTransactionController::class, 'index'])->name('recurring-transactions.index');
     Route::post('planning/recurring', [RecurringTransactionController::class, 'store'])->name('recurring-transactions.store');

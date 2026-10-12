@@ -25,6 +25,7 @@ import {
     destroy,
     realize,
     skip,
+    reopen,
     link,
 } from '@/actions/App/Modules/Planning/Http/Controllers/PlannedEventController';
 
@@ -187,6 +188,7 @@ const submitRealize = () => {
 };
 
 /* ---- skip / link / delete ---- */
+const reopenEvent = (event) => router.post(reopen.url(event.id), {}, { preserveScroll: true });
 const skipEvent = (event) => router.post(skip.url(event.id), {}, { preserveScroll: true });
 const linkMatch = (event) => router.post(link.url(event.id), { transaction_id: event.suggestedMatch.id }, { preserveScroll: true });
 
@@ -347,6 +349,14 @@ const deleteEvent = () => {
                                         </button>
                                         <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" title="Edit" @click="openEditModal(event)">
                                             <DynamicIcon name="pencil" class="h-4 w-4" />
+                                        </button>
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" title="Delete" @click="askDelete(event)">
+                                            <DynamicIcon name="trash" class="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                    <div v-else-if="event.status === 'skipped'" class="flex items-center gap-1">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" title="Reopen (plan it again)" @click="reopenEvent(event)">
+                                            <DynamicIcon name="arrow-path" class="h-4 w-4" />
                                         </button>
                                         <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" title="Delete" @click="askDelete(event)">
                                             <DynamicIcon name="trash" class="h-4 w-4" />
