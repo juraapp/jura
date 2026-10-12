@@ -37,7 +37,7 @@ const markAllAsRead = () => {
             >
                 {{ page.props.notifications.unreadCount > 9 ? '9+' : page.props.notifications.unreadCount }}
             </span>
-            <span class="sr-only">Notifications</span>
+            <span class="sr-only">{{ $t('ui.shell.notifications.title') }}</span>
         </button>
 
         <div
@@ -45,21 +45,21 @@ const markAllAsRead = () => {
             class="absolute right-0 z-30 mt-2 w-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
         >
             <div class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-                <p class="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">Notifications</p>
+                <p class="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">{{ $t('ui.shell.notifications.title') }}</p>
                 <button
                     v-if="page.props.notifications?.unreadCount > 0"
                     type="button"
                     class="shrink-0 whitespace-nowrap text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
                     @click="markAllAsRead"
                 >
-                    Mark all
+                    {{ $t('ui.shell.notifications.mark_all') }}
                 </button>
             </div>
 
             <div class="max-h-96 overflow-y-auto">
                 <Deferred data="notifications" group="topbar">
                     <template #fallback>
-                        <p class="px-4 py-8 text-center text-sm text-gray-400">Loading…</p>
+                        <p class="px-4 py-8 text-center text-sm text-gray-400">{{ $t('ui.common.loading') }}</p>
                     </template>
 
                     <template v-if="page.props.notifications?.items?.length">
@@ -85,7 +85,7 @@ const markAllAsRead = () => {
                             </div>
                         </Link>
                     </template>
-                    <p v-else class="px-4 py-8 text-center text-sm text-gray-400">You have no notifications.</p>
+                    <p v-else class="px-4 py-8 text-center text-sm text-gray-400">{{ $t('ui.shell.notifications.empty') }}</p>
                 </Deferred>
             </div>
         </div>
