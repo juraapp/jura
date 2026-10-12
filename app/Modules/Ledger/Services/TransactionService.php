@@ -184,6 +184,46 @@ class TransactionService implements RecordsTransactions
         });
     }
 
+    /**
+     * Brings a deleted transaction (and the other leg of a transfer) back.
+     */
+    public function restore(Transaction $transaction): void
+    {
+        DB::transaction(function () use ($transaction) {
+            $legs = $this->trashedLegs($transaction);
+            $legs->each->restore();
+
+            $this->announce($transaction->user, $legs->map->account);
+
+            $legs->filter(fn (Transaction $leg) => $leg->type === TransactionType::Income)
+                ->each(fn (Transaction $leg) => $this->announceIncome($leg->refresh()));
+        });
+    }
+
+    /**
+     * Removes a deleted transaction (and the other leg of a transfer) for good.
+     */
+    public function forceDelete(Transaction $transaction): void
+    {
+        DB::transaction(fn () => $this->trashedLegs($transaction)->each->forceDelete());
+    }
+
+    /**
+     * @return Collection<int, Transaction>
+     */
+    private function trashedLegs(Transaction $transaction): Collection
+    {
+        $legs = collect([$transaction]);
+
+        if ($transaction->type->isTransfer() && $transaction->transfer_group_id) {
+            $legs = Transaction::onlyTrashed()
+                ->where('transfer_group_id', $transaction->transfer_group_id)
+                ->get();
+        }
+
+        return $legs->each(fn (Transaction $leg) => $leg->loadMissing('account'));
+    }
+
     private function createSimple(User $user, TransactionType $type, array $data): Transaction
     {
         $transaction = $user->transactions()->create([

@@ -14,6 +14,7 @@ import { index as dataExportIndex } from '@/routes/data-export';
 import { index as expensesIndex } from '@/routes/expenses';
 import { index as incomesIndex } from '@/routes/incomes';
 import { edit as preferencesEdit } from '@/routes/preferences';
+import { index as trashIndex } from '@/routes/trash';
 import { index as recurringTransactionsIndex } from '@/routes/recurring-transactions';
 import { annual as reportsAnnual, buckets as reportsBuckets, custom as reportsCustom, forecast as reportsForecast, monthly as reportsMonthly, projects as reportsProjects } from '@/routes/reports';
 import { index as savingsGoalsIndex } from '@/routes/savings-goals';
@@ -75,6 +76,7 @@ const sections = [
             { label: 'Profile & security', route: profileEdit, icon: 'user-circle' },
             { label: 'Categories', route: categoriesIndex, icon: 'tag' },
             { label: 'Preferences', route: preferencesEdit, icon: 'adjustments' },
+            { label: 'Trash', route: trashIndex, icon: 'trash' },
             { label: 'Export my data', route: dataExportIndex, icon: 'arrow-down-tray' },
         ],
     },
