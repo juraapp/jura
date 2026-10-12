@@ -32,6 +32,10 @@ final readonly class EngineBucket
         public int $cycleEvery = 1,
         public ?CarbonImmutable $cycleAnchor = null,
         public ?Money $receivedThisCycle = null,
+        public ?string $stepUpValue = null,
+        public ?int $stepUpAfterBucketId = null,
+        public bool $completesOnPurchase = false,
+        public ?CarbonImmutable $completedOn = null,
     ) {}
 
     public function cyclePeriod(): ?CyclePeriod

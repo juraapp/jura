@@ -13,7 +13,10 @@ use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\WishlistItem;
 use App\Modules\Planning\Services\BucketLedger;
+use App\Modules\Planning\Services\WishlistService;
+use App\Modules\Shared\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -264,5 +267,37 @@ class IncomeAllocationTest extends TestCase
 
         $this->assertSame(300000.0, $this->funded($leisure));
         $this->assertSame(600000.0, $this->funded($savings));
+    }
+
+    public function test_buying_the_item_of_a_completing_bucket_closes_it_and_a_waiting_bucket_steps_up(): void
+    {
+        $restoration = $this->bucket('Restoration', 3, FillRule::Fixed, 10);
+        $car = $this->bucket('Car', 2, FillRule::Fixed, 500000, [
+            'cap_amount' => 1000000, 'completes_on_purchase' => true, 'carry_over' => 'overflow', 'overflow_bucket_id' => $restoration->id,
+        ]);
+        $savings = $this->bucket('Savings', 1, FillRule::Fixed, 100, [
+            'cycle' => 'monthly', 'step_up_value' => 300, 'step_up_after_bucket_id' => $car->id,
+        ]);
+
+        app(BucketLedger::class)->credit($car, Money::of(1200000), AllocationSource::Adjustment, null, Carbon::today());
+        $expenseCategory = Category::factory()->expense()->create(['user_id' => $this->user->id]);
+        $item = WishlistItem::factory()->for($this->user)->create(['price' => 1000000, 'currency' => 'COP', 'bucket_id' => $car->id]);
+
+        app(WishlistService::class)->purchase($item, ['account_id' => $this->debit->id, 'category_id' => $expenseCategory->id]);
+
+        $this->assertSame('2026-10-12', $car->fresh()->completed_on->toDateString());
+        $this->assertSame(0.0, $this->funded($car));
+        $this->assertSame(200000.0, $this->funded($restoration));
+
+        $this->income(10000, null, '2026-10-20');
+        $this->assertSame(0.0, $this->funded($car), 'a completed bucket takes no more income');
+        $this->assertSame(100.0, $this->funded($savings));
+        $this->assertSame(200010.0, $this->funded($restoration));
+
+        $this->income(10000, null, '2026-11-03');
+        $this->assertSame(400.0, $this->funded($savings), 'October still paid 100; November steps up to 300');
+
+        app(BucketLedger::class)->reopen($car->fresh());
+        $this->assertNull($car->fresh()->completed_on);
     }
 }

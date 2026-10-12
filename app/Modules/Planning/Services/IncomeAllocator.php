@@ -61,11 +61,11 @@ class IncomeAllocator
         }
 
         $inputs = $buckets
-            ->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($accountId))
+            ->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($accountId) && ! $bucket->isCompletedOn($date))
             ->map(fn (Bucket $bucket) => new WaterfallBucket(
                 $bucket->id,
                 $bucket->fill_rule,
-                $bucket->fill_value !== null ? (string) $bucket->fill_value : null,
+                $this->funds->fillValueFor($bucket, $date),
                 $this->room($bucket, $date),
                 $this->funds->receivedInCycle($bucket, $date),
             ))

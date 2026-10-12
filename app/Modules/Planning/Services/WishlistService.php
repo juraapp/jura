@@ -52,6 +52,10 @@ class WishlistService
                 }
             }
 
+            if ($item->bucket !== null && $item->bucket->completes_on_purchase && ! $item->bucket->isCompletedOn($date)) {
+                $this->funds->complete($item->bucket, $date);
+            }
+
             $item->update([
                 'status' => WishlistStatus::Purchased,
                 'purchased_on' => $date->toDateString(),
@@ -66,6 +70,11 @@ class WishlistService
     public function undoPurchase(WishlistItem $item): void
     {
         DB::transaction(function () use ($item) {
+            if ($item->bucket !== null && $item->bucket->completes_on_purchase
+                && $item->bucket->completed_on?->toDateString() === $item->purchased_on?->toDateString()) {
+                $this->funds->reopen($item->bucket);
+            }
+
             if ($item->purchase_allocation_id !== null) {
                 Allocation::forUser($item->user_id)->whereKey($item->purchase_allocation_id)->delete();
             }

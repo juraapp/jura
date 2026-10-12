@@ -25,6 +25,8 @@ import {
     move,
     adjust,
     reset,
+    complete,
+    reopen,
     history,
     allocations,
     destroyAllocation,
@@ -90,6 +92,9 @@ const blank = () => ({
     opening_balance: '',
     fill_rule: '',
     fill_value: '',
+    step_up_after_bucket_id: '',
+    step_up_value: '',
+    completes_on_purchase: false,
     carry_over: 'carry',
     overflow_bucket_id: '',
     allowed_account_ids: [],
@@ -109,6 +114,8 @@ const fillValueLabel = computed(() => {
     if (form.fill_rule === 'of_remaining') return 'Percent of what is left when this bucket is reached';
     return form.cycle ? 'Amount per cycle (income tops it up to this)' : 'Amount from each income';
 });
+const canStepUp = computed(() => needsValue.value);
+const stepUpChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === form.currency && bucket.id !== editingBucket.value?.id && bucket.cap && bucket.kind === 'savings'));
 const overflowChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === form.currency && bucket.id !== editingBucket.value?.id));
 
 const openCreateModal = () => {
@@ -135,6 +142,9 @@ const openEditModal = (bucket) => {
     form.opening_balance = bucket.openingBalance > 0 ? String(bucket.openingBalance) : '';
     form.fill_rule = bucket.fillRule ?? '';
     form.fill_value = bucket.fillValue !== null ? String(bucket.fillValue) : '';
+    form.step_up_after_bucket_id = bucket.stepUpAfterBucketId ?? '';
+    form.step_up_value = bucket.stepUpValue !== null ? String(bucket.stepUpValue) : '';
+    form.completes_on_purchase = bucket.completesOnPurchase;
     form.carry_over = bucket.carryOver;
     form.overflow_bucket_id = bucket.overflowBucketId ?? '';
     form.allowed_account_ids = [...bucket.allowedAccountIds];
@@ -356,6 +366,13 @@ const deleteBucket = () => {
                         <li v-if="bucket.cycleView && bucket.cycleView.capOverride" class="text-amber-600 dark:text-amber-400">
                             Limit this cycle only: <Money :amount="bucket.cycleView.capOverride" :currency="bucket.currency" />
                         </li>
+                        <li v-if="bucket.completedOn" class="flex items-center gap-1.5 text-green-700 dark:text-green-400">
+                            <DynamicIcon name="check-circle" class="h-3.5 w-3.5" /> Completed on {{ formatDate(bucket.completedOn) }}. It no longer takes income.
+                            <button type="button" class="font-medium underline" @click="router.post(reopen.url(bucket.id), {}, { preserveScroll: true })">Reopen</button>
+                        </li>
+                        <li v-else-if="bucket.kind === 'savings' && !bucket.isDefault">
+                            <button type="button" class="font-medium text-primary-600 hover:underline dark:text-primary-400" @click="router.post(complete.url(bucket.id), {}, { preserveScroll: true })">Mark as completed</button>
+                        </li>
                         <li v-if="bucket.cycle">
                             <Link :href="history.url(bucket.id)" class="font-medium text-primary-600 hover:underline dark:text-primary-400">Cycle history</Link>
                         </li>
@@ -464,6 +481,29 @@ const deleteBucket = () => {
                             <TextInput id="fill_value" v-model="form.fill_value" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                             <InputError class="mt-1" :message="form.errors.fill_value" />
                         </div>
+                        <div v-if="canStepUp && stepUpChoices.length" class="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/40">
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Raise it later (optional)</p>
+                            <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">From the cycle after another bucket reaches its target, use a different value.</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <InputLabel for="step_up_after_bucket_id" value="When this bucket is full" />
+                                    <SelectInput id="step_up_after_bucket_id" v-model="form.step_up_after_bucket_id">
+                                        <option value="">Never</option>
+                                        <option v-for="bucket in stepUpChoices" :key="bucket.id" :value="bucket.id">{{ bucket.name }}</option>
+                                    </SelectInput>
+                                    <InputError class="mt-1" :message="form.errors.step_up_after_bucket_id" />
+                                </div>
+                                <div>
+                                    <InputLabel for="step_up_value" value="Use this value" />
+                                    <TextInput id="step_up_value" v-model="form.step_up_value" type="number" step="0.01" min="0.01" class="mt-1 block w-full" :disabled="!form.step_up_after_bucket_id" />
+                                    <InputError class="mt-1" :message="form.errors.step_up_value" />
+                                </div>
+                            </div>
+                        </div>
+                        <label v-if="form.kind === 'savings'" class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <input v-model="form.completes_on_purchase" type="checkbox" class="mt-0.5 rounded border-gray-300 text-primary-600 dark:border-gray-600 dark:bg-gray-700" />
+                            <span>Close this bucket when a wish-list item paid from it is bought. What is left moves to the bucket chosen under "Move leftover to" (or the default bucket).</span>
+                        </label>
                         <p v-if="form.fill_rule === 'fill_to_target'" class="text-xs text-gray-500 dark:text-gray-400">Needs a limit/target above. It refills whatever is missing.</p>
 
                         <div>

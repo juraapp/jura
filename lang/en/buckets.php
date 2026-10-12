@@ -12,6 +12,8 @@ return [
     'opening_balance' => 'Opening balance',
     'reset_note' => 'Reset to zero',
     'reset' => 'Funds reset to zero.',
+    'completed' => 'Bucket completed. What was left moved on.',
+    'reopened' => 'Bucket reopened.',
     'allocation_locked' => 'This entry comes from your income or a closed cycle and cannot be removed here.',
     'allocation_removed' => 'Entry removed.',
     'cycle_limit_saved' => 'Limit for this cycle saved.',

@@ -20,6 +20,12 @@ final class ForecastEngine
     /** @var array<int, array<string, Money>> income received per bucket and cycle start */
     private array $received = [];
 
+    /** @var array<int, CarbonImmutable> when each bucket was closed */
+    private array $completed = [];
+
+    /** @var array<int, CarbonImmutable> when each bucket first held its target (or was closed) */
+    private array $reached = [];
+
     public function __construct(private readonly Waterfall $waterfall) {}
 
     /**
@@ -30,6 +36,8 @@ final class ForecastEngine
         $buckets = [];
         $balances = [];
         $this->received = [];
+        $this->completed = [];
+        $this->reached = [];
         foreach ($input->buckets as $bucket) {
             $period = $bucket->cyclePeriod();
             if ($period !== null) {
@@ -38,6 +46,9 @@ final class ForecastEngine
 
             $buckets[$bucket->id] = $bucket;
             $balances[$bucket->id] = $bucket->balance;
+            if ($bucket->completedOn !== null) {
+                $this->completed[$bucket->id] = $bucket->completedOn;
+            }
         }
 
         $state = new class
@@ -51,6 +62,7 @@ final class ForecastEngine
         };
         $state->lastPurchase = $input->start;
 
+        $this->noteReached($input, $balances, $input->start);
         $this->buy($input, $lines, $balances, $state, $input->start);
 
         foreach ($this->events($input, $lines) as $event) {
@@ -60,7 +72,9 @@ final class ForecastEngine
                 $this->closeCycle($input, $buckets[$event['bucketId']], $balances);
             }
 
+            $this->noteReached($input, $balances, $event['date']);
             $this->buy($input, $lines, $balances, $state, $event['date']);
+            $this->noteReached($input, $balances, $event['date']);
         }
 
         while ($state->next < count($lines)) {
@@ -127,8 +141,8 @@ final class ForecastEngine
 
         $inputs = [];
         foreach ($input->buckets as $bucket) {
-            if ($bucket->acceptsAccount($income->accountId)) {
-                $inputs[] = new WaterfallBucket($bucket->id, $bucket->rule, $bucket->value, $bucket->room($balances[$bucket->id]), $this->receivedOn($bucket, $income->date));
+            if ($bucket->acceptsAccount($income->accountId) && ! $this->isCompleted($bucket->id, $income->date)) {
+                $inputs[] = new WaterfallBucket($bucket->id, $bucket->rule, $this->valueOn($bucket, $income->date), $bucket->room($balances[$bucket->id]), $this->receivedOn($bucket, $income->date));
             }
         }
 
@@ -146,6 +160,58 @@ final class ForecastEngine
         $default = $input->defaultBucket();
         if ($result['leftover']->isPositive() && $default !== null && $default->acceptsAccount($income->accountId)) {
             $balances[$default->id] = $balances[$default->id]->add($result['leftover']);
+        }
+    }
+
+    private function isCompleted(int $bucketId, CarbonImmutable $date): bool
+    {
+        return isset($this->completed[$bucketId]) && $this->completed[$bucketId]->lte($date);
+    }
+
+    /**
+     * The fill value on a date: the step-up value once the bucket it waits for has held its target,
+     * counted from the start of the current cycle.
+     */
+    private function valueOn(EngineBucket $bucket, CarbonImmutable $date): ?string
+    {
+        if ($bucket->stepUpValue === null || $bucket->stepUpAfterBucketId === null || ! isset($this->reached[$bucket->stepUpAfterBucketId])) {
+            return $bucket->value;
+        }
+
+        $period = $bucket->cyclePeriod();
+        $cutoff = $period !== null ? CarbonImmutable::instance($period->startOf($date->toDateTimeImmutable()))->subDay() : $date;
+
+        return $this->reached[$bucket->stepUpAfterBucketId]->lte($cutoff) ? $bucket->stepUpValue : $bucket->value;
+    }
+
+    /**
+     * @param  array<int, Money>  $balances
+     */
+    private function noteReached(EngineInput $input, array $balances, CarbonImmutable $date): void
+    {
+        foreach ($input->buckets as $bucket) {
+            if (! isset($this->reached[$bucket->id]) && $bucket->target !== null && ! $balances[$bucket->id]->lessThan($bucket->target)) {
+                $this->reached[$bucket->id] = $date;
+            }
+        }
+    }
+
+    /**
+     * A bucket marked "completes on purchase" closes when something is bought from it: what is left moves
+     * to its overflow bucket (or the default one) and it stops receiving income.
+     *
+     * @param  array<int, Money>  $balances
+     */
+    private function completeIfDone(EngineInput $input, int $bucketId, array &$balances, CarbonImmutable $date): void
+    {
+        foreach ($input->buckets as $bucket) {
+            if ($bucket->id !== $bucketId || ! $bucket->completesOnPurchase || isset($this->completed[$bucketId])) {
+                continue;
+            }
+
+            $this->completed[$bucketId] = $date;
+            $this->reached[$bucketId] ??= $date;
+            $this->closeCycle($input, $bucket, $balances);
         }
     }
 
@@ -212,6 +278,7 @@ final class ForecastEngine
             }
 
             $balances[$bucketId] = $balances[$bucketId]->subtract($line->price);
+            $this->completeIfDone($input, $bucketId, $balances, $date);
             $state->lastPurchase = $date;
             $state->results[$state->next] = new LineResult(
                 $line->itemId, $line->name, $line->price, $date, (int) round($input->start->diffInDays($date)), Money::zero(), null,
