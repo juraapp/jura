@@ -168,16 +168,15 @@ const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { day: '
                                                     {{ transaction.description || transaction.category?.name || 'Transfer' }}
                                                 </p>
                                                 <p class="text-xs text-gray-400">
-                                                    {{ transaction.category?.name || 'Transfer between accounts' }}
+                                                    <template v-if="transaction.type === 'transfer_out'">Transfer out<template v-if="transaction.counterpartAccount"> &rarr; {{ transaction.counterpartAccount }}</template></template>
+                                                    <template v-else-if="transaction.type === 'transfer_in'">Transfer in<template v-if="transaction.counterpartAccount"> &larr; {{ transaction.counterpartAccount }}</template></template>
+                                                    <template v-else>{{ transaction.category?.name }}</template>
                                                 </p>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                                         {{ transaction.account.name }}
-                                        <span v-if="typeFilter === 'transfer' && transaction.transferDestinationAccount" class="text-gray-400">
-                                            &rarr; {{ transaction.transferDestinationAccount }}
-                                        </span>
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums" :class="amountClass(transaction.type)">
                                         {{ amountSign(transaction.type) }}
