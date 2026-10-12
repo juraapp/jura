@@ -7,6 +7,7 @@ use App\Modules\Ledger\Contracts\Balances;
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Enums\CategoryType;
+use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
@@ -18,11 +19,11 @@ use App\Modules\Ledger\Services\EloquentLedgerQuery;
 use App\Modules\Ledger\Services\TransactionService;
 use App\Modules\Planning\Contracts\BudgetProgress;
 use App\Modules\Planning\Models\Budget;
-use App\Modules\Planning\Models\BudgetForecast;
+use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Models\SavingsGoal;
-use App\Modules\Planning\Policies\BudgetForecastPolicy;
 use App\Modules\Planning\Policies\BudgetPolicy;
+use App\Modules\Planning\Policies\PlannedEventPolicy;
 use App\Modules\Planning\Policies\RecurringTransactionPolicy;
 use App\Modules\Planning\Policies\SavingsGoalPolicy;
 use App\Modules\Planning\Services\BudgetService;
@@ -95,6 +96,27 @@ class ModuleContractsTest extends TestCase
         $this->assertNotContains('Mine', $ledger->categoryOptions(CategoryType::Income)->pluck('name')->all());
     }
 
+    public function test_record_creates_a_transaction_and_returns_its_id(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->income()->create(['user_id' => $user->id]);
+
+        $id = app(RecordsTransactions::class)->record($user, TransactionType::Income, [
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'amount' => 1500.25,
+            'date' => '2026-10-12',
+            'description' => 'Freelance',
+        ]);
+
+        $transaction = Transaction::findOrFail($id);
+        $this->assertSame(TransactionType::Income, $transaction->type);
+        $this->assertSame('1500.25', $transaction->amount->toDecimalString());
+        $this->assertFalse($transaction->is_recurring_generated);
+    }
+
     public function test_planning_contract_resolves_to_its_implementation(): void
     {
         $this->assertInstanceOf(BudgetService::class, app(BudgetProgress::class));
@@ -103,7 +125,7 @@ class ModuleContractsTest extends TestCase
     public function test_planning_models_resolve_their_policies(): void
     {
         $this->assertInstanceOf(BudgetPolicy::class, Gate::getPolicyFor(Budget::class));
-        $this->assertInstanceOf(BudgetForecastPolicy::class, Gate::getPolicyFor(BudgetForecast::class));
+        $this->assertInstanceOf(PlannedEventPolicy::class, Gate::getPolicyFor(PlannedEvent::class));
         $this->assertInstanceOf(SavingsGoalPolicy::class, Gate::getPolicyFor(SavingsGoal::class));
         $this->assertInstanceOf(RecurringTransactionPolicy::class, Gate::getPolicyFor(RecurringTransaction::class));
     }
