@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Transaction;
-use App\Models\User;
+use App\Modules\Identity\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;

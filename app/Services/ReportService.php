@@ -6,7 +6,7 @@ use App\Enums\TransactionType;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Transaction;
-use App\Models\User;
+use App\Modules\Identity\Models\User;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;

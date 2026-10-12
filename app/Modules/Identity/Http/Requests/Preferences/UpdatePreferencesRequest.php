@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Preferences;
+namespace App\Modules\Identity\Http\Requests\Preferences;
 
 use Illuminate\Foundation\Http\FormRequest;
 

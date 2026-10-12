@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Transaction;
-use App\Models\User;
+use App\Modules\Identity\Models\User;
 
 class TransactionPolicy
 {

@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\SavingsGoal;
-use App\Models\User;
+use App\Modules\Identity\Models\User;
 
 class SavingsGoalPolicy
 {

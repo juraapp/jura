@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\AccountType;
 use App\Models\Account;
-use App\Models\User;
+use App\Modules\Identity\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
