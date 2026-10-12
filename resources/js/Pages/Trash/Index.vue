@@ -48,7 +48,7 @@ const formatDate = (date) => format.date(date);
             <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Trash</h2>
         </template>
 
-        <div class="space-y-6 py-6">
+        <div class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
             <p class="text-sm text-gray-500 dark:text-gray-400">
                 Deleted items stay here until you restore them or delete them permanently.
             </p>
