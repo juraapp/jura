@@ -160,7 +160,7 @@ class BucketsTest extends TestCase
         $foreignAccount = Account::factory()->create();
 
         $this->actingAs($user)->post('/planning/buckets', [
-            'kind' => 'spending', 'category_id' => 999999, 'currency' => 'CO', 'cap_amount' => -5, 'cycle' => 'weekly',
+            'kind' => 'spending', 'category_id' => 999999, 'currency' => 'CO', 'cap_amount' => -5, 'cycle' => 'fortnightly',
         ])->assertSessionHasErrors(['category_id', 'currency', 'cap_amount', 'cycle']);
 
         $this->post('/planning/buckets', ['kind' => 'weird', 'currency' => 'COP'])->assertSessionHasErrors(['kind']);

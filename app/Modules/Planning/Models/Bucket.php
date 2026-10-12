@@ -7,8 +7,12 @@ use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
+use App\Modules\Planning\Support\CyclePeriod;
 use App\Modules\Shared\Casts\AsMoney;
 use App\Modules\Shared\Concerns\BelongsToUser;
+use App\Modules\Shared\Support\Money;
+use Carbon\CarbonInterface;
+use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -23,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * a target). Funded money is the sum of its allocations.
  */
 #[Fillable([
-    'name', 'kind', 'currency', 'priority', 'category_id', 'cycle', 'cap_amount', 'fill_rule', 'fill_value',
+    'name', 'kind', 'currency', 'priority', 'category_id', 'cycle', 'cycle_every', 'cycle_anchor', 'cap_amount', 'fill_rule', 'fill_value',
     'carry_over', 'overflow_bucket_id', 'allowed_account_ids', 'is_default', 'tracking_started_on', 'cycle_closed_through',
 ])]
 class Bucket extends Model
@@ -35,6 +39,8 @@ class Bucket extends Model
         return [
             'kind' => BucketKind::class,
             'cycle' => BudgetPeriodType::class,
+            'cycle_every' => 'integer',
+            'cycle_anchor' => 'date',
             'cap_amount' => AsMoney::class,
             'fill_rule' => FillRule::class,
             'carry_over' => CarryOverPolicy::class,
@@ -51,6 +57,48 @@ class Bucket extends Model
         return Attribute::make(
             set: fn (string $value) => strtoupper(trim($value)),
         );
+    }
+
+    /**
+     * The repeating window this bucket works in, or null for buckets without a cycle.
+     */
+    public function cyclePeriod(): ?CyclePeriod
+    {
+        if ($this->cycle === null) {
+            return null;
+        }
+
+        return new CyclePeriod(
+            $this->cycle,
+            max(1, (int) ($this->cycle_every ?? 1)),
+            $this->cycle_anchor !== null ? new DateTimeImmutable($this->cycle_anchor->toDateString()) : null,
+        );
+    }
+
+    /**
+     * The limit/target that applies on a date: one set for that cycle only wins over the bucket's own.
+     */
+    public function effectiveCap(CarbonInterface $date): ?Money
+    {
+        $period = $this->cyclePeriod();
+
+        if ($period !== null) {
+            $override = BucketCycle::forUser($this->user_id)
+                ->where('bucket_id', $this->id)
+                ->where('starts_on', $period->startOf($date->toDateTimeImmutable())->format('Y-m-d'))
+                ->value('cap_override');
+
+            if ($override !== null) {
+                return Money::of($override);
+            }
+        }
+
+        return $this->cap_amount;
+    }
+
+    public function cycles(): HasMany
+    {
+        return $this->hasMany(BucketCycle::class);
     }
 
     public function scopeInPriorityOrder(Builder $query): Builder

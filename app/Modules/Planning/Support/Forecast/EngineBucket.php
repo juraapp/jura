@@ -6,6 +6,7 @@ use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Shared\Support\Money;
+use Carbon\CarbonImmutable;
 
 /**
  * A bucket as the forecast engine sees it: its rule, funds and cycle behaviour.
@@ -27,6 +28,8 @@ final readonly class EngineBucket
         public CarryOverPolicy $carryOver,
         public ?int $overflowBucketId,
         public bool $isDefault,
+        public int $cycleEvery = 1,
+        public ?CarbonImmutable $cycleAnchor = null,
     ) {}
 
     public function acceptsAccount(?int $accountId): bool

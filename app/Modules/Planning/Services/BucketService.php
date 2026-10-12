@@ -6,6 +6,7 @@ use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Contracts\BucketProgress;
 use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Support\CyclePeriod;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -29,8 +30,9 @@ class BucketService implements BucketProgress
 
         $spent = $this->ledger->expenseTotal($bucket->category_id, $bucket->currency, $start, $end);
 
-        $percentage = $spent->percentageOf($bucket->cap_amount);
-        $remaining = $bucket->cap_amount->subtract($spent);
+        $cap = $bucket->effectiveCap(today());
+        $percentage = $spent->percentageOf($cap);
+        $remaining = $cap->subtract($spent);
 
         $status = match (true) {
             $percentage >= 100 => 'exceeded',
@@ -53,10 +55,13 @@ class BucketService implements BucketProgress
      */
     public function periodBounds(Bucket $bucket, ?CarbonInterface $at = null): array
     {
-        $at = Carbon::instance($at ?? now());
+        $at = Carbon::instance($at ?? now())->startOfDay();
+        $period = $bucket->cyclePeriod() ?? new CyclePeriod(BudgetPeriodType::Monthly);
+        $moment = $at->toDateTimeImmutable();
 
-        return $bucket->cycle === BudgetPeriodType::Yearly
-            ? [$at->copy()->startOfYear(), $at->copy()->endOfYear()]
-            : [$at->copy()->startOfMonth(), $at->copy()->endOfMonth()];
+        return [
+            Carbon::instance($period->startOf($moment))->startOfDay(),
+            Carbon::instance($period->endOf($moment))->endOfDay(),
+        ];
     }
 }

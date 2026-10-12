@@ -4,6 +4,8 @@ namespace App\Modules\Planning\Enums;
 
 enum BudgetPeriodType: string
 {
+    case Daily = 'daily';
+    case Weekly = 'weekly';
     case Monthly = 'monthly';
     case Yearly = 'yearly';
 
