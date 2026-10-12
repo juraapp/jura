@@ -4,8 +4,7 @@ namespace App\Modules\Notifications\Listeners;
 
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Notifications\Notifications\BudgetThresholdReached;
-use App\Modules\Planning\Contracts\BudgetProgress;
-use Illuminate\Support\Carbon;
+use App\Modules\Planning\Contracts\BucketProgress;
 
 /**
  * Re-evaluates the user's active budgets after any transaction change and
@@ -14,20 +13,15 @@ use Illuminate\Support\Carbon;
  */
 class CheckBudgetThreshold
 {
-    public function __construct(private readonly BudgetProgress $budgets) {}
+    public function __construct(private readonly BucketProgress $limits) {}
 
     public function handle(TransactionsMutated $event): void
     {
-        $now = Carbon::now();
+        $limitBuckets = $event->user->buckets()->with('category')->get()
+            ->filter(fn ($bucket) => $bucket->tracksLimit());
 
-        $activeBudgets = $event->user->budgets()->with('category')->get()->filter(function ($budget) use ($now) {
-            return $budget->period_type->value === 'yearly'
-                ? $budget->period_start->isSameYear($now)
-                : $budget->period_start->isSameMonth($now);
-        });
-
-        foreach ($activeBudgets as $budget) {
-            $progress = $this->budgets->progress($budget);
+        foreach ($limitBuckets as $bucket) {
+            $progress = $this->limits->progress($bucket);
 
             if ($progress['status'] === 'on_track') {
                 continue;
@@ -35,11 +29,11 @@ class CheckBudgetThreshold
 
             $alreadyNotified = $event->user->unreadNotifications()
                 ->where('type', BudgetThresholdReached::class)
-                ->where('data->budget_id', $budget->id)
+                ->where('data->budget_id', $bucket->id)
                 ->exists();
 
             if (! $alreadyNotified) {
-                $event->user->notify(new BudgetThresholdReached($budget, $progress['percentage'], $progress['status'] === 'exceeded'));
+                $event->user->notify(new BudgetThresholdReached($bucket, $progress['percentage'], $progress['status'] === 'exceeded'));
             }
         }
     }

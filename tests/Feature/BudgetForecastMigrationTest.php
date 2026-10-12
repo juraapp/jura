@@ -6,7 +6,6 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Planning\Enums\Certainty;
 use App\Modules\Planning\Enums\PlannedEventStatus;
-use App\Modules\Planning\Models\Budget;
 use App\Modules\Planning\Models\PlannedEvent;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,16 +34,35 @@ class BudgetForecastMigrationTest extends TestCase
         });
     }
 
+    private function recreateLegacyBudgetsTable(): void
+    {
+        Schema::create('budgets', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('category_id')->constrained()->cascadeOnDelete();
+            $table->string('currency', 3);
+            $table->decimal('amount', 15, 2);
+            $table->decimal('allocated_amount', 15, 2)->nullable();
+            $table->string('period_type');
+            $table->date('period_start');
+            $table->timestamps();
+        });
+    }
+
     public function test_legacy_forecasts_become_planned_expenses_and_the_table_is_dropped(): void
     {
+        $this->recreateLegacyBudgetsTable();
         $this->recreateLegacyTable();
         $user = User::factory()->create();
         $budgetCategory = Category::factory()->expense()->create(['user_id' => $user->id]);
         $ownCategory = Category::factory()->expense()->create(['user_id' => $user->id]);
-        $budget = Budget::factory()->for($user)->create(['category_id' => $budgetCategory->id]);
+        $budgetId = DB::table('budgets')->insertGetId([
+            'user_id' => $user->id, 'category_id' => $budgetCategory->id, 'currency' => 'COP', 'amount' => 100,
+            'period_type' => 'monthly', 'period_start' => '2026-11-01', 'created_at' => now(), 'updated_at' => now(),
+        ]);
 
         $row = fn (array $attributes) => DB::table('budget_forecasts')->insert($attributes + [
-            'user_id' => $user->id, 'budget_id' => $budget->id, 'category_id' => null, 'description' => 'Forecast',
+            'user_id' => $user->id, 'budget_id' => $budgetId, 'category_id' => null, 'description' => 'Forecast',
             'amount' => 120.5, 'date' => '2026-11-03', 'is_anticipated' => true, 'currency' => 'COP',
             'notes' => 'note', 'created_at' => now(), 'updated_at' => now(),
         ]);

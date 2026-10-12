@@ -73,4 +73,9 @@ class EloquentLedgerQuery implements LedgerQuery
                 'account' => $row->account_name,
             ]);
     }
+
+    public function categoryName(int $categoryId): ?string
+    {
+        return Category::whereKey($categoryId)->value('name');
+    }
 }
