@@ -1,6 +1,6 @@
 <?php
 
-use App\Jobs\GenerateDueRecurringTransactions;
+use App\Modules\Planning\Jobs\GenerateDueRecurringTransactions;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;

@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Modules\Planning\Services;
+
+use App\Modules\Planning\Models\Budget;
+use App\Modules\Shared\Support\Money;
+
+class BudgetForecastService
+{
+    /**
+     * @return array{projected: Money, allocated: Money, effectiveRemaining: Money}
+     */
+    public function summary(Budget $budget): array
+    {
+        $projected = Money::of(
+            $budget->forecasts()
+                ->where('is_anticipated', true)
+                ->where('currency', $budget->currency)
+                ->sum('amount')
+        );
+
+        $allocated = $budget->allocated_amount
+            ? Money::of($budget->allocated_amount)
+            : Money::zero();
+
+        $effectiveRemaining = $budget->amount
+            ->subtract($projected)
+            ->add($allocated);
+
+        return [
+            'projected' => $projected,
+            'allocated' => $allocated,
+            'effectiveRemaining' => $effectiveRemaining,
+        ];
+    }
+}

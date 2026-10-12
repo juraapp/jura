@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\Budget;
+use App\Modules\Planning\Models\Budget;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 

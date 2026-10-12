@@ -2,10 +2,9 @@
 
 namespace App\Modules\Ledger\Models;
 
-use App\Models\RecurringTransaction;
-
 use App\Modules\Ledger\Enums\PaymentMethod;
 use App\Modules\Ledger\Enums\TransactionType;
+use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Shared\Casts\AsMoney;
 use App\Modules\Shared\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

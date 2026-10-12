@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\RecurringTransaction;
+use App\Modules\Planning\Models\RecurringTransaction;
 use App\Notifications\UpcomingRecurringPayment;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
