@@ -16,13 +16,14 @@ for everyday use. Sections marked **Advanced** are optional extras.
 7. [Cash flow (planned income and expenses)](#cash-flow-planned-income-and-expenses)
 8. [Buckets (budgets and savings)](#buckets-budgets-and-savings)
 9. [Wish list and projects](#wish-list-and-projects)
-10. [Savings goals](#savings-goals)
-11. [Recurring expenses](#recurring-expenses)
-12. [Reports](#reports)
-13. [Notifications](#notifications)
-14. [Preferences, profile and appearance](#preferences-profile-and-appearance)
-15. [Common questions](#common-questions)
-16. [Coming soon](#coming-soon)
+10. [Planner](#planner)
+11. [Savings goals](#savings-goals)
+12. [Recurring expenses](#recurring-expenses)
+13. [Reports](#reports)
+14. [Notifications](#notifications)
+15. [Preferences, profile and appearance](#preferences-profile-and-appearance)
+16. [Common questions](#common-questions)
+17. [Coming soon](#coming-soon)
 
 ---
 
@@ -215,6 +216,43 @@ If the bucket holds less than the price, it pays what it has and the rest is sim
 **Dropping.** The forward button marks an item as *Dropped* (no longer wanted) without deleting it. Tick *Show
 purchased and dropped items* to see them, and use the arrow to want one again.
 
+## Planner
+
+Menu: **Planning → Planner**.
+
+The planner answers "what should I buy first, and when can I afford each thing?". It replays the income you have
+planned through your buckets' filling rules and tells you the earliest date each wish-list item can be paid for.
+Nothing in the planner changes your real money.
+
+**How to use it.**
+1. Choose **how sure the income should be**: *Conservative* (only confirmed income), *Expected* (confirmed and
+   expected) or *Optimistic* (everything). Conservative is the default, so the planner never promises money that may
+   not arrive. Choose how far ahead to look (12, 24 or 36 months).
+2. Tick the items you want to buy and press **Suggest the best order**. The planner proposes several orders and marks
+   one as **Recommended**:
+   - **Best overall** balances how much you want each item against how long it waits.
+   - **Most wanted first**, **Cheapest first**, **Soonest needed first** (by your "want it by" dates) and **Quickest
+     to afford first** are simple alternatives for comparison.
+3. For each order you see, item by item, the date you can buy it (or *Not in N months* with how much is still
+   missing), how long that is from today, and whether it lands later than you wanted.
+
+**Building your own order.** Press **Build my own order** (or **Adjust this order** on a suggestion). Use the arrows to
+move items earlier or later. Items are bought **strictly in the order shown**: moving something earlier makes the others
+wait. An optional **Not before** date holds an item back. The result updates as you change things.
+
+**Saving and comparing.** Save any order as a plan. Tick two or more saved plans to compare them side by side: for
+each item you see when it would be bought in each plan, plus an overall score (lower is better).
+
+**How the planner counts money (advanced).**
+- It starts from what each bucket has available today, then adds planned income as it would really be split: by
+  priority, with each bucket's rule, target and allowed accounts. Money that no bucket claims goes to the default bucket.
+- An item is paid from its bucket, or from the default bucket if it has none. Items sharing a bucket share its money.
+- An item that can only be bought with certain accounts, while its bucket only receives income from other accounts,
+  shows as **Blocked**.
+- If none of your buckets has a fill rule, the planner warns you: income does not reach any bucket, so only money
+  already in buckets is used.
+- Planned expenses are not taken out of bucket money in this version, and spending in a category is not predicted.
+
 ## Savings goals
 
 Menu: **Planning → Savings goals**.
@@ -287,5 +325,5 @@ mixes them.
 
 ## Coming soon
 
-Project budgeting is being built in stages. Planned cash flow, buckets and the wish list are available now (see above). Still
-to come: a planner that compares purchase orders, and forecast reports. This manual will gain a section for each as it ships.
+Project budgeting is being built in stages. Planned cash flow, buckets, the wish list and the planner are available now (see above).
+Still to come: forecast reports. This manual will gain a section for each as it ships.

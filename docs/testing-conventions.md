@@ -105,3 +105,8 @@ Not covered: the CSV/PDF *content* of report downloads beyond status code + `Con
 ## Architecture test
 
 `tests/Architecture/ModuleBoundariesTest.php` is a plain PHPUnit test (no app boot) that scans `app/Modules/**` for references to other modules and fails on boundary violations (see "Modules" in `architecture.md`). A failure prints each offending file with the classes it should not import: replace the import with the owning module's `Contracts`, or move the code. It also asserts the old type folders (`app/Models`, `app/Services`, ...) do not come back. `tests/Feature/ModuleContractsTest.php` checks that contracts resolve to their implementations and that every moved model still finds its policy.
+
+## Pure planning logic
+
+`Waterfall`, `ForecastEngine` and `ScenarioSuggester` (under `app/Modules/Planning/Support`) have no framework or database dependencies, so they are tested with plain PHPUnit `TestCase`s in `tests/Unit` using hand-built DTOs. Keep new forecast rules there with a failing unit test first; reserve feature tests for the wiring (`PlannerTest`, `IncomeAllocationTest`). In a PHPUnit test class never name a helper `run()`: `TestCase::run()` is final.
+
