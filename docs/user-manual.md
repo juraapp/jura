@@ -129,6 +129,8 @@ categories** shared by everyone, and you can add your own.
 - A category is either **Income** or **Expense**.
 - System categories, and categories that already have transactions, **cannot be edited or deleted**, so your
   history never changes meaning. Create a new category instead.
+- Your own categories have a checkbox, plus edit and delete buttons. Tick several (or **Select all**) to delete them
+  together; those that already have transactions are kept, and deleted ones go to the **Trash**.
 
 ## Cash flow (planned income and expenses)
 

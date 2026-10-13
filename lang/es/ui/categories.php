@@ -20,4 +20,7 @@ return [
     'save' => 'Guardar',
     'delete_title' => '¿Eliminar esta categoría?',
     'name_placeholder' => 'Mercado',
+    'select_all' => 'Seleccionar todo',
+    'noun' => 'categorías',
+    'bulk_note' => 'Las categorías con transacciones se conservan; las eliminadas pasan a la papelera.',
 ];

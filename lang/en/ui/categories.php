@@ -20,4 +20,7 @@ return [
     'save' => 'Save',
     'delete_title' => 'Delete this category?',
     'name_placeholder' => 'Groceries',
+    'select_all' => 'Select all',
+    'noun' => 'categories',
+    'bulk_note' => 'Categories with transactions are kept; deleted ones move to the Trash.',
 ];

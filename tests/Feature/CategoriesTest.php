@@ -153,4 +153,32 @@ class CategoriesTest extends TestCase
         $response->assertForbidden();
         $this->assertDatabaseHas('categories', ['id' => $category->id, 'deleted_at' => null]);
     }
+
+    public function test_user_can_bulk_delete_categories_and_those_with_transactions_are_kept(): void
+    {
+        $user = User::factory()->create();
+        $free = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $used = Category::factory()->expense()->create(['user_id' => $user->id]);
+        Transaction::factory()->for($user)->for($used)->create();
+
+        $response = $this->actingAs($user)->post('/settings/categories/bulk-delete', ['ids' => [$free->id, $used->id]]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $this->assertSoftDeleted('categories', ['id' => $free->id]);
+        $this->assertDatabaseHas('categories', ['id' => $used->id, 'deleted_at' => null]);
+    }
+
+    public function test_bulk_delete_never_touches_system_or_other_users_categories(): void
+    {
+        $user = User::factory()->create();
+        $system = Category::factory()->expense()->system()->create();
+        $foreign = Category::factory()->expense()->create(['user_id' => User::factory()->create()->id]);
+
+        $this->actingAs($user)->post('/settings/categories/bulk-delete', ['ids' => [$foreign->id]])->assertRedirect();
+        $this->actingAs($user)->post('/settings/categories/bulk-delete', ['ids' => [$system->id]])->assertForbidden();
+
+        $this->assertDatabaseHas('categories', ['id' => $system->id, 'deleted_at' => null]);
+        $this->assertDatabaseHas('categories', ['id' => $foreign->id, 'deleted_at' => null]);
+    }
 }
