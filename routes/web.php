@@ -135,6 +135,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('settings/categories', [CategoryController::class, 'store'])->name('categories.store');
     Route::patch('settings/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::post('settings/categories/bulk-delete', [CategoryController::class, 'bulkDestroy'])->name('categories.bulk-delete');
     Route::delete('settings/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
     Route::get('settings/trash', [TrashController::class, 'index'])->name('trash.index');
     Route::post('settings/trash/transactions/{id}/restore', [TrashController::class, 'restoreTransaction'])->name('trash.transactions.restore');

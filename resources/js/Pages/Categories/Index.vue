@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -14,15 +14,22 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
-import { store, update, destroy } from '@/actions/App/Modules/Ledger/Http/Controllers/CategoryController';
+import BulkCheckbox from '@/Components/BulkCheckbox.vue';
+import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
+import { useBulkSelection } from '@/composables/useBulkSelection';
+import { store, update, destroy, bulkDestroy } from '@/actions/App/Modules/Ledger/Http/Controllers/CategoryController';
 
-defineProps({
+const props = defineProps({
     expenseCategories: { type: Array, required: true },
     incomeCategories: { type: Array, required: true },
     iconChoices: { type: Array, required: true },
 });
 
 const { t } = useI18n();
+
+const editableCategories = computed(() => [...props.expenseCategories, ...props.incomeCategories].filter((category) => category.editable));
+const bulk = useBulkSelection(() => editableCategories.value);
+watch(() => [props.expenseCategories, props.incomeCategories], () => bulk.clear());
 const showModal = ref(false);
 const editingCategory = ref(null);
 const confirmingDeleteCategory = ref(null);
@@ -113,6 +120,10 @@ const deleteCategory = () => {
             </EmptyState>
 
             <div v-else class="space-y-8">
+                <div v-if="editableCategories.length > 0" class="space-y-2">
+                    <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> {{ $t('ui.categories.select_all') }}</label>
+                    <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" :noun="$t('ui.categories.noun')" :note="$t('ui.categories.bulk_note')" />
+                </div>
                 <div v-for="section in [{ label: t('ui.categories.expenses'), items: expenseCategories }, { label: t('ui.categories.income'), items: incomeCategories }]" :key="section.label">
                     <h3 v-if="section.items.length > 0" class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                         {{ section.label }}
@@ -124,6 +135,7 @@ const deleteCategory = () => {
                             class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800"
                         >
                             <div class="flex items-center gap-3">
+                                <BulkCheckbox v-if="category.editable" :bulk="bulk" :id="category.id" />
                                 <CategoryIcon :category="category" size="h-9 w-9" />
                                 <div>
                                     <p class="text-sm font-medium text-gray-900 dark:text-white">{{ category.name }}</p>
