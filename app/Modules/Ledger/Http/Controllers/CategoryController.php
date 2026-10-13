@@ -7,6 +7,7 @@ use App\Modules\Ledger\Http\Requests\Categories\StoreCategoryRequest;
 use App\Modules\Ledger\Http\Requests\Categories\UpdateCategoryRequest;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -65,5 +66,30 @@ class CategoryController extends Controller
         $category->delete();
 
         return back()->with('success', __('categories.deleted'));
+    }
+
+    public function bulkDestroy(BulkIdsRequest $request): RedirectResponse
+    {
+        $deleted = 0;
+        $skipped = 0;
+
+        foreach (Category::whereIn('id', $request->validated('ids'))->get() as $category) {
+            $this->authorize('delete', $category);
+
+            if ($category->transactions()->exists()) {
+                $skipped++;
+
+                continue;
+            }
+
+            $category->delete();
+            $deleted++;
+        }
+
+        if ($skipped > 0) {
+            return back()->with($deleted > 0 ? 'success' : 'error', __('categories.bulk_deleted', ['count' => $deleted, 'skipped' => $skipped]));
+        }
+
+        return back()->with('success', __('messages.bulk.deleted', ['count' => $deleted]));
     }
 }
