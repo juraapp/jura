@@ -93,7 +93,11 @@ const confirmImport = async () => {
         const data = await response.json().catch(() => null);
 
         if (!response.ok || !data) {
-            pushToast({ type: 'error', message: data?.error ?? data?.message ?? t('ui.common.request_failed') });
+            /* Only a 422 carries a message meant for the user; anything else is Laravel's generic English text. */
+            const validationMessage = response.status === 422
+                ? data?.error ?? Object.values(data?.errors ?? {}).flat()[0] ?? data?.message
+                : null;
+            pushToast({ type: 'error', message: validationMessage ?? t('ui.common.request_failed') });
             return;
         }
 
