@@ -39,6 +39,6 @@ Vue pages and components use `$t('ui.<area>.<key>')` in templates and `const { t
 - Placeholders use vue-i18n braces (`'Delete {label}?'`), not Laravel's `:label`. Avoid `@`, `|` and `{`/`}` as literal text
   in a value (they are message syntax); plurals use `'one item | {count} items'` with `t(key, { count }, count)`.
 - Spanish says "balde" for bucket.
-- `tests/Feature/UiTranslationsTest.php` fails when `en` and `es` differ in keys or a page uses a key that does not exist.
+- `tests/Feature/UiTranslationsTest.php` fails when any `en` and `es` lang file (server messages and `ui/*`) differ in keys, or a page uses a key that does not exist.
   It cannot see English text left hard-coded in a template, so reviewing a page means grepping it for literals.
 - Every page and component is migrated. Free-text examples (placeholders) are translated too; names users type are shown as entered.

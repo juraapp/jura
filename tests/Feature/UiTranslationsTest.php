@@ -19,6 +19,11 @@ class UiTranslationsTest extends TestCase
         $this->assertSame($this->keys('en'), $this->keys('es'));
     }
 
+    public function test_every_spanish_and_english_lang_file_has_the_same_keys(): void
+    {
+        $this->assertSame($this->allKeys('en'), $this->allKeys('es'));
+    }
+
     public function test_every_key_the_vue_pages_use_exists(): void
     {
         $known = array_flip(array_keys(Arr::dot(UiMessages::for('en'))));
@@ -56,6 +61,25 @@ class UiTranslationsTest extends TestCase
         foreach ((new Finder)->files()->in(lang_path($locale.'/ui'))->name('*.php') as $file) {
             foreach (array_keys(Arr::dot(require $file->getPathname())) as $key) {
                 $keys[] = $file->getFilenameWithoutExtension().'.'.$key;
+            }
+        }
+        sort($keys);
+
+        return $keys;
+    }
+
+    /**
+     * Every key of every PHP lang file of a locale, prefixed by the file's path (e.g. "ui/buckets.title").
+     *
+     * @return list<string>
+     */
+    private function allKeys(string $locale): array
+    {
+        $keys = [];
+        foreach ((new Finder)->files()->in(lang_path($locale))->name('*.php') as $file) {
+            $prefix = str_replace('\\', '/', substr($file->getRelativePathname(), 0, -4));
+            foreach (array_keys(Arr::dot(require $file->getPathname())) as $key) {
+                $keys[] = $prefix.'.'.$key;
             }
         }
         sort($keys);
