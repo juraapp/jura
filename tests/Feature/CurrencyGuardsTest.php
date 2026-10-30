@@ -10,7 +10,11 @@ use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\PlannedEventSeries;
+use App\Modules\Planning\Models\RecurringTransaction;
+use App\Modules\Planning\Models\WishlistItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -71,6 +75,32 @@ class CurrencyGuardsTest extends TestCase
     public function test_an_account_with_transactions_keeps_its_currency(): void
     {
         Transaction::factory()->for($this->user)->for($this->cop)->create(['category_id' => $this->expense->id]);
+
+        $this->patch("/accounts/{$this->cop->id}", [
+            'name' => 'Main', 'type' => 'bank', 'initial_balance' => 0, 'currency' => 'USD', 'color' => '#000000',
+        ])->assertSessionHasErrors(['currency' => __('accounts.currency_locked')]);
+
+        $this->assertSame('COP', $this->cop->fresh()->currency);
+    }
+
+    /**
+     * @return array<string, array{0: \Closure(User, Account, Category): mixed}>
+     */
+    public static function accountReferences(): array
+    {
+        return [
+            'recurring template' => [fn (User $user, Account $account, Category $category) => RecurringTransaction::factory()->for($user)->for($account)->for($category)->create()],
+            'planned event' => [fn (User $user, Account $account) => PlannedEvent::factory()->for($user)->create(['account_id' => $account->id, 'currency' => 'COP'])],
+            'planned series' => [fn (User $user, Account $account) => PlannedEventSeries::factory()->for($user)->create(['account_id' => $account->id, 'currency' => 'COP'])],
+            'bucket allowed accounts' => [fn (User $user, Account $account) => Bucket::factory()->savings()->for($user)->create(['currency' => 'COP', 'allowed_account_ids' => [$account->id]])],
+            'wish-list allowed accounts' => [fn (User $user, Account $account) => WishlistItem::factory()->for($user)->create(['currency' => 'COP', 'allowed_account_ids' => [$account->id]])],
+        ];
+    }
+
+    #[DataProvider('accountReferences')]
+    public function test_an_account_used_by_plans_keeps_its_currency(\Closure $reference): void
+    {
+        $reference($this->user, $this->cop, $this->expense);
 
         $this->patch("/accounts/{$this->cop->id}", [
             'name' => 'Main', 'type' => 'bank', 'initial_balance' => 0, 'currency' => 'USD', 'color' => '#000000',

@@ -4,7 +4,11 @@ namespace App\Modules\Ledger\Models;
 
 use App\Modules\Ledger\Enums\AccountType;
 use App\Modules\Ledger\Enums\YieldCompounding;
+use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\PlannedEventSeries;
 use App\Modules\Planning\Models\RecurringTransaction;
+use App\Modules\Planning\Models\WishlistItem;
 use App\Modules\Shared\Casts\AsMoney;
 use App\Modules\Shared\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -41,6 +45,23 @@ class Account extends Model
     public function recurringTransactions(): HasMany
     {
         return $this->hasMany(RecurringTransaction::class);
+    }
+
+    /**
+     * Whether the account's currency can no longer change: it has transactions (trashed ones included), or a
+     * recurring template, planned event or series, or a bucket's or wish-list item's allowed accounts use it.
+     */
+    public function isCurrencyLocked(): bool
+    {
+        $planned = fn (string $model) => $model::forUser($this->user_id)->where('account_id', $this->id)->exists();
+        $allows = fn (string $model) => $model::forUser($this->user_id)->whereJsonContains('allowed_account_ids', $this->id)->exists();
+
+        return $this->transactions()->withTrashed()->exists()
+            || $planned(RecurringTransaction::class)
+            || $planned(PlannedEvent::class)
+            || $planned(PlannedEventSeries::class)
+            || $allows(Bucket::class)
+            || $allows(WishlistItem::class);
     }
 
     protected function currency(): Attribute
