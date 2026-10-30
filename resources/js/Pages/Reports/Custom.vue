@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import InputLabel from '@/Components/InputLabel.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Money from '@/Components/Money.vue';
 import StatCard from '@/Components/StatCard.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -57,10 +58,10 @@ const formatDate = (date) => format.date(date);
                     <InputLabel for="to" :value="$t('ui.reports.to')" />
                     <TextInput id="to" v-model="filters.to" type="date" class="mt-1" @change="applyFilters" />
                 </div>
-                <a :href="csvUrl" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                <PrimaryButton as="a" :href="csvUrl">
                     <DynamicIcon name="arrow-down-tray" class="h-4 w-4" />
                     {{ $t('ui.reports.export_csv') }}
-                </a>
+                </PrimaryButton>
             </div>
 
             <div v-for="currencyTotals in totals" :key="currencyTotals.currency" class="grid grid-cols-1 gap-4 sm:grid-cols-3">

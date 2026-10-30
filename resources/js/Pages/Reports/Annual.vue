@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Money from '@/Components/Money.vue';
 import StatCard from '@/Components/StatCard.vue';
 import { annual as annualReport } from '@/routes/reports';
@@ -39,10 +40,10 @@ const pdfUrl = computed(() => annualPdf.url({ query: { year: props.year } }));
                     <button type="button" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="nextYear">
                         <DynamicIcon name="chevron-right" class="h-4 w-4" />
                     </button>
-                    <a :href="pdfUrl" target="_blank" class="ms-2 inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    <PrimaryButton as="a" :href="pdfUrl" target="_blank" class="ms-2">
                         <DynamicIcon name="arrow-down-tray" class="h-4 w-4" />
                         {{ $t('ui.reports.export_pdf') }}
-                    </a>
+                    </PrimaryButton>
                 </div>
             </div>
         </template>
