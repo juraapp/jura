@@ -139,6 +139,22 @@ class BucketsTest extends TestCase
         $this->assertNull($bucket->category_id);
     }
 
+    public function test_a_fixed_fill_is_money_with_two_decimals_while_a_percentage_keeps_four(): void
+    {
+        $user = User::factory()->create();
+        $payload = ['kind' => 'savings', 'name' => 'Car', 'currency' => 'COP', 'priority' => 10];
+
+        $this->actingAs($user)->post('/planning/buckets', $payload + ['fill_rule' => 'fixed', 'fill_value' => '100.125'])
+            ->assertSessionHasErrors('fill_value');
+        $this->post('/planning/buckets', $payload + ['fill_rule' => 'fixed', 'fill_value' => '100', 'step_up_value' => '150.555'])
+            ->assertSessionHasErrors('step_up_value');
+        $this->assertDatabaseCount('buckets', 0);
+
+        $this->post('/planning/buckets', $payload + ['fill_rule' => 'percent', 'fill_value' => '12.3456'])->assertSessionHasNoErrors();
+        $this->post('/planning/buckets', array_merge($payload, ['name' => 'Trip']) + ['fill_rule' => 'fixed', 'fill_value' => '100.25'])->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('buckets', 2);
+    }
+
     public function test_creating_a_spending_bucket_for_an_existing_category_currency_and_cycle_updates_it(): void
     {
         $user = User::factory()->create();

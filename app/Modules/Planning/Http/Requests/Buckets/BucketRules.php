@@ -26,6 +26,11 @@ trait BucketRules
         $userId = $this->user()->id;
         $spending = fn () => $this->input('kind') === BucketKind::Spending->value;
         $needsTarget = fn () => $this->input('fill_rule') === FillRule::FillToTarget->value;
+        // A fixed fill is money (2 decimals); a percentage keeps up to 4.
+        $moneyWhenFixed = fn (string $attribute, mixed $value, Closure $fail) => $this->input('fill_rule') === FillRule::Fixed->value
+            && is_numeric($value) && preg_match('/^\d+(\.\d{1,2})?$/', (string) $value) !== 1
+                ? $fail(__('validation.decimal', ['decimal' => '0-2']))
+                : null;
 
         $categoryUnique = Rule::unique('buckets', 'category_id')
             ->where('user_id', $userId)
@@ -72,8 +77,9 @@ trait BucketRules
                 fn ($attribute, $value, $fail) => in_array($this->input('fill_rule'), [FillRule::Percent->value, FillRule::PercentOfRemaining->value], true) && (float) $value > 100
                     ? $fail('The percentage cannot be more than 100.')
                     : null,
+                $moneyWhenFixed,
             ],
-            'step_up_value' => ['nullable', 'numeric', 'decimal:0,4', 'gt:0', 'max:'.MoneyRules::MAX, 'required_with:step_up_after_bucket_id'],
+            'step_up_value' => ['nullable', 'numeric', 'decimal:0,4', 'gt:0', 'max:'.MoneyRules::MAX, 'required_with:step_up_after_bucket_id', $moneyWhenFixed],
             'step_up_after_bucket_id' => [
                 'nullable',
                 'integer',
