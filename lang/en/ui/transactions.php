@@ -30,7 +30,7 @@ return [
     'keep_account' => 'Keep account',
     'apply' => 'Apply',
     'delete_one' => 'Delete this transaction?',
-    'delete_one_hint' => 'If this is a transfer, both movements (source and destination) will be deleted. This action cannot be undone.',
+    'delete_one_hint' => 'If this is a transfer, both movements (source and destination) are deleted. You can restore it from the Trash.',
     'income' => 'Income',
     'expense' => 'Expense',
 ];

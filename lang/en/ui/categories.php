@@ -19,6 +19,7 @@ return [
     'preview' => 'Preview',
     'save' => 'Save',
     'delete_title' => 'Delete this category?',
+    'delete_hint' => 'It moves to the Trash, where you can restore it. A category that still has transactions is kept.',
     'name_placeholder' => 'Groceries',
     'select_all' => 'Select all',
     'noun' => 'categories',

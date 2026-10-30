@@ -364,7 +364,7 @@ const formatDate = (date) => format.date(date);
             <div class="p-6">
                 <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.savings_goals.delete_title') }}</h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    {{ $t('ui.common.cannot_be_undone') }}
+                    {{ $t('ui.savings_goals.delete_hint') }}
                 </p>
 
                 <div class="mt-6 flex justify-end gap-3">
