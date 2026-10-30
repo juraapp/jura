@@ -180,29 +180,81 @@ const submitMove = () => {
 const historyBucket = ref(null);
 const historyRows = ref([]);
 const historyLoading = ref(false);
+const historyError = ref(false);
+const historyBusy = ref(false);
+const confirmingRemove = ref(null);
 
 const loadHistory = async () => {
+    const bucketId = historyBucket.value?.id;
+    if (!bucketId) {
+        return;
+    }
+
     historyLoading.value = true;
+    historyError.value = false;
     try {
-        const response = await fetch(allocations.url(historyBucket.value.id), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
-        historyRows.value = (await response.json()).allocations;
+        const response = await fetch(allocations.url(bucketId), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        if (historyBucket.value?.id === bucketId) {
+            historyRows.value = data.allocations;
+        }
+    } catch {
+        if (historyBucket.value?.id === bucketId) {
+            historyError.value = true;
+        }
     } finally {
-        historyLoading.value = false;
+        if (historyBucket.value?.id === bucketId) {
+            historyLoading.value = false;
+        }
     }
 };
 
 const openHistory = (bucket) => {
     historyBucket.value = bucket;
     historyRows.value = [];
+    confirmingRemove.value = null;
     loadHistory();
 };
 
-const removeEntry = (row) => {
-    router.delete(destroyAllocation.url({ bucket: historyBucket.value.id, allocation: row.id }), { preserveScroll: true, onSuccess: loadHistory });
+/* The modal stays open while a removal or reset is in flight, so its reload lands on the right bucket. */
+const closeHistory = () => {
+    if (historyBusy.value) {
+        return;
+    }
+    historyBucket.value = null;
+    confirmingRemove.value = null;
+};
+
+/* After a reload, show the fresh bucket (name, currency) rather than the snapshot taken when the modal opened. */
+watch(() => props.buckets, (buckets) => {
+    if (historyBucket.value) {
+        historyBucket.value = buckets.find((bucket) => bucket.id === historyBucket.value.id) ?? null;
+    }
+});
+
+const historyRequestOptions = {
+    preserveScroll: true,
+    onStart: () => (historyBusy.value = true),
+    onFinish: () => (historyBusy.value = false),
+    onSuccess: () => loadHistory(),
+};
+
+const removeEntry = () => {
+    const row = confirmingRemove.value;
+    router.delete(destroyAllocation.url({ bucket: historyBucket.value.id, allocation: row.id }), {
+        ...historyRequestOptions,
+        onFinish: () => {
+            historyBusy.value = false;
+            confirmingRemove.value = null;
+        },
+    });
 };
 
 const resetToZero = () => {
-    router.post(reset.url(historyBucket.value.id), {}, { preserveScroll: true, onSuccess: loadHistory });
+    router.post(reset.url(historyBucket.value.id), {}, historyRequestOptions);
 };
 
 const adjusting = ref(null);
@@ -599,7 +651,7 @@ const deleteBucket = () => {
             <form id="adjust-form" class="space-y-4" @submit.prevent="submitAdjust">
                 <div>
                     <InputLabel for="adjust_amount" :value="$t('ui.buckets.amount')" />
-                    <TextInput id="adjust_amount" v-model="adjustForm.amount" type="number" step="0.01" class="mt-1 block w-full" placeholder="250000 or -50000" />
+                    <TextInput id="adjust_amount" v-model="adjustForm.amount" type="number" step="0.01" class="mt-1 block w-full" :placeholder="$t('ui.buckets.adjust_placeholder')" />
                     <InputError class="mt-1" :message="adjustForm.errors.amount" />
                 </div>
                 <div>
@@ -626,14 +678,29 @@ const deleteBucket = () => {
             </div>
         </Modal>
 
-        <Modal :show="historyBucket !== null" max-width="lg" @close="historyBucket = null">
+        <Modal :show="historyBucket !== null" max-width="lg" @close="closeHistory">
             <div v-if="historyBucket" class="p-6">
                 <div class="flex items-start justify-between gap-3">
                     <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.buckets.all_activity', { name: historyBucket.name }) }}</h2>
-                    <SecondaryButton type="button" @click="resetToZero">{{ $t('ui.buckets.reset_zero') }}</SecondaryButton>
+                    <SecondaryButton type="button" :disabled="historyBusy" @click="resetToZero">{{ $t('ui.buckets.reset_zero') }}</SecondaryButton>
                 </div>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.buckets.history_hint') }}</p>
+                <div v-if="confirmingRemove" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-500/30 dark:bg-red-500/10">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $t('ui.buckets.remove_entry_title') }}</p>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        {{ $t('ui.buckets.remove_entry_hint') }}
+                        <template v-if="confirmingRemove.source === 'transfer'">{{ $t('ui.buckets.remove_entry_transfer') }}</template>
+                    </p>
+                    <div class="mt-3 flex justify-end gap-3">
+                        <SecondaryButton type="button" :disabled="historyBusy" @click="confirmingRemove = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                        <DangerButton type="button" :disabled="historyBusy" @click="removeEntry">{{ $t('ui.buckets.remove_entry') }}</DangerButton>
+                    </div>
+                </div>
                 <p v-if="historyLoading" class="mt-4 text-sm text-gray-400">{{ $t('ui.common.loading') }}</p>
+                <div v-else-if="historyError" class="mt-4 flex items-center justify-between gap-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400">
+                    {{ $t('ui.buckets.history_error') }}
+                    <SecondaryButton type="button" @click="loadHistory">{{ $t('ui.buckets.retry') }}</SecondaryButton>
+                </div>
                 <ul v-else class="mt-3 max-h-96 divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
                     <li v-for="row in historyRows" :key="row.id" class="flex items-center justify-between gap-3 py-2 text-sm">
                         <span class="min-w-0 text-gray-600 dark:text-gray-300">
@@ -644,7 +711,7 @@ const deleteBucket = () => {
                             <span class="tabular-nums" :class="row.amount < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
                                 <Money :amount="row.amount" :currency="historyBucket.currency" signed />
                             </span>
-                            <button v-if="row.deletable" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.buckets.remove_entry')" @click="removeEntry(row)">
+                            <button v-if="row.deletable" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-500/10" :title="$t('ui.buckets.remove_entry')" :aria-label="$t('ui.buckets.remove_entry')" :disabled="historyBusy" @click="confirmingRemove = row">
                                 <DynamicIcon name="trash" class="h-4 w-4" />
                             </button>
                         </span>
@@ -652,7 +719,7 @@ const deleteBucket = () => {
                     <li v-if="!historyRows.length" class="py-4 text-center text-sm text-gray-400">{{ $t('ui.buckets.no_activity') }}</li>
                 </ul>
                 <div class="mt-4 flex justify-end">
-                    <SecondaryButton type="button" @click="historyBucket = null">{{ $t('ui.common.close') }}</SecondaryButton>
+                    <SecondaryButton type="button" :disabled="historyBusy" @click="closeHistory">{{ $t('ui.common.close') }}</SecondaryButton>
                 </div>
             </div>
         </Modal>

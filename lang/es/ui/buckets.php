@@ -116,5 +116,11 @@ return [
     'reset_zero' => 'Poner en cero',
     'history_hint' => 'Los movimientos que hiciste a mano (saldo inicial, ajustes, traslados) se pueden quitar. Los de ingresos y fin de ciclo no.',
     'remove_entry' => 'Quitar movimiento',
+    'adjust_placeholder' => '250000 o -50000',
+    'remove_entry_title' => '¿Quitar este movimiento?',
+    'remove_entry_hint' => 'Se borra definitivamente y el saldo del balde cambia.',
+    'remove_entry_transfer' => 'Es un traslado entre baldes, así que también se quita el movimiento correspondiente del otro balde.',
+    'history_error' => 'No se pudo cargar la actividad.',
+    'retry' => 'Reintentar',
     'no_activity' => 'Aún no hay actividad.',
 ];
