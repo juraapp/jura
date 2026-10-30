@@ -62,6 +62,7 @@ return [
     'paid_with' => 'Paid with',
     'select_account' => 'Select an account',
     'no_account_allowed' => 'No account is allowed for this item and its bucket.',
+    'no_account_in_currency' => 'No account in {currency}. Add one in Accounts first.',
     'category' => 'Category',
     'select_category' => 'Select a category',
     'final_price' => 'Final price',
