@@ -6,6 +6,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
+import MoneyMapStrip from '@/Components/MoneyMapStrip.vue';
 import Modal from '@/Components/Modal.vue';
 import ModalForm from '@/Components/ModalForm.vue';
 import Money from '@/Components/Money.vue';
@@ -304,6 +305,8 @@ const deleteBucket = () => {
             <p v-if="buckets.length" class="mb-6 max-w-3xl text-sm text-gray-500 dark:text-gray-400">
                 {{ $t('ui.buckets.intro') }}
             </p>
+
+            <MoneyMapStrip class="mb-6" />
 
             <EmptyState
                 v-if="buckets.length === 0"

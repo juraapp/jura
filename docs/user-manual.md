@@ -41,6 +41,8 @@ Your data is private to you. Nobody else can see or open your accounts, transact
 
 The first page after you sign in. It answers "how am I doing this month?" at a glance:
 
+- **Money map**: for each currency, how much is **in accounts** (on-budget ones), **in buckets**, and **ready to
+  assign** (the rest). See *Buckets*.
 - **Total net worth**: the sum of your account balances.
 - **Income this month**, **Expenses this month** and **Savings this month**.
 - **Average daily expense**, **Biggest expense this month** and **Top spending category**.
@@ -210,6 +212,13 @@ never change. There are two kinds:
   left, and warns you at 80% and when you go over. This is what budgets used to be.
 - **Savings**: a pot for a goal (a car, a trip, an emergency fund), with an optional target. The card shows what is
   available and how close you are to the target.
+
+**Ready to assign.** The money map at the top of this page (also on the Dashboard and Accounts, and as **Ready to
+assign** in the top bar) shows, per currency, the money **in accounts** (only accounts that count in your budget), the
+money **in buckets** (every bucket that has ever been funded; a spending limit that never received money is only a
+limit and holds nothing), and what is **ready to assign**: in accounts minus in buckets. It is always calculated,
+never stored. When it is negative it shows **Over-assigned by** that amount, in red: your buckets promise more money
+than you have, so take some out of a bucket.
 
 **Filling buckets from income.** Open a bucket and, under *Filling and advanced options*, choose how it fills when
 income arrives:

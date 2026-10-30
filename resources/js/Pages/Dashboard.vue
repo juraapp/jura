@@ -8,6 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import StatCard from '@/Components/StatCard.vue';
 import BadgeVariation from '@/Components/BadgeVariation.vue';
 import Money from '@/Components/Money.vue';
+import MoneyMapStrip from '@/Components/MoneyMapStrip.vue';
 import { useDarkMode } from '@/composables/useDarkMode';
 import { CHART_PALETTE, formatCompact, formatMoney } from '@/chartPalette';
 import { index as accountsIndex } from '@/routes/accounts';
@@ -149,6 +150,8 @@ const netWorthEvolutionOptions = (currency) => ({
                         {{ $t('ui.dashboard.new_transaction') }}
                     </PrimaryButton>
                 </div>
+
+                <MoneyMapStrip />
 
                 <!-- Total net worth never mixes currencies, one line per currency -->
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

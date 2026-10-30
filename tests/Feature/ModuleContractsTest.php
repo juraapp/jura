@@ -18,6 +18,7 @@ use App\Modules\Ledger\Services\BalanceCalculator;
 use App\Modules\Ledger\Services\EloquentLedgerQuery;
 use App\Modules\Ledger\Services\TransactionService;
 use App\Modules\Planning\Contracts\BucketProgress;
+use App\Modules\Planning\Contracts\MoneyMap;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\RecurringTransaction;
@@ -27,6 +28,7 @@ use App\Modules\Planning\Policies\PlannedEventPolicy;
 use App\Modules\Planning\Policies\RecurringTransactionPolicy;
 use App\Modules\Planning\Policies\SavingsGoalPolicy;
 use App\Modules\Planning\Services\BucketService;
+use App\Modules\Planning\Services\MoneyMapService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
@@ -123,6 +125,7 @@ class ModuleContractsTest extends TestCase
     public function test_planning_contract_resolves_to_its_implementation(): void
     {
         $this->assertInstanceOf(BucketService::class, app(BucketProgress::class));
+        $this->assertInstanceOf(MoneyMapService::class, app(MoneyMap::class));
     }
 
     public function test_planning_models_resolve_their_policies(): void
