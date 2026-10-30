@@ -399,7 +399,10 @@ Menu: **Planning → Recurring transactions**.
 For income or expenses that repeat (rent, salary, subscriptions). Pick the account, category, amount, how often
 (weekly, biweekly, monthly or yearly), the next due date and an optional end date.
 
-- Jura **creates the real transaction for you** when it falls due. This runs once a day in the morning.
+- Jura **creates the real transaction for you** when it falls due: shortly after midnight on the due date in your
+  time zone (it checks every hour).
+- A recurring transaction whose account is archived or deleted, or whose category is deleted, is not created (and no
+  reminder is sent) until you fix it: un-archive the account or pick another account or category.
 - Use the **on/off switch** to pause one without deleting it. It turns itself off after its end date.
 - You get a reminder **3 days before** a payment is due.
 - Transactions created this way are marked as generated from a recurring item.

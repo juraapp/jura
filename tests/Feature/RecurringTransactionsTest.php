@@ -234,6 +234,28 @@ class RecurringTransactionsTest extends TestCase
         Log::shouldHaveReceived('warning')->once();
     }
 
+    public function test_templates_on_an_archived_account_or_a_deleted_category_are_skipped_and_logged(): void
+    {
+        Carbon::setTestNow('2026-10-12 06:00:00');
+        $user = User::factory()->create();
+        $archived = Account::factory()->for($user)->create(['is_active' => false]);
+        $active = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $trashedCategory = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $onArchived = RecurringTransaction::factory()->for($user)->for($archived)->for($category)->create(['next_due_date' => '2026-10-12']);
+        $onTrashedCategory = RecurringTransaction::factory()->for($user)->for($active)->for($trashedCategory)->create(['next_due_date' => '2026-10-12']);
+        $trashedCategory->delete();
+        Log::spy();
+
+        $generated = app(RecurringTransactionService::class)->generateDue();
+
+        $this->assertSame(0, $generated);
+        $this->assertSame(0, Transaction::withTrashed()->forUser($user)->count());
+        $this->assertSame('2026-10-12', $onArchived->fresh()->next_due_date->toDateString());
+        $this->assertSame('2026-10-12', $onTrashedCategory->fresh()->next_due_date->toDateString());
+        Log::shouldHaveReceived('warning')->twice();
+    }
+
     public function test_a_template_that_fails_to_generate_is_reported_and_the_batch_continues(): void
     {
         Carbon::setTestNow('2026-10-12 06:00:00');
