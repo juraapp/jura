@@ -8,6 +8,7 @@ use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Notifications\Notifications\UpcomingRecurringPayment;
 use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Services\RecurringTransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -267,5 +268,27 @@ class RecurringTransactionsTest extends TestCase
         $this->assertSame([$working->id], $recorded);
         $this->assertSame('2026-10-12', $failing->fresh()->next_due_date->toDateString());
         Exceptions::assertReported(RuntimeException::class);
+    }
+
+    public function test_upcoming_payment_alerts_skip_templates_on_a_deleted_account(): void
+    {
+        Carbon::setTestNow('2026-10-12 07:00:00');
+        $owner = User::factory()->create();
+        $deletedAccount = Account::factory()->for($owner)->create();
+        RecurringTransaction::factory()->for($owner)->for($deletedAccount)->create([
+            'category_id' => Category::factory()->expense()->create(['user_id' => $owner->id])->id,
+            'next_due_date' => '2026-10-13',
+        ]);
+        $deletedAccount->delete();
+        $other = User::factory()->create();
+        RecurringTransaction::factory()->for($other)->for(Account::factory()->for($other))->create([
+            'category_id' => Category::factory()->expense()->create(['user_id' => $other->id])->id,
+            'next_due_date' => '2026-10-13',
+        ]);
+
+        $this->artisan('app:notify-upcoming-recurring-payments')->assertSuccessful();
+
+        $this->assertSame(0, $owner->notifications()->count());
+        $this->assertSame(1, $other->notifications()->where('type', UpcomingRecurringPayment::class)->count());
     }
 }
