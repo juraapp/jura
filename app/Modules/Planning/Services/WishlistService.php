@@ -33,7 +33,7 @@ class WishlistService
     {
         return DB::transaction(function () use ($item, $data) {
             $amount = Money::of($data['amount'] ?? $item->price->toDecimalString());
-            $date = isset($data['date']) ? Carbon::parse($data['date']) : today();
+            $date = isset($data['date']) ? Carbon::parse($data['date']) : Carbon::instance($item->user->today());
 
             $transactionId = $this->transactions->record($item->user, TransactionType::Expense, [
                 'account_id' => $data['account_id'],

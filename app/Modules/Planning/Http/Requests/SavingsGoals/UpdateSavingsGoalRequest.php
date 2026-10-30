@@ -18,7 +18,7 @@ class UpdateSavingsGoalRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'target_amount' => ['required', ...MoneyRules::positive()],
             'currency' => ['required', 'string', 'size:3'],
-            'target_date' => ['nullable', 'date', 'after:today'],
+            'target_date' => ['nullable', 'date', 'after:'.$this->user()->today()->toDateString()],
             'icon' => ['required', 'string', 'max:32'],
             'color' => ['required', 'string', 'max:7'],
         ];

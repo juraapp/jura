@@ -14,8 +14,8 @@ class MonthlyReportPdfController extends Controller
 {
     public function __invoke(Request $request, ReportService $reports, InsightService $insights): PdfBuilder
     {
-        $year = (int) $request->integer('year', now()->year);
-        $month = (int) $request->integer('month', now()->month);
+        $year = (int) $request->integer('year', $request->user()->today()->year);
+        $month = (int) $request->integer('month', $request->user()->today()->month);
         $user = $request->user();
 
         $summary = $reports->monthlySummary($user, $year, $month);

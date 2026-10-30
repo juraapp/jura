@@ -10,7 +10,10 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { useTransactionModal } from '@/composables/useTransactionModal';
 import { useToast } from '@/composables/useToast';
+import { useToday } from '@/composables/useToday';
 import { store, update, formOptions, editData } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
+
+const todayDate = useToday();
 
 const { t } = useI18n();
 
@@ -33,7 +36,7 @@ const form = useForm({
     from_account_id: '',
     to_account_id: '',
     amount: '',
-    date: new Date().toISOString().slice(0, 10),
+    date: todayDate(),
     time: '',
     description: '',
     notes: '',
@@ -77,7 +80,7 @@ const loadOptions = async () => {
 const resetForm = () => {
     form.reset();
     form.clearErrors();
-    form.date = new Date().toISOString().slice(0, 10);
+    form.date = todayDate();
     form.time = new Date().toTimeString().slice(0, 5);
 };
 

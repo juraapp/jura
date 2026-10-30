@@ -63,7 +63,7 @@ class PlannedEventService
             $series->user_id = $user->id;
             $series->save();
 
-            $this->materialize($series, now()->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS));
+            $this->materialize($series, $user->today()->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS));
 
             return $series;
         });
@@ -120,16 +120,17 @@ class PlannedEventService
     }
 
     /**
-     * Tops up every open-ended series to the standard horizon (daily command).
+     * Tops up every open-ended series to the standard horizon, counted from each owner's today (daily command).
      */
     public function extendAllSeries(): int
     {
         $created = 0;
-        $until = now()->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS);
 
-        PlannedEventSeries::withoutGlobalScope('user')->chunkById(100, function ($batch) use (&$created, $until) {
+        PlannedEventSeries::withoutGlobalScope('user')->with('user')->chunkById(100, function ($batch) use (&$created) {
             foreach ($batch as $series) {
-                $created += $this->materialize($series, $until);
+                if ($series->user !== null) {
+                    $created += $this->materialize($series, $series->user->today()->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS));
+                }
             }
         });
 
@@ -223,7 +224,7 @@ class PlannedEventService
                 'account_id' => $data['account_id'],
                 'category_id' => $data['category_id'],
                 'amount' => $data['amount'] ?? $event->amount->toDecimalString(),
-                'date' => $data['date'] ?? today()->toDateString(),
+                'date' => $data['date'] ?? $event->user->today()->toDateString(),
                 'description' => $data['description'] ?? $event->description,
                 'notes' => $event->notes,
             ]);
@@ -328,7 +329,7 @@ class PlannedEventService
      */
     public function suggestedMatches(User $user, Collection $events, ?CarbonInterface $today = null): array
     {
-        $today = Carbon::instance($today ?? now())->startOfDay();
+        $today = Carbon::instance($today ?? $user->today())->startOfDay();
         $linked = PlannedEvent::forUser($user)->whereNotNull('realized_transaction_id')->pluck('realized_transaction_id')->all();
         $matches = [];
 

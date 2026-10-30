@@ -17,8 +17,13 @@ class NotifyUpcomingRecurringPayments extends Command
         $recurrences = RecurringTransaction::with(['user', 'category', 'account'])
             ->whereHas('account')
             ->where('is_active', true)
-            ->whereBetween('next_due_date', [now()->toDateString(), now()->addDays(3)->toDateString()])
-            ->get();
+            ->whereBetween('next_due_date', [now()->subDay()->toDateString(), now()->addDays(4)->toDateString()])
+            ->get()
+            ->filter(function (RecurringTransaction $recurring) {
+                $today = $recurring->user->today();
+
+                return $recurring->next_due_date->betweenIncluded($today, $today->addDays(3));
+            });
 
         foreach ($recurrences as $recurring) {
             $alreadyNotified = $recurring->user->unreadNotifications()

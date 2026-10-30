@@ -20,6 +20,9 @@ import { useFormat } from '@/composables/useFormat';
 import BulkCheckbox from '@/Components/BulkCheckbox.vue';
 import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
 import { useBulkSelection } from '@/composables/useBulkSelection';
+import { useToday } from '@/composables/useToday';
+
+const todayDate = useToday();
 
 const format = useFormat();
 const { t } = useI18n();
@@ -46,7 +49,7 @@ const form = useForm({
     amount: '',
     description: '',
     frequency: 'monthly',
-    next_due_date: new Date().toISOString().slice(0, 10),
+    next_due_date: todayDate(),
     end_date: '',
 });
 
@@ -56,7 +59,7 @@ const openCreateModal = () => {
     editingRecurring.value = null;
     form.reset();
     form.clearErrors();
-    form.next_due_date = new Date().toISOString().slice(0, 10);
+    form.next_due_date = todayDate();
     showModal.value = true;
 };
 

@@ -443,6 +443,9 @@ You are notified once per crossing; an unread alert is not repeated.
 
 - **Settings → Preferences**: default **currency**, **language** (English or Spanish) and **time zone**. These
   control how amounts, dates and text appear everywhere. Changing the language applies right after you save, with no reload.
+  The time zone decides what "today" is: new transactions and plans default to today's date where you live, plans
+  become overdue, recurring transactions are posted and bucket cycles close when the day changes there, and the
+  dashboard and reports open on your current month.
   Below them, **How dates, times and numbers look** lets you pick the date style (2026-03-09, 03/09/2026,
   09/03/2026 or 9 Mar 2026), 12- or 24-hour time, the decimal and thousands separators, the number of decimals, and
   whether the currency shows as a symbol (`$`), a code (`COP`) or not at all, before or after the amount. The number

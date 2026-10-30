@@ -37,7 +37,7 @@ class CycleProjector
      */
     public function project(User $user, string $currency, ForecastView $view = ForecastView::Conservative, ?CarbonInterface $today = null): array
     {
-        $today = Carbon::instance($today ?? now())->startOfDay();
+        $today = Carbon::instance($today ?? $user->today())->startOfDay();
         $buckets = Bucket::forUser($user)->where('currency', $currency)->inPriorityOrder()->get();
 
         $windows = [];

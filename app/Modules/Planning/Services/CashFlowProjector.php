@@ -66,7 +66,7 @@ class CashFlowProjector implements CashFlowForecast
 
     public function project(User $user, ForecastView $view, int $months = 6, ?CarbonInterface $today = null): Collection
     {
-        $today = Carbon::instance($today ?? now())->startOfDay();
+        $today = Carbon::instance($today ?? $user->today())->startOfDay();
         $firstMonth = $today->copy()->startOfMonth();
         $horizonEnd = $firstMonth->copy()->addMonthsNoOverflow($months)->subDay()->endOfDay();
 

@@ -46,7 +46,7 @@ class BucketLedger
         $balance = $this->balance($bucket, $asOf);
 
         if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null) {
-            $spent = $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $bucket->tracking_started_on, $asOf ?? today());
+            $spent = $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $bucket->tracking_started_on, $asOf ?? User::todayFor($bucket->user_id));
             $balance = $balance->subtract($spent);
         }
 
@@ -150,7 +150,7 @@ class BucketLedger
             'bucket_id' => $bucket->id,
             'amount' => $amount,
             'currency' => $bucket->currency,
-            'date' => ($date ?? today())->toDateString(),
+            'date' => ($date ?? User::todayFor($bucket->user_id))->toDateString(),
             'source' => $source,
             'source_id' => $sourceId,
             'description' => $description,
@@ -268,7 +268,7 @@ class BucketLedger
             'currency' => $currency,
             'priority' => 9999,
             'is_default' => true,
-            'tracking_started_on' => Carbon::today()->toDateString(),
+            'tracking_started_on' => $user->today()->toDateString(),
         ]);
         $bucket->user_id = $user->id;
         $bucket->save();

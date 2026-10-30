@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Models;
 
+use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
@@ -52,8 +53,10 @@ class RecurringTransaction extends Model
 
     public function isDue(): bool
     {
+        $today = User::todayFor($this->user_id);
+
         return $this->is_active
-            && $this->next_due_date->lte(now())
-            && ($this->end_date === null || $this->end_date->gte(now()));
+            && $this->next_due_date->lte($today)
+            && ($this->end_date === null || $this->end_date->gte($today));
     }
 }

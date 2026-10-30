@@ -10,6 +10,7 @@ use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Shared\Support\UserFormat;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Auth;
 
 #[Fillable([
     'name', 'email', 'password', 'currency_default', 'locale', 'timezone',
@@ -31,6 +33,7 @@ class User extends Authenticatable
     protected $attributes = [
         'currency_default' => 'COP',
         'locale' => 'en',
+        'timezone' => 'America/Bogota',
         'date_format' => 'auto',
         'time_format' => 'auto',
         'currency_display' => 'auto',
@@ -62,6 +65,45 @@ class User extends Authenticatable
             'date_format', 'time_format', 'decimal_separator', 'thousands_separator',
             'fraction_digits', 'currency_display', 'currency_position',
         ]), $this->locale ?? 'en');
+    }
+
+    /**
+     * The user's timezone, or the app's when none (or an unknown one) is stored.
+     */
+    public function timezoneName(): string
+    {
+        $timezone = $this->timezone;
+
+        return is_string($timezone) && in_array($timezone, timezone_identifiers_list(), true)
+            ? $timezone
+            : config('app.timezone');
+    }
+
+    /**
+     * The user's current calendar date, as midnight in the app timezone so it compares directly with stored
+     * `date` columns. Use this, never today()/now(), whenever server code needs "today" for a user.
+     */
+    public function today(): CarbonImmutable
+    {
+        return CarbonImmutable::parse(CarbonImmutable::now($this->timezoneName())->toDateString(), config('app.timezone'));
+    }
+
+    /**
+     * Today for a user given by id, without a query when it is the authenticated user (services that only
+     * hold a user_id, such as bucket maths, call this on every request).
+     */
+    public static function todayFor(self|int $user): CarbonImmutable
+    {
+        if ($user instanceof self) {
+            return $user->today();
+        }
+
+        $current = Auth::user();
+        if ($current instanceof self && $current->id === $user) {
+            return $current->today();
+        }
+
+        return (static::find($user) ?? new static)->today();
     }
 
     public function accounts(): HasMany

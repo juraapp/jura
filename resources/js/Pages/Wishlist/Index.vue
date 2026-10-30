@@ -34,6 +34,7 @@ import { useFormat } from '@/composables/useFormat';
 import BulkCheckbox from '@/Components/BulkCheckbox.vue';
 import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
 import { useBulkSelection } from '@/composables/useBulkSelection';
+import { useToday } from '@/composables/useToday';
 
 const format = useFormat();
 const { t } = useI18n();
@@ -52,7 +53,8 @@ const page = usePage();
 const locale = () => page.props.auth.user?.locale ?? 'en';
 const money = (value, currency) => formatMoney(value, currency, locale());
 const formatDate = (date) => format.date(date);
-const today = new Date().toISOString().slice(0, 10);
+const todayDate = useToday();
+const today = todayDate();
 
 const showClosed = ref(false);
 
@@ -210,7 +212,7 @@ const openPurchase = (item) => {
     purchaseForm.account_id = '';
     purchaseForm.category_id = '';
     purchaseForm.amount = String(item.price);
-    purchaseForm.date = today;
+    purchaseForm.date = todayDate();
 };
 
 const submitPurchase = () => {

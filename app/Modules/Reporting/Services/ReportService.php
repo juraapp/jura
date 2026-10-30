@@ -55,9 +55,10 @@ class ReportService
         $netWorthByCurrency = $this->balances->netWorthByCurrency($user);
 
         $daysInMonth = Carbon::create($year, $month, 1)->daysInMonth;
+        $today = $user->today();
         $daysElapsed = min(
             $daysInMonth,
-            Carbon::create($year, $month, 1)->isSameMonth(now()) ? now()->day : $daysInMonth,
+            Carbon::create($year, $month, 1)->isSameMonth($today) ? $today->day : $daysInMonth,
         );
 
         return $current->mapWithKeys(function (array $totals, string $currency) use ($previous, $netWorthByCurrency, $daysElapsed) {
@@ -164,7 +165,7 @@ class ReportService
      */
     public function monthlyEvolution(User $user, int $months = 12): Collection
     {
-        $start = now()->startOfMonth()->subMonths($months - 1);
+        $start = Carbon::instance($user->today())->startOfMonth()->subMonths($months - 1);
 
         $rows = Transaction::query()
             ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
@@ -279,7 +280,7 @@ class ReportService
      */
     public function netWorthEvolution(User $user, int $months = 12): Collection
     {
-        $start = now()->startOfMonth()->subMonths($months - 1);
+        $start = Carbon::instance($user->today())->startOfMonth()->subMonths($months - 1);
 
         $accounts = $user->accounts()->get(['id', 'initial_balance', 'currency', 'created_at']);
 

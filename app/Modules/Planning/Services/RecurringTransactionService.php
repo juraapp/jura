@@ -10,7 +10,7 @@ use Throwable;
 
 /**
  * Materializes due recurring templates into real transactions. Runs for every
- * user at once (daily job), so one template that can't be generated is logged
+ * user at once (hourly job; a template is due once its date is today or earlier in its owner's timezone), so one template that can't be generated is logged
  * and skipped instead of stopping the rest of the batch.
  */
 class RecurringTransactionService
@@ -24,9 +24,13 @@ class RecurringTransactionService
         RecurringTransaction::withoutGlobalScope('user')
             ->with(['user', 'account' => fn ($query) => $query->withoutGlobalScope('user')])
             ->where('is_active', true)
-            ->where('next_due_date', '<=', now()->toDateString())
+            ->where('next_due_date', '<=', now()->addDay()->toDateString())
             ->chunkById(50, function ($recurrences) use (&$generated) {
                 foreach ($recurrences as $recurring) {
+                    if ($recurring->user !== null && $recurring->next_due_date->gt($recurring->user->today())) {
+                        continue;
+                    }
+
                     if ($this->tryGenerate($recurring)) {
                         $generated++;
                     }

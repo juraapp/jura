@@ -29,16 +29,23 @@ class BucketCycleService
     ) {}
 
     /**
+     * Closes every finished cycle. Without a date, "today" is each bucket owner's own date in their timezone,
+     * so a cycle closes once it has ended where the user lives (the command runs hourly).
+     *
      * @return int how many cycles were closed
      */
     public function closeDue(?CarbonInterface $today = null): int
     {
-        $today = Carbon::instance($today ?? now())->startOfDay();
+        $fixedToday = $today !== null ? Carbon::instance($today)->startOfDay() : null;
         $closed = 0;
 
-        Bucket::withoutGlobalScope('user')->whereNotNull('cycle')->chunkById(100, function ($batch) use ($today, &$closed) {
+        Bucket::withoutGlobalScope('user')->with('user')->whereNotNull('cycle')->chunkById(100, function ($batch) use ($fixedToday, &$closed) {
             foreach ($batch as $bucket) {
-                $closed += $this->closeBucket($bucket, $today);
+                if ($bucket->user === null) {
+                    continue;
+                }
+
+                $closed += $this->closeBucket($bucket, $fixedToday ?? Carbon::instance($bucket->user->today()));
             }
         });
 
