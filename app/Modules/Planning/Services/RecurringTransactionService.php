@@ -5,11 +5,13 @@ namespace App\Modules\Planning\Services;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Planning\Models\RecurringTransaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
- * Materializes due recurring templates into real transactions. Runs inside
- * the user's own timezone so "due tomorrow" matches what they'd expect, not
- * the server's UTC clock.
+ * Materializes due recurring templates into real transactions. Runs for every
+ * user at once (daily job), so one template that can't be generated is logged
+ * and skipped instead of stopping the rest of the batch.
  */
 class RecurringTransactionService
 {
@@ -19,17 +21,41 @@ class RecurringTransactionService
     {
         $generated = 0;
 
-        RecurringTransaction::with('user')
+        RecurringTransaction::withoutGlobalScope('user')
+            ->with(['user', 'account' => fn ($query) => $query->withoutGlobalScope('user')])
             ->where('is_active', true)
             ->where('next_due_date', '<=', now()->toDateString())
             ->chunkById(50, function ($recurrences) use (&$generated) {
                 foreach ($recurrences as $recurring) {
-                    $this->generateOne($recurring);
-                    $generated++;
+                    if ($this->tryGenerate($recurring)) {
+                        $generated++;
+                    }
                 }
             });
 
         return $generated;
+    }
+
+    private function tryGenerate(RecurringTransaction $recurring): bool
+    {
+        if ($recurring->user === null || $recurring->account === null) {
+            Log::warning('Skipped a recurring transaction whose account is deleted or missing.', [
+                'recurring_transaction_id' => $recurring->id,
+                'account_id' => $recurring->account_id,
+            ]);
+
+            return false;
+        }
+
+        try {
+            $this->generateOne($recurring);
+
+            return true;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
     }
 
     private function generateOne(RecurringTransaction $recurring): void
