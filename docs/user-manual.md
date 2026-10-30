@@ -31,7 +31,8 @@ for everyday use. Sections marked **Advanced** are optional extras.
 
 1. **Register** and verify your email address. Most pages need a verified account.
 2. **Create your first account** (a bank account, wallet, cash, and so on) with its current balance.
-3. **Record your first transaction.** The dashboard prompts you for both steps when you have no data yet.
+3. **Record your first transaction.** The dashboard asks you to create an account when you have none. Once you
+   have one it shows your balances, with a prompt and a **New transaction** button until you record the first one.
 4. Optionally set your **currency, language and time zone** under Settings → Preferences.
 
 Your data is private to you. Nobody else can see or open your accounts, transactions or budgets.
@@ -230,7 +231,9 @@ goes to each bucket for that income only. The rest goes to the default bucket.
   the funded amount.
 - **All activity, edit or remove entries** (under *Recent activity*) lists everything that ever went in or out of the
   bucket. Entries you made yourself (opening balance, adjustments, moves between buckets) have a trash button, and
-  **Reset to zero** empties the bucket. Entries created by income or by closing a cycle cannot be removed.
+  **Reset to zero** empties the bucket. Removing an entry asks for confirmation first: it is deleted for good, and
+  removing a move between buckets also removes the matching entry in the other bucket. Entries created by income or
+  by closing a cycle cannot be removed.
 - Deleting a bucket returns its money to the default bucket.
 
 **Cycles.** A spending bucket works in cycles: set **Cycle: repeats every N days / weeks / months / years**, and
@@ -316,7 +319,8 @@ A place for everything you would like to get. Group things into **projects** (a 
   price. Items that share one bucket each compare against the same pot, so their bars overlap rather than add up.
 
 **Buying.** Press the check button (*Mark as purchased*), choose the account and category, and confirm the final
-price. Jura records the real expense and, if the item has a bucket, spends that money from the bucket in the same step.
+price. Only accounts in the item's currency (and allowed for the item and its bucket) are offered. Account lists across
+Jura show each account's currency, for example "Nu · COP". Jura records the real expense and, if the item has a bucket, spends that money from the bucket in the same step.
 If the bucket holds less than the price, it pays what it has and the rest is simply paid from your account.
 **Undo purchase** removes the expense and returns the money to the bucket.
 
@@ -349,7 +353,9 @@ move items earlier or later. Items are bought **strictly in the order shown**: m
 wait. An optional **Not before** date holds an item back. The result updates as you change things.
 
 **Saving and comparing.** Save any order as a plan. Tick two or more saved plans to compare them side by side: for
-each item you see when it would be bought in each plan, plus an overall score (lower is better).
+each item you see when it would be bought in each plan, plus an overall score (lower is better). Changing *How sure*
+or *Look ahead* recalculates your order. If an item in a saved plan has since been bought or dropped, opening the plan
+shows it struck through and leaves it out of the calculation.
 
 **How the planner counts money (advanced).**
 - It starts from what each bucket has available today, then adds planned income as it would really be split: by
