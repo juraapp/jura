@@ -87,7 +87,8 @@ There are three kinds:
 To add one, use the add button (it is available from any page). Choose the account, category, amount, date and
 an optional **time** (it defaults to now and can be cleared), an optional description, notes and payment method (cash, debit card, credit card, bank transfer or other).
 
-- You can **edit** or **delete** any transaction; balances update automatically.
+- You can **edit** or **delete** any transaction; balances update automatically. A transaction keeps its account and
+  category when you edit it, even if that account was archived or the category deleted since.
 - **Filter** the list by type to see only incomes, expenses or transfers.
 - **One currency per transaction.** A transfer must be between two accounts of the same currency, and a transaction
   can only move to another account of its currency (bulk *Change account* skips the ones that don't match). An

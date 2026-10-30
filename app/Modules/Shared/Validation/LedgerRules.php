@@ -29,14 +29,16 @@ final class LedgerRules
     }
 
     /**
-     * A category the user can see (their own or a system one) that is not in the trash. With a $type
-     * ('income' or 'expense'), it must also be of that kind, so an income is never filed under an expense.
+     * A category the user can see (their own or a system one) that is not in the trash, except $keepId (the
+     * category a record already uses, so editing it doesn't force a change). With a $type ('income' or
+     * 'expense'), it must also be of that kind, so an income is never filed under an expense.
      */
-    public static function category(int $userId, ?string $type = null): Exists
+    public static function category(int $userId, ?string $type = null, ?int $keepId = null): Exists
     {
         return Rule::exists('categories', 'id')
             ->where(fn (Builder $query) => $query->where('user_id', $userId)->orWhereNull('user_id'))
-            ->whereNull('deleted_at')
+            ->where(fn (Builder $query) => $query->whereNull('deleted_at')
+                ->when($keepId !== null, fn (Builder $inner) => $inner->orWhere('id', $keepId)))
             ->when($type !== null, fn (Exists $rule) => $rule->where('type', $type));
     }
 }
