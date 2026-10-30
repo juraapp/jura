@@ -63,6 +63,10 @@ class CategoryController extends Controller
             return back()->with('error', __('categories.has_transactions'));
         }
 
+        if ($category->isUsedByPlans()) {
+            return back()->with('error', __('categories.used_by_plans'));
+        }
+
         $category->delete();
 
         return back()->with('success', __('categories.deleted'));
@@ -76,7 +80,7 @@ class CategoryController extends Controller
         foreach (Category::whereIn('id', $request->validated('ids'))->get() as $category) {
             $this->authorize('delete', $category);
 
-            if ($category->transactions()->exists()) {
+            if ($category->transactions()->exists() || $category->isUsedByPlans()) {
                 $skipped++;
 
                 continue;
