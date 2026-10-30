@@ -62,6 +62,7 @@ return [
     'paid_with' => 'Pagado con',
     'select_account' => 'Selecciona una cuenta',
     'no_account_allowed' => 'Ninguna cuenta está permitida para este artículo y su balde.',
+    'no_account_in_currency' => 'No hay ninguna cuenta en {currency}. Crea una en Cuentas primero.',
     'category' => 'Categoría',
     'select_category' => 'Selecciona una categoría',
     'final_price' => 'Precio final',

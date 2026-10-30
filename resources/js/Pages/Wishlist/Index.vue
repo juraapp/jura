@@ -134,12 +134,15 @@ const blankItem = (projectId = '') => ({
 
 const itemForm = useForm(blankItem());
 const bucketChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === itemForm.currency));
+const itemAccountChoices = computed(() => props.accounts.filter((account) => account.currency === itemForm.currency));
 
-/* A bucket in another currency would stay selected but invisible, and the server rejects it. */
+/* A bucket or account in another currency would stay selected but invisible, and the server rejects it. */
 watch(() => itemForm.currency, () => {
     if (itemForm.bucket_id && !bucketChoices.value.some((bucket) => bucket.id === itemForm.bucket_id)) {
         itemForm.bucket_id = '';
     }
+    itemForm.allowed_account_ids = itemForm.allowed_account_ids
+        .filter((id) => itemAccountChoices.value.some((account) => account.id === id));
 });
 
 const openItemModal = (item = null, projectId = '') => {
@@ -196,6 +199,9 @@ const deleteItem = () => {
 /* ---- purchase ---- */
 const buying = ref(null);
 const purchaseForm = useForm({ account_id: '', category_id: '', amount: '', date: today });
+
+const hasAccountInBuyingCurrency = computed(() => buying.value !== null
+    && props.accounts.some((account) => account.currency === buying.value.currency));
 
 const accountChoices = computed(() => {
     if (!buying.value) return [];
@@ -456,10 +462,10 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                             <TextInput id="item_desired_by" v-model="itemForm.desired_by" type="date" class="mt-1 block w-full" />
                             <InputError class="mt-1" :message="itemForm.errors.desired_by" />
                         </div>
-                        <fieldset v-if="accounts.length">
+                        <fieldset v-if="itemAccountChoices.length">
                             <legend class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('ui.wishlist.only_bought_with') }}</legend>
                             <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.wishlist.only_bought_hint') }}</p>
-                            <label v-for="account in accounts" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
+                            <label v-for="account in itemAccountChoices" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
                                 <input v-model="itemForm.allowed_account_ids" type="checkbox" :value="account.id" class="rounded border-gray-300 text-primary-600" />
                                 {{ account.name }} · {{ account.currency }}
                             </label>
@@ -496,7 +502,9 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                         <option value="">{{ $t('ui.wishlist.select_account') }}</option>
                         <option v-for="account in accountChoices" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </SelectInput>
-                    <p v-if="buying && accountChoices.length === 0" class="mt-1 text-xs text-red-600">{{ $t('ui.wishlist.no_account_allowed') }}</p>
+                    <p v-if="buying && accountChoices.length === 0" class="mt-1 text-xs text-red-600">
+                        {{ hasAccountInBuyingCurrency ? $t('ui.wishlist.no_account_allowed') : $t('ui.wishlist.no_account_in_currency', { currency: buying.currency }) }}
+                    </p>
                     <InputError class="mt-1" :message="purchaseForm.errors.account_id" />
                 </div>
                 <div>
