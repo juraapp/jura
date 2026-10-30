@@ -47,7 +47,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
 2. Another module's `Models` may be referenced only from files under a `Models/` directory (relationships) or from the read-side modules `Reporting` and `Notifications`.
 3. Nothing else (`Services`, `Http`, `Policies`, `Jobs`, ...) of another module may be imported. Cross-module calls go through contracts:
    - `Ledger\Contracts\Balances`: account balances and net worth.
-   - `Ledger\Contracts\LedgerQuery`: expense totals, account/category option lists, account currency and similar-transaction lookups.
+   - `Ledger\Contracts\LedgerQuery`: expense totals, account/category option lists, account currency and similar-transaction lookups. Every method takes the user id explicitly, so it stays scoped in jobs and console commands.
    - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record`, `recordRecurring`).
    - `Planning\Contracts\BucketProgress`: spending-bucket spent/remaining/status.
    - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances and planned money in a date window.

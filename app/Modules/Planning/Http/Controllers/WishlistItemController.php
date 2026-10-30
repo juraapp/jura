@@ -48,8 +48,8 @@ class WishlistItemController extends Controller
             ])->values(),
             'items' => $items->map(fn (WishlistItem $item) => $this->present($item, $available))->values(),
             'buckets' => Bucket::inPriorityOrder()->where('kind', BucketKind::Savings->value)->get(['id', 'name', 'currency', 'allowed_account_ids']),
-            'accounts' => $ledger->activeAccountOptions(),
-            'categories' => $ledger->categoryOptions(CategoryType::Expense, ['id', 'name', 'icon', 'color']),
+            'accounts' => $ledger->activeAccountOptions(Auth::id()),
+            'categories' => $ledger->categoryOptions(Auth::id(), CategoryType::Expense, ['id', 'name', 'icon', 'color']),
             'currencies' => $currencies->isEmpty() ? collect([Auth::user()->currency_default]) : $currencies,
             'projectKinds' => collect(ProjectKind::cases())->map(fn (ProjectKind $kind) => ['value' => $kind->value, 'label' => $kind->label()]),
         ]);

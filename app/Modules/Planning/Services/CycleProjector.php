@@ -122,7 +122,7 @@ class CycleProjector
             $expected = $atWindowEnd[$bucket->id];
 
             if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null) {
-                $expected = $expected->subtract($this->planned->plannedExpenseTotal($bucket->category_id, $currency, $today, $end));
+                $expected = $expected->subtract($this->planned->plannedExpenseTotal($bucket->user_id, $bucket->category_id, $currency, $today, $end));
             }
 
             $release = Money::zero();

@@ -34,7 +34,7 @@ class BucketManager
             $carryOver = CarryOverPolicy::from($data['carry_over'] ?? CarryOverPolicy::Carry->value);
 
             $attributes = [
-                'name' => $data['name'] ?? $this->ledger->categoryName((int) ($data['category_id'] ?? 0)) ?? __('buckets.untitled'),
+                'name' => $data['name'] ?? $this->ledger->categoryName($user->id, (int) ($data['category_id'] ?? 0)) ?? __('buckets.untitled'),
                 'kind' => $kind,
                 'currency' => $data['currency'],
                 'priority' => $data['priority'] ?? $bucket?->priority ?? 100,

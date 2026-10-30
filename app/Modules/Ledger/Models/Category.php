@@ -68,6 +68,15 @@ class Category extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    /**
+     * Categories one user can see (their own and the system ones), for contexts without an authenticated user.
+     */
+    public function scopeVisibleTo(Builder $query, int $userId): Builder
+    {
+        return $query->withoutGlobalScope('visibleToUser')
+            ->where(fn (Builder $inner) => $inner->where('categories.user_id', $userId)->orWhereNull('categories.user_id'));
+    }
+
     public function isEditable(): bool
     {
         return ! $this->is_system;

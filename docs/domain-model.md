@@ -43,6 +43,8 @@ Every query against a `BelongsToUser` model is transparently scoped to the authe
 
 Use `Model::forUser($user)` (also from the trait) to query outside a request context (jobs, console commands) where `Auth::check()` is false.
 
+Because the scope silently turns off without an authenticated user, any code reachable from a queued job, console command or a listener they trigger must scope explicitly. `Ledger\Contracts\LedgerQuery` therefore takes the user id on every method (`expenseTotal($userId, ...)`, `accountCurrency($userId, ...)`, ...), and Planning services pass `$bucket->user_id` / the event's user rather than relying on `Auth`. `Category::visibleTo($userId)` is the explicit form of the category scope (own + system). `BackgroundTenancyTest` runs the cycle-close command and the recurring job with two users sharing a system category.
+
 ## Validation must re-scope `exists:` rules
 
 `exists:accounts,id` / `exists:categories,id` in a Form Request checks **only that a row exists**, not that it belongs to the current user — Laravel's `exists` rule runs a raw query, bypassing the `BelongsToUser` global scope entirely. Every Form Request that accepts an `account_id` or `category_id` foreign key scopes it explicitly:

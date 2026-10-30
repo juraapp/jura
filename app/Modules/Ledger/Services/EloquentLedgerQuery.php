@@ -15,10 +15,10 @@ use Illuminate\Support\Collection;
 
 class EloquentLedgerQuery implements LedgerQuery
 {
-    public function expenseTotal(int $categoryId, string $currency, CarbonInterface $from, CarbonInterface $to): Money
+    public function expenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, CarbonInterface $to): Money
     {
         return Money::of(
-            Transaction::query()
+            Transaction::forUser($userId)
                 ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
                 ->where('transactions.category_id', $categoryId)
                 ->where('transactions.type', TransactionType::Expense->value)
@@ -28,22 +28,23 @@ class EloquentLedgerQuery implements LedgerQuery
         );
     }
 
-    public function activeAccountOptions(): Collection
+    public function activeAccountOptions(int $userId): Collection
     {
-        return Account::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        return Account::forUser($userId)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
     }
 
-    public function categoryOptions(CategoryType $type, array $columns = ['id', 'name']): Collection
+    public function categoryOptions(int $userId, CategoryType $type, array $columns = ['id', 'name']): Collection
     {
-        return Category::where('type', $type)->orderBy('name')->get($columns);
+        return Category::visibleTo($userId)->where('type', $type)->orderBy('name')->get($columns);
     }
 
-    public function accountCurrency(int $accountId): ?string
+    public function accountCurrency(int $userId, int $accountId): ?string
     {
-        return Account::whereKey($accountId)->value('currency');
+        return Account::forUser($userId)->whereKey($accountId)->value('currency');
     }
 
     public function findSimilarTransactions(
+        int $userId,
         TransactionType $type,
         string $currency,
         Money $amount,
@@ -55,7 +56,7 @@ class EloquentLedgerQuery implements LedgerQuery
         $low = $amount->multiply(1 - $tolerance)->toDecimalString();
         $high = $amount->multiply(1 + $tolerance)->toDecimalString();
 
-        return Transaction::query()
+        return Transaction::forUser($userId)
             ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
             ->where('transactions.type', $type->value)
             ->where('accounts.currency', $currency)
@@ -74,8 +75,8 @@ class EloquentLedgerQuery implements LedgerQuery
             ]);
     }
 
-    public function categoryName(int $categoryId): ?string
+    public function categoryName(int $userId, int $categoryId): ?string
     {
-        return Category::whereKey($categoryId)->value('name');
+        return Category::visibleTo($userId)->whereKey($categoryId)->value('name');
     }
 }

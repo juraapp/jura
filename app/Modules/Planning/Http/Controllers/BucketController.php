@@ -40,7 +40,7 @@ class BucketController extends Controller
     {
         $this->authorize('viewAny', Bucket::class);
 
-        $accounts = $ledger->activeAccountOptions();
+        $accounts = $ledger->activeAccountOptions(Auth::id());
         $accountNames = $accounts->pluck('name', 'id');
 
         $buckets = Bucket::with('category')->inPriorityOrder()->get();
@@ -97,7 +97,7 @@ class BucketController extends Controller
 
             $progress = $limits->progress($bucket);
             [$start, $end] = $limits->periodBounds($bucket);
-            $projected = $planned->plannedExpenseTotal($bucket->category_id, $bucket->currency, $start, $end);
+            $projected = $planned->plannedExpenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $start, $end);
 
             return $card + [
                 'spent' => $progress['spent']->toFloat(),
@@ -113,7 +113,7 @@ class BucketController extends Controller
 
         return Inertia::render('Buckets/Index', [
             'buckets' => $cards,
-            'categories' => $ledger->categoryOptions(CategoryType::Expense),
+            'categories' => $ledger->categoryOptions(Auth::id(), CategoryType::Expense),
             'accounts' => $accounts,
             'currencies' => $currencies->isEmpty() ? collect([Auth::user()->currency_default]) : $currencies,
             'kinds' => $this->options(BucketKind::cases()),

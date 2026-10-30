@@ -28,7 +28,7 @@ class BucketService implements BucketProgress
     {
         [$start, $end] = $this->periodBounds($bucket);
 
-        $spent = $this->ledger->expenseTotal($bucket->category_id, $bucket->currency, $start, $end);
+        $spent = $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $start, $end);
 
         $cap = $bucket->effectiveCap(today());
         $percentage = $spent->percentageOf($cap);

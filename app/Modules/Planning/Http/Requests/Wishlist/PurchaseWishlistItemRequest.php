@@ -42,7 +42,7 @@ class PurchaseWishlistItemRequest extends FormRequest
             $item = $this->route('wishlistItem');
             $accountId = (int) $this->input('account_id');
 
-            $currency = app(LedgerQuery::class)->accountCurrency($accountId);
+            $currency = app(LedgerQuery::class)->accountCurrency($this->user()->id, $accountId);
             if (strtoupper((string) $currency) !== $item->currency) {
                 $validator->errors()->add('account_id', __('wishlist.currency_mismatch'));
 
