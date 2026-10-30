@@ -20,6 +20,7 @@ use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,7 +32,7 @@ class PlannedEventController extends Controller
 
         $view = ForecastView::tryFrom((string) $request->query('view')) ?? ForecastView::Expected;
         $months = max(3, min(12, (int) $request->query('months', 6)));
-        $monthStart = today()->startOfMonth();
+        $monthStart = Carbon::instance($request->user()->today())->startOfMonth();
         $horizonEnd = $monthStart->copy()->addMonthsNoOverflow($months)->subDay();
 
         $events = PlannedEvent::with(['account', 'category'])

@@ -217,7 +217,7 @@ class BucketController extends Controller
      */
     private function receivedSoFar(Bucket $bucket, array $row): float
     {
-        $figures = app(BucketCycleService::class)->figures($bucket, $row['start'], today());
+        $figures = app(BucketCycleService::class)->figures($bucket, $row['start'], Carbon::instance(Auth::user()->today()));
 
         return $figures['filled']->add($figures['moved_in'])->toFloat();
     }
@@ -235,7 +235,7 @@ class BucketController extends Controller
         $period = $bucket->cyclePeriod();
         $current = null;
         if ($period !== null) {
-            $now = today();
+            $now = Carbon::instance(Auth::user()->today());
             $start = Carbon::instance($period->startOf($now->toDateTimeImmutable()));
             $end = Carbon::instance($period->endOf($now->toDateTimeImmutable()));
             $row = $projector->project(Auth::user(), $bucket->currency)[$bucket->id] ?? null;
@@ -272,8 +272,9 @@ class BucketController extends Controller
         $period = $bucket->cyclePeriod();
         abort_if($period === null || $bucket->kind !== BucketKind::Spending, 404);
 
-        $start = $period->startOf(today()->toDateTimeImmutable())->format('Y-m-d');
-        $end = $period->endOf(today()->toDateTimeImmutable())->format('Y-m-d');
+        $today = $request->user()->today();
+        $start = $period->startOf($today)->format('Y-m-d');
+        $end = $period->endOf($today)->format('Y-m-d');
 
         $cycle = BucketCycle::where('bucket_id', $bucket->id)->where('starts_on', $start)->first()
             ?? new BucketCycle(['bucket_id' => $bucket->id, 'starts_on' => $start, 'ends_on' => $end, 'status' => BucketCycle::OPEN]);
@@ -309,7 +310,7 @@ class BucketController extends Controller
     {
         $this->authorize('update', $bucket);
 
-        $funds->complete($bucket, today());
+        $funds->complete($bucket, Carbon::instance(Auth::user()->today()));
 
         return back()->with('success', __('buckets.completed'));
     }

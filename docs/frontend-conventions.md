@@ -13,6 +13,12 @@ chart helpers in `chartPalette.js` already do. The rules live in `resources/js/f
 server by `App\Modules\Shared\Support\UserFormat` (PDFs, notifications); change both together. `format.js` has no
 framework imports and is tested with `npm run test:js` (`node --test`).
 
+## Default dates
+Never default a date field with `new Date().toISOString().slice(0, 10)`: that is the UTC date, already tomorrow in the
+evening west of Greenwich. Use `const todayDate = useToday()` (`composables/useToday.js`) and call `todayDate()` when a
+form opens: it is today in the user's Preferences timezone (pure `resources/js/today.js`, tested with `npm run test:js`),
+falling back to the shared `today` prop.
+
 ## Pages vs Components vs Layouts
 
 - **`Pages/`** — one file per `Inertia::render('X')` target, same path (`Pages/Accounts/Index.vue` ↔ `Inertia::render('Accounts/Index', ...)`). A Page always wraps its content in `<AuthenticatedLayout>` (or `<GuestLayout>` for auth screens) and receives its data exclusively via `defineProps()` — never fetches its own initial data.

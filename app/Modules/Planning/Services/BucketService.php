@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Services;
 
+use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Contracts\BucketProgress;
 use App\Modules\Planning\Enums\BudgetPeriodType;
@@ -30,7 +31,7 @@ class BucketService implements BucketProgress
 
         $spent = $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $start, $end);
 
-        $cap = $bucket->effectiveCap(today());
+        $cap = $bucket->effectiveCap(User::todayFor($bucket->user_id));
         $percentage = $spent->percentageOf($cap);
         $remaining = $cap->subtract($spent);
 
@@ -55,7 +56,7 @@ class BucketService implements BucketProgress
      */
     public function periodBounds(Bucket $bucket, ?CarbonInterface $at = null): array
     {
-        $at = Carbon::instance($at ?? now())->startOfDay();
+        $at = Carbon::instance($at ?? User::todayFor($bucket->user_id))->startOfDay();
         $period = $bucket->cyclePeriod() ?? new CyclePeriod(BudgetPeriodType::Monthly);
         $moment = $at->toDateTimeImmutable();
 

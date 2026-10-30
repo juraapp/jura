@@ -5,14 +5,15 @@ namespace App\Modules\Reporting\Http\Controllers\Reports;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CustomReportCsvController extends Controller
 {
     public function __invoke(Request $request): StreamedResponse
     {
-        $from = $request->date('from') ?? now()->startOfMonth();
-        $to = $request->date('to') ?? now()->endOfMonth();
+        $from = $request->date('from') ?? Carbon::instance($request->user()->today())->startOfMonth();
+        $to = $request->date('to') ?? Carbon::instance($request->user()->today())->endOfMonth();
 
         $transactions = Transaction::query()
             ->with(['account', 'category'])

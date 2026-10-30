@@ -28,7 +28,7 @@ class SavingsGoalController extends Controller
         $currencies = Auth::user()->accounts()->pluck('currency')->unique()->sort()->values();
         $currencies = $currencies->isEmpty() ? collect([Auth::user()->currency_default]) : $currencies;
 
-        $now = Carbon::now();
+        $now = Carbon::instance(Auth::user()->today());
 
         $goals = Auth::user()->savingsGoals()
             ->whereIn('status', [SavingsGoalStatus::Active, SavingsGoalStatus::Completed])

@@ -42,7 +42,7 @@ class PlanningOverviewService implements PlanningOverview
 
     public function allocationHistory(User $user, int $months): array
     {
-        $start = Carbon::today()->startOfMonth()->subMonths($months - 1);
+        $start = Carbon::instance($user->today())->startOfMonth()->subMonths($months - 1);
         $keys = collect(range(0, $months - 1))->map(fn (int $i) => $start->copy()->addMonths($i));
         $labels = $keys->map(fn (Carbon $month) => $month->translatedFormat('M Y'))->all();
 

@@ -12,7 +12,7 @@ class AnnualReportPdfController extends Controller
 {
     public function __invoke(Request $request, ReportService $reports): PdfBuilder
     {
-        $year = (int) $request->integer('year', now()->year);
+        $year = (int) $request->integer('year', $request->user()->today()->year);
         $user = $request->user();
 
         return Pdf::view('pdf.annual-report', [

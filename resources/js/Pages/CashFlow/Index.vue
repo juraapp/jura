@@ -34,6 +34,7 @@ import { useFormat } from '@/composables/useFormat';
 import BulkCheckbox from '@/Components/BulkCheckbox.vue';
 import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
 import { useBulkSelection } from '@/composables/useBulkSelection';
+import { useToday } from '@/composables/useToday';
 
 const format = useFormat();
 const { t } = useI18n();
@@ -59,7 +60,8 @@ const page = usePage();
 const { isDark } = useDarkMode();
 const locale = () => page.props.auth.user?.locale ?? 'en';
 const palette = () => CHART_PALETTE[isDark.value ? 'dark' : 'light'];
-const today = new Date().toISOString().slice(0, 10);
+const todayDate = useToday();
+const today = todayDate();
 
 const viewHints = computed(() => ({
     conservative: t('ui.cash_flow.hint_conservative'),
@@ -148,7 +150,7 @@ const openCreateModal = (type = 'expense') => {
     form.reset();
     form.clearErrors();
     form.type = type;
-    form.date = today;
+    form.date = todayDate();
     overrideAmounts.value = {};
     showModal.value = true;
 };
@@ -190,7 +192,7 @@ const openRealize = (event) => {
     realizeForm.account_id = event.account?.id ?? (props.accounts.length === 1 ? props.accounts[0].id : '');
     realizeForm.category_id = event.category?.id ?? '';
     realizeForm.amount = String(event.amount);
-    realizeForm.date = today;
+    realizeForm.date = todayDate();
     realizeForm.description = event.description;
 };
 

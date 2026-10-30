@@ -63,6 +63,7 @@ To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to 
 - `appName` — from `config('app.name')`.
 - `i18n` — `{ locale, messages }`, the single source of truth for both server- and client-rendered strings (see `i18n-conventions.md`).
 - `auth.user` — the authenticated user, or `null`.
+- `today` — the user's current date (`Y-m-d`) in their timezone (`$user->today()`), or `null` for guests. Vue reads it through `useToday()` (see `frontend-conventions.md`).
 - `flash` — `{ success, error, warning }`, read by pages that want to react to a flash message (most currently rely on the flash surfacing naturally via a full Inertia re-render rather than reading this explicitly).
 - `netWorth` / `notifications` — deferred (`Inertia::defer(..., 'topbar')`) since the topbar needs them on every page but they're not worth blocking the initial render for. The Vue-side `NetWorthBadge`/`NotificationBell` components consume them; see `frontend-conventions.md`.
 

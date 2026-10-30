@@ -105,7 +105,8 @@ class PlanningReportService
      */
     public function upcoming(User $user, int $days = 30): array
     {
-        $window = $this->forecast->window($user, ForecastView::Expected, today(), today()->addDays($days));
+        $today = Carbon::instance($user->today());
+        $window = $this->forecast->window($user, ForecastView::Expected, $today, $today->copy()->addDays($days));
 
         return collect($window)->map(fn (array $totals, string $currency) => [
             'currency' => $currency,

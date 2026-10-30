@@ -33,7 +33,7 @@ class PlannerService
 
     public function context(User $user, string $currency, ForecastView $view, int $horizonMonths): PlannerContext
     {
-        $start = CarbonImmutable::today();
+        $start = $user->today();
         $end = $start->addMonthsNoOverflow($horizonMonths);
 
         $buckets = Bucket::forUser($user)->where('currency', $currency)->inPriorityOrder()->get();

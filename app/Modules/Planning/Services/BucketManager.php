@@ -9,7 +9,6 @@ use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Shared\Support\Money;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -64,7 +63,7 @@ class BucketManager
             }
 
             if ($bucket === null) {
-                $bucket = new Bucket($attributes + ['tracking_started_on' => Carbon::today()->toDateString()]);
+                $bucket = new Bucket($attributes + ['tracking_started_on' => $user->today()->toDateString()]);
                 $bucket->user_id = $user->id;
                 $bucket->save();
             } else {

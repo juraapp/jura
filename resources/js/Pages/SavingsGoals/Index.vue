@@ -18,6 +18,9 @@ import { useFormat } from '@/composables/useFormat';
 import BulkCheckbox from '@/Components/BulkCheckbox.vue';
 import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
 import { useBulkSelection } from '@/composables/useBulkSelection';
+import { useToday } from '@/composables/useToday';
+
+const todayDate = useToday();
 
 const format = useFormat();
 
@@ -56,7 +59,7 @@ const form = useForm({
 
 const contributionForm = useForm({
     amount: '',
-    date: new Date().toISOString().slice(0, 10),
+    date: todayDate(),
 });
 
 const openCreateModal = () => {
@@ -110,7 +113,7 @@ const deleteGoal = () => {
 const openContributionModal = (goal) => {
     contributingGoal.value = goal;
     contributionForm.reset();
-    contributionForm.date = new Date().toISOString().slice(0, 10);
+    contributionForm.date = todayDate();
     contributionForm.clearErrors();
     showContributionModal.value = true;
 };

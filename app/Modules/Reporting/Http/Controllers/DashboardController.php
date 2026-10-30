@@ -35,7 +35,7 @@ class DashboardController extends Controller
             ]);
         }
 
-        $now = Carbon::now();
+        $now = Carbon::instance($user->today());
         $summary = $reports->monthlySummary($user, $now->year, $now->month);
         $expenseByCategory = $reports->expenseByCategory($user, $now->year, $now->month);
         $expenseByAccount = $reports->expenseByAccount($user, $now->year, $now->month)
