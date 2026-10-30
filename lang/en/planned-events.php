@@ -12,4 +12,5 @@ return [
     'linked' => 'Linked to the existing transaction.',
     'already_closed' => 'This planned event is already closed.',
     'account_required' => 'Choose an account to record this transaction.',
+    'currency_mismatch' => 'This plan is in :currency. Choose an account or transaction in the same currency.',
 ];

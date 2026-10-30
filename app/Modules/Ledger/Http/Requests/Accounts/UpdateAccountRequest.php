@@ -5,6 +5,7 @@ namespace App\Modules\Ledger\Http\Requests\Accounts;
 use App\Modules\Ledger\Enums\AccountType;
 use App\Modules\Ledger\Enums\YieldCompounding;
 use App\Modules\Shared\Validation\MoneyRules;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -25,7 +26,18 @@ class UpdateAccountRequest extends FormRequest
             'type' => ['required', Rule::enum(AccountType::class)],
             'institution' => ['nullable', 'string', 'max:255'],
             'initial_balance' => ['required', ...MoneyRules::signed()],
-            'currency' => ['required', 'string', 'size:3'],
+            'currency' => [
+                'required',
+                'string',
+                'size:3',
+                function (string $attribute, mixed $value, Closure $fail) {
+                    $account = $this->route('account');
+
+                    if (strtoupper(trim((string) $value)) !== $account->currency && $account->transactions()->withTrashed()->exists()) {
+                        $fail(__('accounts.currency_locked'));
+                    }
+                },
+            ],
             'yield_rate' => ['nullable', 'numeric', 'min:0', 'max:1000'],
             'yield_compounding' => ['nullable', Rule::enum(YieldCompounding::class)],
             'color' => ['required', 'string', 'max:7'],

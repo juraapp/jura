@@ -37,6 +37,11 @@ interface LedgerQuery
     public function accountCurrency(int $userId, int $accountId): ?string;
 
     /**
+     * Currency of the account one of the user's transactions belongs to, or null if it is not theirs.
+     */
+    public function transactionCurrency(int $userId, int $transactionId): ?string;
+
+    /**
      * Real transactions that look like a planned one: same type and currency, a similar amount and a nearby date.
      * Closest amount first.
      *

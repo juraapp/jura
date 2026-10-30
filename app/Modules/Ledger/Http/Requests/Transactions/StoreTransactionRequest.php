@@ -3,9 +3,11 @@
 namespace App\Modules\Ledger\Http\Requests\Transactions;
 
 use App\Modules\Ledger\Enums\PaymentMethod;
+use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Validation\LedgerRules;
 use App\Modules\Shared\Validation\MoneyRules;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +24,18 @@ class StoreTransactionRequest extends FormRequest
             return [
                 'type' => ['required', 'in:transfer'],
                 'from_account_id' => ['required', 'integer', 'different:to_account_id', LedgerRules::account($this->user()->id, activeOnly: true)],
-                'to_account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true)],
+                'to_account_id' => [
+                    'required',
+                    'integer',
+                    LedgerRules::account($this->user()->id, activeOnly: true),
+                    function (string $attribute, mixed $value, Closure $fail) {
+                        $currencies = Account::whereKey([(int) $this->input('from_account_id'), (int) $value])->pluck('currency')->unique();
+
+                        if ($currencies->count() > 1) {
+                            $fail(__('transactions.currency_mismatch'));
+                        }
+                    },
+                ],
                 'amount' => ['required', ...MoneyRules::positive()],
                 'date' => ['required', 'date'],
                 'time' => ['nullable', 'date_format:H:i'],

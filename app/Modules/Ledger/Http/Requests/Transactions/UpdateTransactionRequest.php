@@ -3,8 +3,10 @@
 namespace App\Modules\Ledger\Http\Requests\Transactions;
 
 use App\Modules\Ledger\Enums\PaymentMethod;
+use App\Modules\Ledger\Models\Account;
 use App\Modules\Shared\Validation\LedgerRules;
 use App\Modules\Shared\Validation\MoneyRules;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,8 +29,21 @@ class UpdateTransactionRequest extends FormRequest
             ];
         }
 
+        $transaction = $this->route('transaction');
+
         return [
-            'account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true, keepId: $this->route('transaction')->account_id)],
+            'account_id' => [
+                'required',
+                'integer',
+                LedgerRules::account($this->user()->id, activeOnly: true, keepId: $transaction->account_id),
+                function (string $attribute, mixed $value, Closure $fail) use ($transaction) {
+                    $currency = $transaction->account->currency;
+
+                    if (Account::whereKey((int) $value)->value('currency') !== $currency) {
+                        $fail(__('transactions.account_currency_mismatch', ['currency' => $currency]));
+                    }
+                },
+            ],
             'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id, $this->route('transaction')->type->value)],
             'amount' => ['required', ...MoneyRules::positive()],
             'date' => ['required', 'date'],

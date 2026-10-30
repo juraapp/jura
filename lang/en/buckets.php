@@ -17,4 +17,6 @@ return [
     'allocation_locked' => 'This entry comes from your income or a closed cycle and cannot be removed here.',
     'allocation_removed' => 'Entry removed.',
     'cycle_limit_saved' => 'Limit for this cycle saved.',
+    'currency_locked' => 'The currency cannot change once the bucket holds money.',
+    'account_currency_mismatch' => 'Only accounts in the bucket\'s currency can fill it.',
 ];
