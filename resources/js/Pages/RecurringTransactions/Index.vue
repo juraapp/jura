@@ -185,13 +185,15 @@ const formatDate = (date) => format.date(date);
                                     <button
                                         type="button"
                                         class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
-                                        :title="recurring.isActive ? $t('ui.recurring.pause') : $t('ui.recurring.reactivate')"
+                                        :title="recurring.isActive ? $t('ui.recurring.pause') : $t('ui.recurring.reactivate')" :aria-label="recurring.isActive ? $t('ui.recurring.pause') : $t('ui.recurring.reactivate')"
                                         @click="toggle(recurring)"
                                     >
                                         <DynamicIcon :name="recurring.isActive ? 'check-circle' : 'arrow-path'" class="h-4 w-4" />
                                     </button>
                                     <button
                                         type="button"
+                                        :title="$t('ui.common.edit')"
+                                        :aria-label="$t('ui.common.edit')"
                                         class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
                                         @click="openEditModal(recurring)"
                                     >
@@ -199,6 +201,8 @@ const formatDate = (date) => format.date(date);
                                     </button>
                                     <button
                                         type="button"
+                                        :title="$t('ui.common.delete')"
+                                        :aria-label="$t('ui.common.delete')"
                                         class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
                                         @click="confirmDelete(recurring)"
                                     >

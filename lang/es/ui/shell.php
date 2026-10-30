@@ -43,6 +43,8 @@ return [
         'empty' => 'No tienes notificaciones.',
     ],
     'bulk' => [
+        'select' => 'Seleccionar',
+        'select_all' => 'Seleccionar todo',
         'selected' => '{count} seleccionados',
         'select_all_matching' => 'Seleccionar los {count} que coinciden',
         'delete_title' => '¿Eliminar {count} {noun}?',

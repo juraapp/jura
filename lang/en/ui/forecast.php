@@ -3,12 +3,9 @@
 return [
     'title' => 'Forecast report',
     'heading' => 'Forecast',
+    'intro' => 'The {solid} is your real net worth, month by month, from recorded transactions. The {dashed} are estimates built from the income and expenses you planned in {cash_flow}, under three levels of trust in your planned income.',
     'intro_solid' => 'solid line',
     'intro_dashed' => 'dashed lines',
-    'intro_1' => 'The',
-    'intro_2' => 'is your real net worth, month by month, from recorded transactions. The',
-    'intro_3' => 'are estimates built from the income and expenses you planned in',
-    'intro_4' => 'under three levels of trust in your planned income.',
     'cash_flow' => 'Cash flow',
     'empty_title' => 'Nothing to forecast yet',
     'empty_hint' => 'Create an account and plan some income or expenses in Cash flow to see your projected balance here.',

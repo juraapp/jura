@@ -280,10 +280,10 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                                 {{ $t('ui.wishlist.add_item') }}
                             </button>
                             <template v-if="group.project">
-                                <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.edit_project')" @click="openProjectModal(group.project)">
+                                <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.edit_project')" :aria-label="$t('ui.wishlist.edit_project')" @click="openProjectModal(group.project)">
                                     <DynamicIcon name="pencil" class="h-4 w-4" />
                                 </button>
-                                <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.wishlist.delete_project')" @click="confirmingDeleteProject = group.project">
+                                <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.wishlist.delete_project')" :aria-label="$t('ui.wishlist.delete_project')" @click="confirmingDeleteProject = group.project">
                                     <DynamicIcon name="trash" class="h-4 w-4" />
                                 </button>
                             </template>
@@ -303,7 +303,7 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                                 <div class="min-w-0 flex-1">
                                     <p class="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
                                         <span class="truncate" :class="{ 'line-through': item.status === 'dropped' }">{{ item.name }}</span>
-                                        <a v-if="item.url" :href="item.url" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-primary-600" :title="$t('ui.wishlist.open_link')">
+                                        <a v-if="item.url" :href="item.url" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-primary-600" :title="$t('ui.wishlist.open_link')" :aria-label="$t('ui.wishlist.open_link')">
                                             <DynamicIcon name="link" class="h-3.5 w-3.5" />
                                         </a>
                                         <span v-if="item.status !== 'wanted'" class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
@@ -335,23 +335,23 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
 
                                 <div class="flex items-center gap-1">
                                     <template v-if="item.status === 'wanted'">
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" :title="$t('ui.wishlist.mark_purchased')" @click="openPurchase(item)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" :title="$t('ui.wishlist.mark_purchased')" :aria-label="$t('ui.wishlist.mark_purchased')" @click="openPurchase(item)">
                                             <DynamicIcon name="check-circle" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.drop')" @click="setStatus(item, 'dropped')">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.drop')" :aria-label="$t('ui.wishlist.drop')" @click="setStatus(item, 'dropped')">
                                             <DynamicIcon name="forward" class="h-4 w-4" />
                                         </button>
                                     </template>
-                                    <button v-else-if="item.status === 'dropped'" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.want_again')" @click="setStatus(item, 'wanted')">
+                                    <button v-else-if="item.status === 'dropped'" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.want_again')" :aria-label="$t('ui.wishlist.want_again')" @click="setStatus(item, 'wanted')">
                                         <DynamicIcon name="arrow-path" class="h-4 w-4" />
                                     </button>
                                     <button v-else type="button" class="rounded-lg px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" :title="$t('ui.wishlist.undo_purchase_tip')" @click="undo(item)">
                                         {{ $t('ui.wishlist.undo_purchase') }}
                                     </button>
-                                    <button v-if="item.status !== 'purchased'" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.edit')" @click="openItemModal(item)">
+                                    <button v-if="item.status !== 'purchased'" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.edit')" :aria-label="$t('ui.wishlist.edit')" @click="openItemModal(item)">
                                         <DynamicIcon name="pencil" class="h-4 w-4" />
                                     </button>
-                                    <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="confirmingDeleteItem = item">
+                                    <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="confirmingDeleteItem = item">
                                         <DynamicIcon name="trash" class="h-4 w-4" />
                                     </button>
                                 </div>

@@ -71,11 +71,13 @@ const rowsFor = (currency) => currency.projected.expected.map((row, index) => ({
         </template>
 
         <div class="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-            <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">
-                {{ $t('ui.forecast.intro_1') }} <strong>{{ $t('ui.forecast.intro_solid') }}</strong> {{ $t('ui.forecast.intro_2') }} <strong>{{ $t('ui.forecast.intro_dashed') }}</strong> {{ $t('ui.forecast.intro_3') }}
-                <Link :href="plannedEventsIndex.url()" class="font-medium text-primary-600 hover:underline dark:text-primary-400">{{ $t('ui.forecast.cash_flow') }}</Link>,
-                {{ $t('ui.forecast.intro_4') }}
-            </p>
+            <i18n-t keypath="ui.forecast.intro" tag="p" class="max-w-3xl text-sm text-gray-500 dark:text-gray-400" scope="global">
+                <template #solid><strong>{{ $t('ui.forecast.intro_solid') }}</strong></template>
+                <template #dashed><strong>{{ $t('ui.forecast.intro_dashed') }}</strong></template>
+                <template #cash_flow>
+                    <Link :href="plannedEventsIndex.url()" class="font-medium text-primary-600 hover:underline dark:text-primary-400">{{ $t('ui.forecast.cash_flow') }}</Link>
+                </template>
+            </i18n-t>
 
             <EmptyState
                 v-if="currencies.length === 0"

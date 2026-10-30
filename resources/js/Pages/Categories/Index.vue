@@ -146,6 +146,8 @@ const deleteCategory = () => {
                             <div v-if="category.editable" class="flex items-center gap-1">
                                 <button
                                     type="button"
+                                    :title="$t('ui.common.edit')"
+                                    :aria-label="$t('ui.common.edit')"
                                     class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
                                     @click="openEditModal(category)"
                                 >
@@ -153,6 +155,8 @@ const deleteCategory = () => {
                                 </button>
                                 <button
                                     type="button"
+                                    :title="$t('ui.common.delete')"
+                                    :aria-label="$t('ui.common.delete')"
                                     class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
                                     @click="confirmDelete(category)"
                                 >
