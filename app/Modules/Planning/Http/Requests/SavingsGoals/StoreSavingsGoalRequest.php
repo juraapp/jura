@@ -3,6 +3,7 @@
 namespace App\Modules\Planning\Http\Requests\SavingsGoals;
 
 use App\Modules\Planning\Models\SavingsGoal;
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreSavingsGoalRequest extends FormRequest
@@ -16,7 +17,7 @@ class StoreSavingsGoalRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'target_amount' => ['required', 'numeric', 'gt:0'],
+            'target_amount' => ['required', ...MoneyRules::positive()],
             'currency' => ['required', 'string', 'size:3'],
             'target_date' => ['nullable', 'date', 'after:today'],
             'icon' => ['required', 'string', 'max:32'],

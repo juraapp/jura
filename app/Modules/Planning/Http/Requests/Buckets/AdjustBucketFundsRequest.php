@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Http\Requests\Buckets;
 
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class AdjustBucketFundsRequest extends FormRequest
@@ -17,7 +18,7 @@ class AdjustBucketFundsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => ['required', 'numeric', 'not_in:0'],
+            'amount' => ['required', ...MoneyRules::signed(), 'not_in:0'],
             'description' => ['nullable', 'string', 'max:255'],
         ];
     }

@@ -3,6 +3,7 @@
 namespace App\Modules\Planning\Http\Requests\PlannedEvents;
 
 use App\Modules\Shared\Validation\LedgerRules;
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RealizePlannedEventRequest extends FormRequest
@@ -19,7 +20,7 @@ class RealizePlannedEventRequest extends FormRequest
         return [
             'account_id' => ['required', 'integer', LedgerRules::account($userId, activeOnly: true)],
             'category_id' => ['required', 'integer', LedgerRules::category($userId)],
-            'amount' => ['nullable', 'numeric', 'gt:0'],
+            'amount' => ['nullable', ...MoneyRules::positive()],
             'date' => ['nullable', 'date'],
             'description' => ['nullable', 'string', 'max:255'],
         ];

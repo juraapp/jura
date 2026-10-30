@@ -4,6 +4,7 @@ namespace App\Modules\Planning\Http\Requests\Wishlist;
 
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Shared\Validation\LedgerRules;
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -24,7 +25,7 @@ class PurchaseWishlistItemRequest extends FormRequest
         return [
             'account_id' => ['required', 'integer', LedgerRules::account($userId, activeOnly: true)],
             'category_id' => ['required', 'integer', LedgerRules::category($userId)->where('type', 'expense')],
-            'amount' => ['nullable', 'numeric', 'gt:0'],
+            'amount' => ['nullable', ...MoneyRules::positive()],
             'date' => ['nullable', 'date'],
         ];
     }

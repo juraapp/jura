@@ -8,6 +8,7 @@ use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Shared\Validation\LedgerRules;
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Validation\Rule;
 
 /**
@@ -47,19 +48,21 @@ trait BucketRules
             'cycle' => [Rule::requiredIf($spending), 'nullable', Rule::enum(BudgetPeriodType::class)],
             'cycle_every' => ['nullable', 'integer', 'between:1,366'],
             'cycle_anchor' => ['nullable', 'date'],
-            'cycle_goal' => ['nullable', 'numeric', 'gt:0'],
-            'cap_amount' => [Rule::requiredIf(fn () => $spending() || $needsTarget()), 'nullable', 'numeric', 'gt:0'],
+            'cycle_goal' => ['nullable', ...MoneyRules::positive()],
+            'cap_amount' => [Rule::requiredIf(fn () => $spending() || $needsTarget()), 'nullable', ...MoneyRules::positive()],
             'fill_rule' => ['nullable', Rule::enum(FillRule::class)],
             'fill_value' => [
                 Rule::requiredIf(fn () => in_array($this->input('fill_rule'), [FillRule::Fixed->value, FillRule::Percent->value, FillRule::PercentOfRemaining->value], true)),
                 'nullable',
                 'numeric',
+                'decimal:0,4',
                 'gt:0',
+                'max:'.MoneyRules::MAX,
                 fn ($attribute, $value, $fail) => in_array($this->input('fill_rule'), [FillRule::Percent->value, FillRule::PercentOfRemaining->value], true) && (float) $value > 100
                     ? $fail('The percentage cannot be more than 100.')
                     : null,
             ],
-            'step_up_value' => ['nullable', 'numeric', 'gt:0', 'required_with:step_up_after_bucket_id'],
+            'step_up_value' => ['nullable', 'numeric', 'decimal:0,4', 'gt:0', 'max:'.MoneyRules::MAX, 'required_with:step_up_after_bucket_id'],
             'step_up_after_bucket_id' => [
                 'nullable',
                 'integer',
@@ -78,7 +81,7 @@ trait BucketRules
             ],
             'allowed_account_ids' => ['nullable', 'array'],
             'allowed_account_ids.*' => ['integer', LedgerRules::account($userId)],
-            'opening_balance' => ['nullable', 'numeric', 'min:0'],
+            'opening_balance' => ['nullable', ...MoneyRules::nonNegative()],
             'is_default' => ['nullable', 'boolean'],
         ];
     }
