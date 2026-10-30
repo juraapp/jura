@@ -9,10 +9,13 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Notifications\Notifications\UpcomingRecurringPayment;
+use App\Modules\Planning\Jobs\GenerateDueRecurringTransactions;
 use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Services\RecurringTransactionService;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -290,6 +293,25 @@ class RecurringTransactionsTest extends TestCase
         $this->assertSame([$working->id], $recorded);
         $this->assertSame('2026-10-12', $failing->fresh()->next_due_date->toDateString());
         Exceptions::assertReported(RuntimeException::class);
+    }
+
+    public function test_a_template_another_run_already_generated_is_not_generated_again(): void
+    {
+        Carbon::setTestNow('2026-10-12 06:00:00');
+        $template = RecurringTransaction::factory()->create(['next_due_date' => '2026-10-12', 'frequency' => 'monthly']);
+        $advanced = false;
+        // A second run moves the template on right after this run has read it.
+        RecurringTransaction::retrieved(function () use ($template, &$advanced) {
+            if (! $advanced) {
+                $advanced = true;
+                DB::table('recurring_transactions')->where('id', $template->id)->update(['next_due_date' => '2026-11-12']);
+            }
+        });
+
+        $this->assertSame(0, app(RecurringTransactionService::class)->generateDue());
+        $this->assertSame(0, Transaction::withoutGlobalScopes()->count());
+        $this->assertSame('2026-11-12', $template->fresh()->next_due_date->toDateString());
+        $this->assertInstanceOf(ShouldBeUnique::class, new GenerateDueRecurringTransactions);
     }
 
     public function test_upcoming_payment_alerts_skip_templates_on_a_deleted_account(): void

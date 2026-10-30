@@ -65,9 +65,7 @@ class RecurringTransactionService
         }
 
         try {
-            $this->generateOne($recurring);
-
-            return true;
+            return $this->generateOne($recurring);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -75,9 +73,21 @@ class RecurringTransactionService
         }
     }
 
-    private function generateOne(RecurringTransaction $recurring): void
+    /**
+     * Records the occurrence that is due and moves the template on, unless another run already did: the row is
+     * locked and its due date checked again inside the transaction.
+     *
+     * @return bool whether a transaction was recorded
+     */
+    private function generateOne(RecurringTransaction $recurring): bool
     {
-        DB::transaction(function () use ($recurring) {
+        return DB::transaction(function () use ($recurring) {
+            $current = RecurringTransaction::withoutGlobalScope('user')->lockForUpdate()->find($recurring->id);
+
+            if ($current === null || ! $current->is_active || ! $current->next_due_date->equalTo($recurring->next_due_date)) {
+                return false;
+            }
+
             $data = [
                 'account_id' => $recurring->account_id,
                 'category_id' => $recurring->category_id,
@@ -90,10 +100,12 @@ class RecurringTransactionService
 
             $nextDue = $recurring->frequency->addTo($recurring->next_due_date);
 
-            $recurring->update([
+            $current->update([
                 'next_due_date' => $nextDue,
                 'is_active' => $recurring->end_date === null || $nextDue->lte($recurring->end_date),
             ]);
+
+            return true;
         });
     }
 }
