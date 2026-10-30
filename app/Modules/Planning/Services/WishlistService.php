@@ -3,6 +3,7 @@
 namespace App\Modules\Planning\Services;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Enums\AllocationSource;
@@ -24,6 +25,7 @@ class WishlistService
     public function __construct(
         private readonly RecordsTransactions $transactions,
         private readonly BucketLedger $funds,
+        private readonly LedgerQuery $ledger,
     ) {}
 
     /**
@@ -44,7 +46,7 @@ class WishlistService
                 'notes' => $item->notes,
             ]);
 
-            $this->applyPurchase($item, $transactionId, $amount, $date);
+            $this->applyPurchase($item, $transactionId, $amount, $date, (int) $data['account_id']);
 
             return $transactionId;
         });
@@ -85,13 +87,13 @@ class WishlistService
      * The purchase's expense is back from the Trash: if the item is still wanted (not bought again in the
      * meantime), it is purchased again with the expense's amount and date.
      */
-    public function transactionRestored(User $user, int $transactionId, Money $amount, CarbonInterface $date): void
+    public function transactionRestored(User $user, int $transactionId, Money $amount, CarbonInterface $date, int $accountId): void
     {
         WishlistItem::forUser($user)
             ->where('purchased_transaction_id', $transactionId)
             ->where('status', WishlistStatus::Wanted->value)
             ->get()
-            ->each(fn (WishlistItem $item) => $this->applyPurchase($item, $transactionId, $amount, Carbon::instance($date)));
+            ->each(fn (WishlistItem $item) => $this->applyPurchase($item, $transactionId, $amount, Carbon::instance($date), $accountId));
     }
 
     /**
@@ -111,10 +113,14 @@ class WishlistService
             });
     }
 
-    private function applyPurchase(WishlistItem $item, int $transactionId, Money $amount, Carbon $date): void
+    /**
+     * Records the purchase: the bucket pays what it has, up to the price (the rest comes out of ready to assign).
+     * An off-budget account's money is not budgeted, so a purchase paid from one takes nothing from the bucket.
+     */
+    private function applyPurchase(WishlistItem $item, int $transactionId, Money $amount, Carbon $date, int $accountId): void
     {
         $allocationId = null;
-        if ($item->bucket !== null) {
+        if ($item->bucket !== null && $this->ledger->isOnBudget($item->user_id, $accountId)) {
             $covered = $this->smaller($amount, $this->funds->available($item->bucket));
 
             if ($covered->isPositive()) {

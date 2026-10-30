@@ -20,6 +20,6 @@ class RelinkRestoredRecords
     public function handle(TransactionRestored $event): void
     {
         $this->plans->transactionRestored($event->user, $event->transactionId);
-        $this->wishlist->transactionRestored($event->user, $event->transactionId, $event->amount, $event->date);
+        $this->wishlist->transactionRestored($event->user, $event->transactionId, $event->amount, $event->date, $event->accountId);
     }
 }

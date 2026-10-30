@@ -402,6 +402,24 @@ class PlannedEventsTest extends TestCase
         $this->assertSame(PlannedEventStatus::Skipped, $event->fresh()->status);
     }
 
+    public function test_skipping_a_plan_whose_transaction_is_in_the_trash_forgets_that_transaction(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $event = PlannedEvent::factory()->for($user)->expense()->create(['amount' => 100]);
+        $this->actingAs($user)->post("/planning/cash-flow/{$event->id}/realize", ['account_id' => $account->id, 'category_id' => $category->id]);
+        $transaction = Transaction::firstOrFail();
+        $this->delete("/finances/transactions/{$transaction->id}")->assertRedirect();
+
+        $this->post("/planning/cash-flow/{$event->id}/skip")->assertRedirect();
+        $this->post("/settings/trash/transactions/{$transaction->id}/restore")->assertRedirect();
+
+        $event->refresh();
+        $this->assertSame(PlannedEventStatus::Skipped, $event->status, 'restoring the transaction does not realize a skipped plan');
+        $this->assertNull($event->realized_transaction_id);
+    }
+
     public function test_index_suggests_a_similar_real_transaction_as_a_match(): void
     {
         $user = User::factory()->create();

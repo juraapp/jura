@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
@@ -106,5 +107,25 @@ class CycleProjectionTest extends TestCase
         $this->assertSame('0.00', $projection[$this->groceries->id]['provisional']->toDecimalString());
         $this->assertSame('0.00', $projection[$this->savings->id]['provisional']->toDecimalString());
         $this->assertSame('500.00', $projection[$this->groceries->id]['projectedRelease']->toDecimalString(), 'real money still overflows at the end');
+    }
+
+    public function test_a_release_at_the_end_of_the_cycle_is_projected_back_to_ready_to_assign(): void
+    {
+        $this->groceries->update(['carry_over' => CarryOverPolicy::Release, 'overflow_bucket_id' => null]);
+
+        $projection = $this->projection();
+
+        $this->assertSame('500.00', $projection[$this->groceries->id]['projectedRelease']->toDecimalString());
+        $this->assertSame('0.00', $projection[$this->savings->id]['projectedIn']->toDecimalString());
+    }
+
+    public function test_planned_income_in_an_off_budget_account_fills_nothing(): void
+    {
+        PlannedEvent::query()->update(['account_id' => Account::factory()->for($this->user)->offBudget()->create(['currency' => 'COP'])->id]);
+
+        $projection = $this->projection();
+
+        $this->assertSame('0.00', $projection[$this->groceries->id]['provisional']->toDecimalString());
+        $this->assertSame('0.00', $projection[$this->savings->id]['provisional']->toDecimalString());
     }
 }

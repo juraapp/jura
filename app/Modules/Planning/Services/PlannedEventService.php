@@ -165,7 +165,12 @@ class PlannedEventService
             return;
         }
 
-        $event->update($attributes + [
+        // An open plan still pointing at a transaction in the Trash was changed: it no longer describes that transaction.
+        $unlink = $event->status !== PlannedEventStatus::Realized && $event->realized_transaction_id !== null
+            ? ['realized_transaction_id' => null]
+            : [];
+
+        $event->update($attributes + $unlink + [
             'date' => $data['date'],
             'notes' => $data['notes'] ?? null,
             'allocation_overrides' => $this->overrides($data),
@@ -211,9 +216,13 @@ class PlannedEventService
         $event->update(['status' => PlannedEventStatus::Planned]);
     }
 
+    /**
+     * Skipping a plan whose transaction is in the Trash also forgets that transaction, so restoring it
+     * later neither realizes the plan again nor splits the income the plan's way.
+     */
     public function skip(PlannedEvent $event): void
     {
-        $event->update(['status' => PlannedEventStatus::Skipped]);
+        $event->update(['status' => PlannedEventStatus::Skipped, 'realized_transaction_id' => null]);
     }
 
     /**

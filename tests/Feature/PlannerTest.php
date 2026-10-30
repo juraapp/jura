@@ -111,6 +111,7 @@ class PlannerTest extends TestCase
         $this->assertSame($this->bike->id, $expected['lines'][0]['itemId']);
         $this->assertSame(0.0, (float) $expected['lines'][0]['shortfall']);
         $this->assertSame('Bike fund', collect($expected['buckets'])->firstWhere('id', $this->bikeFund->id)['name']);
+        $this->assertEquals(['start' => 0, 'end' => 0], $expected['readyToAssign']);
     }
 
     public function test_the_conservative_view_ignores_income_that_is_only_expected(): void

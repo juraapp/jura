@@ -3,9 +3,11 @@
 namespace App\Modules\Planning\Services;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\FillRule;
+use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
@@ -19,7 +21,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Splits a recorded income across the user's buckets. Runs automatically only
  * when at least one bucket has a fill rule, or when a planned income carries
- * explicit per-bucket amounts. An income that realizes (or is linked to) a plan
+ * explicit per-bucket amounts; what no bucket claims stays ready to assign. An income that realizes (or is linked to) a plan
  * with explicit amounts always uses them, also when it is allocated again after
  * an edit, a bulk change or a restore from the Trash.
  */
@@ -31,6 +33,7 @@ class IncomeAllocator
     public function __construct(
         private readonly BucketLedger $funds,
         private readonly Waterfall $waterfall,
+        private readonly LedgerQuery $ledger,
     ) {}
 
     /**
@@ -51,45 +54,52 @@ class IncomeAllocator
         }
     }
 
+    /**
+     * Splits an income across the buckets; what no bucket claims simply stays ready to assign. Income in an
+     * off-budget account is never allocated. When the income is allocated again (an edit, a restore, a linked
+     * plan), the cover its earlier release left behind is taken back first and only what is still missing is
+     * covered again, so re-running an unchanged income gives exactly the state it had before.
+     */
     public function allocate(User $user, int $transactionId, int $accountId, Money $amount, string $currency, CarbonInterface $date): void
     {
-        if (! $amount->isPositive() || $this->alreadyAllocated($user, $transactionId)) {
+        if (! $amount->isPositive() || $this->alreadyAllocated($user, $transactionId) || ! $this->ledger->isOnBudget($user->id, $accountId)) {
             return;
         }
 
         $buckets = Bucket::forUser($user)->where('currency', $currency)->inPriorityOrder()->get();
-        $overrides = array_intersect_key($this->overridesFor($user, $transactionId), $buckets->pluck('id', 'id')->all());
+        $planned = $this->overridesFor($user, $transactionId);
 
-        if ($overrides === [] && $buckets->every(fn (Bucket $bucket) => $bucket->fill_rule === null)) {
+        if ($planned === [] && $buckets->every(fn (Bucket $bucket) => $bucket->fill_rule === null)) {
             return;
         }
 
-        $inputs = $buckets
-            ->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($accountId) && ! $bucket->isCompletedOn($date))
-            ->map(fn (Bucket $bucket) => new WaterfallBucket(
-                $bucket->id,
-                $bucket->fill_rule,
-                $this->funds->fillValueFor($bucket, $date),
-                $this->room($bucket, $date),
-                $this->funds->receivedInCycle($bucket, $date),
-            ))
-            ->values()
-            ->all();
+        DB::transaction(function () use ($user, $transactionId, $accountId, $amount, $date, $buckets, $planned) {
+            $eligible = $buckets->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($accountId) && ! $bucket->isCompletedOn($date));
+            $overrides = array_intersect_key($planned, $eligible->pluck('id', 'id')->all());
 
-        $result = $this->waterfall->distribute($amount, $inputs, $overrides);
-        $source = $overrides !== [] ? AllocationSource::Planned : AllocationSource::Income;
+            $inputs = $eligible
+                ->map(fn (Bucket $bucket) => new WaterfallBucket(
+                    $bucket->id,
+                    $bucket->fill_rule,
+                    $this->funds->fillValueFor($bucket, $date),
+                    $this->room($bucket, $date),
+                    $this->funds->receivedInCycle($bucket, $date),
+                ))
+                ->values()
+                ->all();
 
-        foreach ($result['allocations'] as $bucketId => $money) {
-            $this->funds->credit($buckets->firstWhere('id', $bucketId), $money, $source, $transactionId, $date);
-        }
+            $covered = $this->takeBackCover($user, $transactionId);
+            $result = $this->waterfall->distribute($amount, $inputs, $overrides);
+            $source = $planned !== [] ? AllocationSource::Planned : AllocationSource::Income;
 
-        if ($result['leftover']->isPositive()) {
-            $default = $this->funds->ensureDefaultBucket($user, $currency);
-
-            if ($default->acceptsAccount($accountId)) {
-                $this->funds->credit($default, $result['leftover'], $source, $transactionId, $date);
+            foreach ($result['allocations'] as $bucketId => $money) {
+                $this->funds->credit($buckets->firstWhere('id', $bucketId), $money, $source, $transactionId, $date);
             }
-        }
+
+            foreach ($covered as $bucketId => $cover) {
+                $this->coverShortfall($user, Bucket::forUser($user)->find($bucketId), $cover, $transactionId);
+            }
+        });
     }
 
     /**
@@ -105,9 +115,9 @@ class IncomeAllocator
 
     /**
      * Takes an income's money back out of its buckets. A bucket only gives back what it still has: when part of
-     * the income was already moved, spent or carried away, the bucket is brought back to zero (not below) with a
-     * move from the currency's default bucket, so the totals still match the real income and the shortfall shows
-     * up in the default ("Unallocated") bucket, which may go negative.
+     * the income was already moved, spent or carried away, the bucket is brought back to zero (not below) with
+     * money from ready to assign (a `ready` row tied to the income), so ready to assign shows the shortfall.
+     * Allocating the income again takes that cover back first.
      */
     public function release(User $user, int $transactionId): void
     {
@@ -124,27 +134,48 @@ class IncomeAllocator
             Allocation::forUser($user)->whereKey($rows->modelKeys())->delete();
 
             foreach ($rows->groupBy('bucket_id') as $bucketId => $bucketRows) {
-                $bucket = Bucket::forUser($user)->find($bucketId);
                 $released = $bucketRows->reduce(fn (Money $sum, Allocation $row) => $sum->add($row->amount), Money::zero());
-
-                if ($bucket === null || $bucket->is_default || ! $released->isPositive()) {
-                    continue;
-                }
-
-                $available = $this->funds->available($bucket);
-                if (! $available->isNegative()) {
-                    continue;
-                }
-
-                $shortfall = $available->abs()->lessThan($released) ? $available->abs() : $released;
-                $this->funds->move(
-                    $this->funds->ensureDefaultBucket($user, $bucket->currency),
-                    $bucket,
-                    $shortfall,
-                    __('buckets.release_shortfall'),
-                );
+                $this->coverShortfall($user, Bucket::forUser($user)->find($bucketId), $released, $transactionId);
             }
         });
+    }
+
+    /**
+     * Brings a bucket left below zero by an income's release back up to zero, by at most what that income
+     * gave it, with money from ready to assign.
+     */
+    private function coverShortfall(User $user, ?Bucket $bucket, Money $limit, int $transactionId): void
+    {
+        if ($bucket === null || $bucket->is_default || ! $limit->isPositive()) {
+            return;
+        }
+
+        $available = $this->funds->available($bucket);
+        if (! $available->isNegative()) {
+            return;
+        }
+
+        $shortfall = $available->abs()->lessThan($limit) ? $available->abs() : $limit;
+        $this->funds->credit($bucket, $shortfall, AllocationSource::Ready, $transactionId, $user->today(), __('buckets.release_shortfall'));
+    }
+
+    /**
+     * Removes the cover an earlier release of this income left, returning how much each bucket had received.
+     *
+     * @return array<int, Money> bucket id => cover taken back
+     */
+    private function takeBackCover(User $user, int $transactionId): array
+    {
+        $rows = Allocation::forUser($user)
+            ->where('source', AllocationSource::Ready->value)
+            ->where('source_id', $transactionId)
+            ->get();
+
+        Allocation::forUser($user)->whereKey($rows->modelKeys())->delete();
+
+        return $rows->groupBy('bucket_id')
+            ->map(fn ($bucketRows) => $bucketRows->reduce(fn (Money $sum, Allocation $row) => $sum->add($row->amount), Money::zero()))
+            ->all();
     }
 
     /**
@@ -161,6 +192,7 @@ class IncomeAllocator
 
         $planned = PlannedEvent::forUser($user)
             ->where('realized_transaction_id', $transactionId)
+            ->where('status', PlannedEventStatus::Realized->value)
             ->where('type', 'income')
             ->first(['id', 'allocation_overrides']);
 

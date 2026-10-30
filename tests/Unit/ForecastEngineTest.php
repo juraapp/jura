@@ -29,7 +29,6 @@ class ForecastEngineTest extends TestCase
         string|int $balance = 0,
         ?FillRule $rule = null,
         string|int|null $value = null,
-        bool $default = false,
         ?array $accounts = null,
         string|int|null $target = null,
         bool $savings = true,
@@ -39,7 +38,7 @@ class ForecastEngineTest extends TestCase
     ): EngineBucket {
         return new EngineBucket(
             $id, $rule, $value === null ? null : (string) $value, $target === null ? null : Money::of($target), $savings,
-            Money::of($balance), $accounts, $cycle, $carry, $overflow, $default,
+            Money::of($balance), $accounts, $cycle, $carry, $overflow,
         );
     }
 
@@ -62,10 +61,10 @@ class ForecastEngineTest extends TestCase
      * @param  list<EngineLine>  $lines
      * @return array<int, array{date: ?string, delay: ?int, shortfall: string, late: bool}>
      */
-    private function simulate(array $buckets, array $incomes, array $lines, string $end = '2027-03-31'): array
+    private function simulate(array $buckets, array $incomes, array $lines, string $end = '2027-03-31', int $ready = 0): array
     {
         $result = (new ForecastEngine(new Waterfall))->run(
-            new EngineInput($this->date(self::START), $this->date($end), $buckets, $incomes),
+            new EngineInput($this->date(self::START), $this->date($end), $buckets, $incomes, Money::of($ready)),
             $lines,
         );
 
@@ -94,7 +93,7 @@ class ForecastEngineTest extends TestCase
     {
         $out = $this->simulate(
             [$this->bucket(1, 0, FillRule::Fixed, 500)],
-            [$this->income('2026-10-10', 1000), $this->income('2026-11-10', 1000)],
+            [$this->income('2026-10-10', 500), $this->income('2026-11-10', 500)],
             [$this->line(1, 900, 1)],
         );
 
@@ -136,7 +135,7 @@ class ForecastEngineTest extends TestCase
     {
         $out = $this->simulate(
             [$this->bucket(1, 600, FillRule::Fixed, 300)],
-            [$this->income('2026-11-01', 1000), $this->income('2026-12-01', 1000)],
+            [$this->income('2026-11-01', 300), $this->income('2026-12-01', 300)],
             [$this->line(1, 500, 1), $this->line(2, 500, 1)],
         );
 
@@ -144,45 +143,69 @@ class ForecastEngineTest extends TestCase
         $this->assertSame('2026-12-01', $out[2]['date'], '100 left + 300 + 300 = 700 only by December');
     }
 
-    public function test_an_item_without_a_bucket_draws_from_the_default_bucket(): void
+    public function test_an_item_without_a_bucket_is_paid_from_ready_to_assign(): void
     {
         $out = $this->simulate(
-            [$this->bucket(1, 0, FillRule::Fixed, 100), $this->bucket(2, 50, default: true)],
+            [$this->bucket(1, 0, FillRule::Fixed, 100)],
             [$this->income('2026-10-12', 1000)],
             [$this->line(1, 800)],
+            ready: 50,
         );
 
         $this->assertSame('2026-10-12', $out[1]['date'], '50 + 900 left over after the fixed 100');
     }
 
-    public function test_buckets_restricted_to_other_accounts_do_not_receive_the_income(): void
+    public function test_a_bucket_item_takes_the_bucket_first_and_the_rest_from_ready_to_assign(): void
     {
-        $out = $this->simulate(
-            [$this->bucket(1, 0, FillRule::Percent, 100, accounts: [7])],
-            [$this->income('2026-10-12', 1000, account: 8), $this->income('2026-10-20', 1000, account: 7)],
-            [$this->line(1, 900, 1)],
+        $result = (new ForecastEngine(new Waterfall))->run(
+            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 300)], [], Money::of(500)),
+            [$this->line(1, 700, 1), $this->line(2, 200, 1)],
         );
 
-        $this->assertSame('2026-10-20', $out[1]['date']);
+        $this->assertSame(self::START, $result->lines[0]->purchaseDate?->toDateString());
+        $this->assertNull($result->lines[1]->purchaseDate, 'only 100 is left anywhere');
+        $this->assertSame('100.00', $result->lines[1]->shortfall->toDecimalString());
+        $this->assertSame('0.00', $result->endBalances[1]->toDecimalString());
+        $this->assertSame('100.00', $result->endReadyToAssign->toDecimalString());
+    }
+
+    public function test_buckets_restricted_to_other_accounts_do_not_receive_the_income(): void
+    {
+        $result = (new ForecastEngine(new Waterfall))->run(
+            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 0, FillRule::Percent, 100, accounts: [7])], [
+                $this->income('2026-10-12', 1000, account: 8),
+                $this->income('2026-10-20', 400, account: 7),
+            ]),
+            [],
+        );
+
+        $this->assertSame('400.00', $result->endBalances[1]->toDecimalString());
+        $this->assertSame('1000.00', $result->endReadyToAssign->toDecimalString());
     }
 
     public function test_savings_buckets_stop_filling_at_their_target(): void
     {
-        $out = $this->simulate(
-            [$this->bucket(1, 0, FillRule::Percent, 100, target: 300)],
-            [$this->income('2026-10-12', 1000), $this->income('2026-11-12', 1000)],
-            [$this->line(1, 600, 1)],
+        $result = (new ForecastEngine(new Waterfall))->run(
+            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 0, FillRule::Percent, 100, target: 300)], [
+                $this->income('2026-10-12', 1000),
+                $this->income('2026-11-12', 1000),
+            ]),
+            [],
         );
 
-        $this->assertNull($out[1]['date'], 'capped at 300, so 600 is never reached');
-        $this->assertSame('300.00', $out[1]['shortfall']);
+        $this->assertSame('300.00', $result->endBalances[1]->toDecimalString(), 'capped at 300');
+        $this->assertSame('1700.00', $result->endReadyToAssign->toDecimalString(), 'the rest stays ready to assign');
     }
 
     public function test_income_fills_nothing_when_no_bucket_has_a_rule(): void
     {
-        $out = $this->simulate([$this->bucket(1, 0)], [$this->income('2026-10-12', 1000)], [$this->line(1, 100, 1)]);
+        $result = (new ForecastEngine(new Waterfall))->run(
+            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 0)], [$this->income('2026-10-12', 1000)]),
+            [],
+        );
 
-        $this->assertNull($out[1]['date']);
+        $this->assertSame('0.00', $result->endBalances[1]->toDecimalString());
+        $this->assertSame('1000.00', $result->endReadyToAssign->toDecimalString());
     }
 
     public function test_priority_order_decides_who_gets_a_short_income(): void
@@ -221,18 +244,15 @@ class ForecastEngineTest extends TestCase
         $this->assertFalse($out[2]['late']);
     }
 
-    public function test_release_at_the_end_of_a_cycle_moves_leftovers_to_the_default_bucket(): void
+    public function test_release_at_the_end_of_a_cycle_returns_leftovers_to_ready_to_assign(): void
     {
         $out = $this->simulate(
-            [
-                $this->bucket(1, 300, cycle: BudgetPeriodType::Monthly, carry: CarryOverPolicy::Release),
-                $this->bucket(2, 0, default: true),
-            ],
+            [$this->bucket(1, 300, cycle: BudgetPeriodType::Monthly, carry: CarryOverPolicy::Release)],
             [],
-            [$this->line(1, 300, 2)],
+            [$this->line(1, 300)],
         );
 
-        $this->assertSame('2026-10-31', $out[1]['date'], 'the October leftover reaches the default bucket on the last day of the month');
+        $this->assertSame('2026-10-31', $out[1]['date'], 'the October leftover is ready to assign on the last day of the month');
     }
 
     public function test_overflow_at_the_end_of_a_cycle_moves_leftovers_to_the_chosen_bucket(): void
@@ -240,7 +260,6 @@ class ForecastEngineTest extends TestCase
         $out = $this->simulate(
             [
                 $this->bucket(1, 300, cycle: BudgetPeriodType::Monthly, carry: CarryOverPolicy::Overflow, overflow: 3),
-                $this->bucket(2, 0, default: true),
                 $this->bucket(3, 0),
             ],
             [],
@@ -253,12 +272,13 @@ class ForecastEngineTest extends TestCase
     public function test_the_result_reports_each_buckets_balance_at_the_end(): void
     {
         $result = (new ForecastEngine(new Waterfall))->run(
-            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 1000), $this->bucket(2, 5, default: true)], []),
+            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 1000), $this->bucket(2, 5)], [], Money::of(70)),
             [$this->line(1, 400, 1)],
         );
 
         $this->assertSame('600.00', $result->endBalances[1]->toDecimalString());
         $this->assertSame('5.00', $result->endBalances[2]->toDecimalString());
+        $this->assertSame('70.00', $result->endReadyToAssign->toDecimalString());
     }
 
     public function test_a_fixed_fill_on_a_cycle_bucket_is_topped_up_once_per_cycle_in_the_simulation(): void
@@ -266,7 +286,6 @@ class ForecastEngineTest extends TestCase
         $result = (new ForecastEngine(new Waterfall))->run(
             new EngineInput($this->date(self::START), $this->date('2026-11-30'), [
                 $this->bucket(1, 0, FillRule::Fixed, 150, savings: false, cycle: BudgetPeriodType::Monthly),
-                $this->bucket(2, 0, default: true),
             ], [
                 $this->income('2026-10-02', 1000),
                 $this->income('2026-10-10', 1000),
@@ -280,11 +299,11 @@ class ForecastEngineTest extends TestCase
 
     public function test_buying_from_a_completing_bucket_closes_it_and_steps_up_the_bucket_waiting_for_it(): void
     {
-        $savings = new EngineBucket(1, FillRule::Fixed, '100', null, true, Money::zero(), null, BudgetPeriodType::Monthly, CarryOverPolicy::Carry, null, false,
+        $savings = new EngineBucket(1, FillRule::Fixed, '100', null, true, Money::zero(), null, BudgetPeriodType::Monthly, CarryOverPolicy::Carry, null,
             stepUpValue: '300', stepUpAfterBucketId: 2);
-        $car = new EngineBucket(2, FillRule::Fixed, '500', Money::of(1000), true, Money::zero(), null, null, CarryOverPolicy::Overflow, 3, false,
+        $car = new EngineBucket(2, FillRule::Fixed, '500', Money::of(1000), true, Money::zero(), null, null, CarryOverPolicy::Overflow, 3,
             completesOnPurchase: true);
-        $rest = new EngineBucket(3, FillRule::Fixed, '50', null, true, Money::zero(), null, null, CarryOverPolicy::Carry, null, true);
+        $rest = new EngineBucket(3, FillRule::PercentOfRemaining, '100', null, true, Money::zero(), null, null, CarryOverPolicy::Carry, null);
 
         $result = (new ForecastEngine(new Waterfall))->run(
             new EngineInput($this->date('2026-10-01'), $this->date('2026-12-31'), [$savings, $car, $rest], [

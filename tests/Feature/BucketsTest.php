@@ -6,6 +6,7 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Contracts\MoneyMap;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Allocation;
@@ -266,17 +267,19 @@ class BucketsTest extends TestCase
         $this->assertDatabaseHas('buckets', ['id' => $bucket->id]);
     }
 
-    public function test_deleting_a_funded_bucket_returns_its_money_to_the_default_bucket(): void
+    public function test_deleting_a_funded_bucket_makes_its_money_ready_to_assign_again(): void
     {
         $user = User::factory()->create();
-        $default = Bucket::factory()->savings()->for($user)->create(['currency' => 'COP', 'is_default' => true]);
+        Account::factory()->for($user)->create(['currency' => 'COP', 'initial_balance' => 1000]);
         $bucket = Bucket::factory()->savings()->for($user)->create(['currency' => 'COP']);
         Allocation::factory()->for($user)->for($bucket)->create(['amount' => 400, 'currency' => 'COP']);
+        $this->assertSame('600.00', app(MoneyMap::class)->readyToAssign($user, 'COP')->toDecimalString());
 
         $this->actingAs($user)->delete("/planning/buckets/{$bucket->id}")->assertRedirect();
 
-        $this->assertEquals(400, Allocation::where('bucket_id', $default->id)->sum('amount'));
         $this->assertDatabaseMissing('buckets', ['id' => $bucket->id]);
+        $this->assertSame(0, Allocation::count());
+        $this->assertSame('1000.00', app(MoneyMap::class)->readyToAssign($user, 'COP')->toDecimalString());
     }
 
     public function test_only_one_bucket_per_currency_can_be_the_default(): void
