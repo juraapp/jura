@@ -539,7 +539,7 @@ const deleteBucket = () => {
                             <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.buckets.only_accounts_hint') }}</p>
                             <label v-for="account in accounts" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
                                 <input v-model="form.allowed_account_ids" type="checkbox" :value="account.id" class="rounded border-gray-300 text-primary-600" />
-                                {{ account.name }}
+                                {{ account.name }} · {{ account.currency }}
                             </label>
                             <InputError class="mt-1" :message="form.errors['allowed_account_ids.0']" />
                         </fieldset>

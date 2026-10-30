@@ -242,7 +242,7 @@ const formatDate = (date) => format.date(date);
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
                         <option value="">{{ $t('ui.recurring.select_account') }}</option>
-                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.account_id" />
                 </div>

@@ -21,7 +21,7 @@ interface LedgerQuery
     public function expenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, CarbonInterface $to): Money;
 
     /**
-     * @return Collection<int, \stdClass> active accounts (id, name) ordered by name
+     * @return Collection<int, \stdClass> active accounts (id, name, currency) ordered by name
      */
     public function activeAccountOptions(int $userId): Collection;
 

@@ -454,7 +454,7 @@ const deleteEvent = () => {
                                 <InputLabel for="account_id" :value="$t('ui.cash_flow.account_opt')" />
                                 <SelectInput id="account_id" v-model="form.account_id">
                                     <option value="">{{ $t('ui.cash_flow.any_account') }}</option>
-                                    <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+                                    <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                                 </SelectInput>
                                 <InputError class="mt-1" :message="form.errors.account_id" />
                             </div>
@@ -542,7 +542,7 @@ const deleteEvent = () => {
                     <InputLabel for="r_account" :value="$t('ui.cash_flow.account')" />
                     <SelectInput id="r_account" v-model="realizeForm.account_id">
                         <option value="">{{ $t('ui.cash_flow.select_account') }}</option>
-                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </SelectInput>
                     <InputError class="mt-1" :message="realizeForm.errors.account_id" />
                 </div>
