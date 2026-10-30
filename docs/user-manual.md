@@ -220,11 +220,14 @@ income arrives:
 Buckets are offered each income in **priority order** (P0 first, then P1, and so on), so the important ones are filled before
 the rest. A bucket with a target stops filling once the target is reached. Whatever no bucket claims goes to the
 **default bucket** (called *Unallocated* until you pick your own). Filling happens by itself, but **only once at least
-one bucket has a fill rule**; with no rules, nothing is allocated. If you edit or delete an income, its fills are
-redone or removed.
+one bucket has a fill rule**; with no rules, nothing is allocated. If you change an income's amount, date or account,
+its fills are redone; changing only its description, notes, category or payment method leaves the buckets alone.
+Deleting an income removes its fills.
 
 **Deciding for one income.** In **Cash flow**, when you plan an income, *More options* lets you type exactly how much
-goes to each bucket for that income only. The rest goes to the default bucket.
+goes to each bucket for that income only. The rest goes to the default bucket. The same split is used when you link
+the plan to an income you already recorded, and again whenever that income's fills are redone (an edit, a bulk
+change or a restore from the Trash).
 
 **Moving money around.**
 - **Move money** (the arrows icon) transfers funds from one bucket to another of the same currency.

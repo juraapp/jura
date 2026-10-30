@@ -51,6 +51,25 @@ class EloquentLedgerQuery implements LedgerQuery
             ->value('accounts.currency');
     }
 
+    public function income(int $userId, int $transactionId): ?array
+    {
+        $transaction = Transaction::forUser($userId)
+            ->with('account:id,currency')
+            ->where('type', TransactionType::Income->value)
+            ->find($transactionId);
+
+        if ($transaction === null || $transaction->account === null) {
+            return null;
+        }
+
+        return [
+            'account_id' => $transaction->account_id,
+            'amount' => $transaction->amount,
+            'currency' => $transaction->account->currency,
+            'date' => $transaction->date,
+        ];
+    }
+
     public function findSimilarTransactions(
         int $userId,
         TransactionType $type,
