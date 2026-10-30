@@ -86,6 +86,20 @@ class PlannerTest extends TestCase
         );
     }
 
+    public function test_scenario_lines_say_which_items_are_no_longer_wanted(): void
+    {
+        $bought = WishlistItem::factory()->for($this->user)->create(['name' => 'Old phone', 'currency' => 'COP', 'status' => 'purchased']);
+        $scenario = Scenario::factory()->for($this->user)->create();
+        $scenario->lines()->create(['wishlist_item_id' => $this->bike->id, 'position' => 1]);
+        $scenario->lines()->create(['wishlist_item_id' => $bought->id, 'position' => 2]);
+
+        $this->get('/planning/planner')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('scenarios.0.lines.0.wanted', true)
+            ->where('scenarios.0.lines.1.name', 'Old phone')
+            ->where('scenarios.0.lines.1.wanted', false)
+        );
+    }
+
     /* ---------- simulate ---------- */
 
     public function test_simulating_returns_the_purchase_date_for_the_chosen_view(): void
