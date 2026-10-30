@@ -68,7 +68,7 @@ Because the scope silently turns off without an authenticated user, any code rea
 - **`ReportService`** (Reporting) — the aggregation layer behind the dashboard and the three report pages (monthly/annual/custom): period totals, expense-by-category, expense-by-account, net-worth evolution, etc. Every aggregate is a `Collection` **keyed by currency** — amounts in different currencies are never summed together.
 - **`InsightService`** (Reporting) — turns `ReportService`'s numbers into short, translated sentences ("You spent 12% more than last month"). Every phrase is a parametrized `__()` call over real aggregates, never freeform text.
 - **`TransactionImportService`** (Ledger) — parses/validates/imports a CSV of income/expense rows. Never writes a `Transaction` directly; hands validated rows to `TransactionService` so import-created transactions go through the exact same path as manually-created ones.
-- **`RecurringTransactionService`** (Planning) — generates due `Transaction`s from active `RecurringTransaction` templates (see the `notify:*` console commands).
+- **`RecurringTransactionService`** (Planning) — generates due `Transaction`s from active `RecurringTransaction` templates for every user (daily `GenerateDueRecurringTransactions` job). A template whose account is deleted is skipped with a logged warning, and any other failure is reported per template, so one bad row never stops the batch for everyone.
 
 ## Money
 

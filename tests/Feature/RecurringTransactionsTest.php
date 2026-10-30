@@ -3,11 +3,19 @@
 namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Contracts\RecordsTransactions;
+use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
+use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Planning\Models\RecurringTransaction;
+use App\Modules\Planning\Services\RecurringTransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia as Assert;
+use RuntimeException;
 use Tests\TestCase;
 
 class RecurringTransactionsTest extends TestCase
@@ -195,5 +203,69 @@ class RecurringTransactionsTest extends TestCase
 
         $response->assertNotFound();
         $this->assertDatabaseHas('recurring_transactions', ['id' => $recurring->id]);
+    }
+
+    public function test_a_template_on_a_deleted_account_is_skipped_without_stopping_other_users_templates(): void
+    {
+        Carbon::setTestNow('2026-10-12 06:00:00');
+        $owner = User::factory()->create();
+        $deletedAccount = Account::factory()->for($owner)->create();
+        $broken = RecurringTransaction::factory()->for($owner)->for($deletedAccount)->create([
+            'category_id' => Category::factory()->expense()->create(['user_id' => $owner->id])->id,
+            'next_due_date' => '2026-10-10',
+        ]);
+        $deletedAccount->delete();
+
+        $other = User::factory()->create();
+        $otherAccount = Account::factory()->for($other)->create();
+        RecurringTransaction::factory()->for($other)->for($otherAccount)->create([
+            'category_id' => Category::factory()->expense()->create(['user_id' => $other->id])->id,
+            'next_due_date' => '2026-10-12',
+        ]);
+        Log::spy();
+
+        $generated = app(RecurringTransactionService::class)->generateDue();
+
+        $this->assertSame(1, $generated);
+        $this->assertSame(1, Transaction::forUser($other)->count());
+        $this->assertSame(0, Transaction::withTrashed()->forUser($owner)->count());
+        $this->assertSame('2026-10-10', $broken->fresh()->next_due_date->toDateString());
+        Log::shouldHaveReceived('warning')->once();
+    }
+
+    public function test_a_template_that_fails_to_generate_is_reported_and_the_batch_continues(): void
+    {
+        Carbon::setTestNow('2026-10-12 06:00:00');
+        Exceptions::fake();
+        $failing = RecurringTransaction::factory()->create(['next_due_date' => '2026-10-12']);
+        $working = RecurringTransaction::factory()->create(['next_due_date' => '2026-10-12']);
+        $recorded = [];
+        $this->app->instance(RecordsTransactions::class, new class($failing->id, $recorded) implements RecordsTransactions
+        {
+            public function __construct(private int $failingId, private array &$recorded) {}
+
+            public function record(User $user, TransactionType $type, array $data): int
+            {
+                return 0;
+            }
+
+            public function recordRecurring(User $user, TransactionType $type, array $data, int $recurringTransactionId): void
+            {
+                if ($recurringTransactionId === $this->failingId) {
+                    throw new RuntimeException('boom');
+                }
+
+                $this->recorded[] = $recurringTransactionId;
+            }
+
+            public function forget(User $user, int $transactionId): void {}
+        });
+
+        $generated = app(RecurringTransactionService::class)->generateDue();
+
+        $this->assertSame(1, $generated);
+        $this->assertSame([$working->id], $recorded);
+        $this->assertSame('2026-10-12', $failing->fresh()->next_due_date->toDateString());
+        Exceptions::assertReported(RuntimeException::class);
     }
 }
