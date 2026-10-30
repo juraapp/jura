@@ -44,7 +44,7 @@ class PlannedEventController extends Controller
             ->orderBy('id')
             ->get();
 
-        $matches = $service->suggestedMatches($events);
+        $matches = $service->suggestedMatches($request->user(), $events);
 
         $projection = $projector->project($request->user(), $view, $months)->map(fn (array $currency) => [
             'currency' => $currency['currency'],
@@ -65,9 +65,9 @@ class PlannedEventController extends Controller
             'view' => $view->value,
             'views' => collect(ForecastView::cases())->map(fn (ForecastView $case) => ['value' => $case->value, 'label' => $case->label()]),
             'months' => $months,
-            'accounts' => $ledger->activeAccountOptions(),
-            'expenseCategories' => $ledger->categoryOptions(CategoryType::Expense, ['id', 'name', 'icon', 'color']),
-            'incomeCategories' => $ledger->categoryOptions(CategoryType::Income, ['id', 'name', 'icon', 'color']),
+            'accounts' => $ledger->activeAccountOptions($request->user()->id),
+            'expenseCategories' => $ledger->categoryOptions($request->user()->id, CategoryType::Expense, ['id', 'name', 'icon', 'color']),
+            'incomeCategories' => $ledger->categoryOptions($request->user()->id, CategoryType::Income, ['id', 'name', 'icon', 'color']),
             'frequencies' => collect(RecurringFrequency::cases())->map(fn (RecurringFrequency $case) => ['value' => $case->value, 'label' => $case->label()]),
             'buckets' => Bucket::inPriorityOrder()->get(['id', 'name', 'currency']),
             'certainties' => collect(Certainty::cases())->map(fn (Certainty $case) => ['value' => $case->value, 'label' => $case->label()]),

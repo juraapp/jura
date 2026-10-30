@@ -257,10 +257,10 @@ class PlannedEventService
     /**
      * Open planned expenses in one category and currency between two dates (inclusive).
      */
-    public function plannedExpenseTotal(int $categoryId, string $currency, CarbonInterface $from, CarbonInterface $to): Money
+    public function plannedExpenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, CarbonInterface $to): Money
     {
         return Money::of(
-            PlannedEvent::query()
+            PlannedEvent::forUser($userId)
                 ->open()
                 ->where('type', TransactionType::Expense->value)
                 ->where('category_id', $categoryId)
@@ -276,10 +276,10 @@ class PlannedEventService
      * @param  Collection<int, PlannedEvent>  $events
      * @return array<int, \stdClass|null> keyed by planned event id
      */
-    public function suggestedMatches(Collection $events, ?CarbonInterface $today = null): array
+    public function suggestedMatches(User $user, Collection $events, ?CarbonInterface $today = null): array
     {
         $today = Carbon::instance($today ?? now())->startOfDay();
-        $linked = PlannedEvent::query()->whereNotNull('realized_transaction_id')->pluck('realized_transaction_id')->all();
+        $linked = PlannedEvent::forUser($user)->whereNotNull('realized_transaction_id')->pluck('realized_transaction_id')->all();
         $matches = [];
 
         foreach ($events as $event) {
@@ -294,7 +294,7 @@ class PlannedEventService
             }
 
             $matches[$event->id] = $this->ledger
-                ->findSimilarTransactions($event->type, $event->currency, $event->amount, $from, $to, $linked)
+                ->findSimilarTransactions($user->id, $event->type, $event->currency, $event->amount, $from, $to, $linked)
                 ->first();
         }
 
@@ -326,7 +326,7 @@ class PlannedEventService
     private function attributes(User $user, array $data): array
     {
         $accountId = $data['account_id'] ?? null;
-        $currency = ($accountId !== null ? $this->ledger->accountCurrency((int) $accountId) : null)
+        $currency = ($accountId !== null ? $this->ledger->accountCurrency($user->id, (int) $accountId) : null)
             ?? $data['currency'] ?? $user->currency_default;
 
         return [

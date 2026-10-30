@@ -70,6 +70,7 @@ class ModuleContractsTest extends TestCase
         $make($cop, $otherCategory, '2026-10-07', 555.00); // other category
 
         $total = app(LedgerQuery::class)->expenseTotal(
+            $user->id,
             $category->id,
             'COP',
             Carbon::parse('2026-10-01'),
@@ -79,21 +80,23 @@ class ModuleContractsTest extends TestCase
         $this->assertSame('150.50', $total->toDecimalString());
     }
 
-    public function test_account_and_category_options_are_scoped_to_the_user(): void
+    public function test_account_and_category_options_are_scoped_to_the_user_without_an_authenticated_user(): void
     {
         $user = User::factory()->create();
-        $this->actingAs($user);
 
         Account::factory()->for($user)->create(['name' => 'Active', 'is_active' => true]);
         Account::factory()->for($user)->inactive()->create(['name' => 'Archived']);
         Account::factory()->create(['name' => 'Someone else']);
         Category::factory()->expense()->create(['user_id' => $user->id, 'name' => 'Mine']);
+        Category::factory()->expense()->create(['user_id' => User::factory()->create()->id, 'name' => 'Theirs']);
 
         $ledger = app(LedgerQuery::class);
 
-        $this->assertSame(['Active'], $ledger->activeAccountOptions()->pluck('name')->all());
-        $this->assertContains('Mine', $ledger->categoryOptions(CategoryType::Expense)->pluck('name')->all());
-        $this->assertNotContains('Mine', $ledger->categoryOptions(CategoryType::Income)->pluck('name')->all());
+        $this->assertSame(['Active'], $ledger->activeAccountOptions($user->id)->pluck('name')->all());
+        $expenseNames = $ledger->categoryOptions($user->id, CategoryType::Expense)->pluck('name')->all();
+        $this->assertContains('Mine', $expenseNames);
+        $this->assertNotContains('Theirs', $expenseNames);
+        $this->assertNotContains('Mine', $ledger->categoryOptions($user->id, CategoryType::Income)->pluck('name')->all());
     }
 
     public function test_record_creates_a_transaction_and_returns_its_id(): void

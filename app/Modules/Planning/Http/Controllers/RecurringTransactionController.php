@@ -48,9 +48,9 @@ class RecurringTransactionController extends Controller
 
         return Inertia::render('RecurringTransactions/Index', [
             'recurrences' => $recurrences,
-            'accounts' => $ledger->activeAccountOptions(),
-            'expenseCategories' => $ledger->categoryOptions(CategoryType::Expense),
-            'incomeCategories' => $ledger->categoryOptions(CategoryType::Income),
+            'accounts' => $ledger->activeAccountOptions(Auth::id()),
+            'expenseCategories' => $ledger->categoryOptions(Auth::id(), CategoryType::Expense),
+            'incomeCategories' => $ledger->categoryOptions(Auth::id(), CategoryType::Income),
             'frequencies' => collect(RecurringFrequency::cases())->map(fn (RecurringFrequency $frequency) => [
                 'value' => $frequency->value,
                 'label' => $frequency->label(),

@@ -46,7 +46,7 @@ class BucketLedger
         $balance = $this->balance($bucket, $asOf);
 
         if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null) {
-            $spent = $this->ledger->expenseTotal($bucket->category_id, $bucket->currency, $bucket->tracking_started_on, $asOf ?? today());
+            $spent = $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $bucket->tracking_started_on, $asOf ?? today());
             $balance = $balance->subtract($spent);
         }
 
