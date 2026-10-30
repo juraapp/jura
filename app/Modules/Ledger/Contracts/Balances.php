@@ -14,8 +14,6 @@ interface Balances
 {
     public function accountBalance(Account $account): Money;
 
-    public function netWorth(User $user): Money;
-
     /**
      * @return Collection<string, Money> net worth keyed by currency code
      */
