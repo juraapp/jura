@@ -64,7 +64,7 @@ class TransactionController extends Controller
         return Inertia::render('Transactions/Index', [
             'typeFilter' => $type,
             'transactions' => $transactions,
-            'accounts' => Account::orderBy('name')->get(['id', 'name']),
+            'accounts' => Account::orderBy('name')->get(['id', 'name', 'currency']),
             'categories' => Category::orderBy('name')->get(['id', 'name', 'type']),
             'filters' => $request->only(['account', 'category', 'from', 'to', 'q']),
         ]);
