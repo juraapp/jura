@@ -293,7 +293,7 @@ const comparisonRows = computed(() => {
                     </ul>
                     <div class="flex flex-wrap gap-2">
                         <PrimaryButton type="button" :disabled="loading || selected.size === 0" @click="runSuggest">
-                            <DynamicIcon name="sparkles" class="mr-1.5 h-4 w-4" />
+                            <DynamicIcon name="sparkles" class="h-4 w-4" />
                             {{ $t('ui.planner.suggest') }}
                         </PrimaryButton>
                         <SecondaryButton type="button" :disabled="selected.size === 0" @click="startFromSelection">{{ $t('ui.planner.build') }}</SecondaryButton>

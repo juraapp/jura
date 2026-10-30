@@ -105,7 +105,7 @@ const deleteAccount = () => {
                     {{ $t('ui.accounts.title') }}
                 </h2>
                 <PrimaryButton type="button" @click="openCreateModal">
-                    <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                    <DynamicIcon name="plus" class="h-4 w-4" />
                     {{ $t('ui.accounts.new') }}
                 </PrimaryButton>
             </div>
@@ -120,7 +120,7 @@ const deleteAccount = () => {
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.accounts.create_first') }}
                     </PrimaryButton>
                 </template>

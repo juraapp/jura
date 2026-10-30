@@ -220,11 +220,11 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.wishlist.title') }}</h2>
                 <div class="flex items-center gap-2">
                     <SecondaryButton type="button" @click="openProjectModal()">
-                        <DynamicIcon name="flag" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="flag" class="h-4 w-4" />
                         {{ $t('ui.wishlist.new_project') }}
                     </SecondaryButton>
                     <PrimaryButton type="button" @click="openItemModal()">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.wishlist.new_item') }}
                     </PrimaryButton>
                 </div>
@@ -240,7 +240,7 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openItemModal()">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.wishlist.add_first') }}
                     </PrimaryButton>
                 </template>

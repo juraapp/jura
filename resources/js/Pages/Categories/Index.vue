@@ -98,7 +98,7 @@ const deleteCategory = () => {
                     {{ $t('ui.categories.title') }}
                 </h2>
                 <PrimaryButton type="button" @click="openCreateModal">
-                    <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                    <DynamicIcon name="plus" class="h-4 w-4" />
                     {{ $t('ui.categories.new') }}
                 </PrimaryButton>
             </div>
@@ -113,7 +113,7 @@ const deleteCategory = () => {
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.categories.create_first') }}
                     </PrimaryButton>
                 </template>
