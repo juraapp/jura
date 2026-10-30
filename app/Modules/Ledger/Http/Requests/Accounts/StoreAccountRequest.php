@@ -32,6 +32,7 @@ class StoreAccountRequest extends FormRequest
             'color' => ['required', 'string', 'max:7'],
             'masked_number' => ['nullable', 'string', 'max:32'],
             'is_active' => ['boolean'],
+            'on_budget' => ['boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }

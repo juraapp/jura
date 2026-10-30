@@ -174,4 +174,24 @@ class AccountsTest extends TestCase
         $this->assertSame('9.3000', (string) $account->yield_rate);
         $this->assertSame('monthly', $account->yield_compounding->value);
     }
+
+    public function test_user_can_keep_an_account_off_budget(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $this->assertTrue($account->fresh()->on_budget);
+
+        $this->actingAs($user)->patch("/accounts/{$account->id}", [
+            'name' => $account->name,
+            'type' => $account->type->value,
+            'initial_balance' => (string) $account->initial_balance,
+            'currency' => $account->currency,
+            'color' => $account->color,
+            'is_active' => true,
+            'on_budget' => false,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertFalse($account->fresh()->on_budget);
+        $this->actingAs($user)->get('/accounts')->assertInertia(fn (Assert $page) => $page->where('accounts.0.on_budget', false));
+    }
 }

@@ -24,4 +24,8 @@ return [
     'delete_hint' => 'If it has recorded transactions or recurring entries linked to it, it will be archived instead of deleted to preserve your history.',
     'name_placeholder' => 'Chase Checking',
     'institution_placeholder' => 'Chase, Wells Fargo, PayPal...',
+    'on_budget' => 'Count in my budget (ready to assign)',
+    'on_budget_hint' => 'Its balance counts toward ready to assign, and its income can fill buckets. Turning this off, or archiving the account, moves ready to assign by the account\'s balance.',
+    'off_budget' => 'Off budget',
+    'off_budget_hint' => 'Kept out of the budget: its balance never counts toward ready to assign.',
 ];

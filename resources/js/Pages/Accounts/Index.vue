@@ -38,6 +38,7 @@ const form = useForm({
     color: '#2563eb',
     masked_number: '',
     is_active: true,
+    on_budget: true,
     notes: '',
 });
 
@@ -61,6 +62,7 @@ const openEditModal = (account) => {
     form.color = account.color;
     form.masked_number = account.masked_number ?? '';
     form.is_active = account.is_active;
+    form.on_budget = account.on_budget;
     form.notes = account.notes ?? '';
     showModal.value = true;
 };
@@ -148,6 +150,11 @@ const deleteAccount = () => {
                                     <template v-if="account.masked_number"> &middot; {{ account.masked_number }}</template>
                                     <template v-if="!account.is_active"> &middot; {{ $t('ui.accounts.archived') }}</template>
                                 </p>
+                                <span
+                                    v-if="!account.on_budget"
+                                    class="mt-1 inline-block rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                                    :title="$t('ui.accounts.off_budget_hint')"
+                                >{{ $t('ui.accounts.off_budget') }}</span>
                             </div>
                         </div>
 
@@ -268,6 +275,15 @@ const deleteAccount = () => {
                     <input v-model="form.is_active" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600">
                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $t('ui.accounts.active') }}</span>
                 </label>
+
+                <div>
+                    <label class="flex items-center gap-2">
+                        <input v-model="form.on_budget" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ $t('ui.accounts.on_budget') }}</span>
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.accounts.on_budget_hint') }}</p>
+                    <InputError class="mt-1" :message="form.errors.on_budget" />
+                </div>
             </form>
 
             <template #footer>

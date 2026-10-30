@@ -27,8 +27,19 @@ class AccountFactory extends Factory
             'icon' => 'wallet',
             'masked_number' => null,
             'is_active' => true,
+            'on_budget' => true,
             'notes' => null,
         ];
+    }
+
+    /**
+     * An account kept out of the budget (its money never counts toward ready to assign).
+     */
+    public function offBudget(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'on_budget' => false,
+        ]);
     }
 
     public function inactive(): static

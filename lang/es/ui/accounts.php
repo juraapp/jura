@@ -24,4 +24,8 @@ return [
     'delete_hint' => 'Si tiene transacciones o movimientos recurrentes vinculados, se archivará en lugar de eliminarse para conservar tu historial.',
     'name_placeholder' => 'Cuenta de ahorros Bancolombia',
     'institution_placeholder' => 'Bancolombia, Nequi, PayPal...',
+    'on_budget' => 'Contar en mi presupuesto (disponible para asignar)',
+    'on_budget_hint' => 'Su saldo cuenta en el disponible para asignar y sus ingresos pueden llenar baldes. Desactivarlo, o archivar la cuenta, mueve el disponible para asignar en el saldo de la cuenta.',
+    'off_budget' => 'Fuera del presupuesto',
+    'off_budget_hint' => 'Fuera del presupuesto: su saldo nunca cuenta en el disponible para asignar.',
 ];
