@@ -16,9 +16,21 @@ use Illuminate\Support\Collection;
 interface LedgerQuery
 {
     /**
-     * Sum of expense transactions in one category, in accounts of one currency, between two dates (inclusive).
+     * Sum of expense transactions in one category, in accounts of one currency, between two dates (inclusive;
+     * no end date = every expense from the start date on, future-dated ones included). With $onBudgetOnly, only
+     * expenses in on-budget accounts count (the spending that shrinks a bucket envelope).
      */
-    public function expenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, CarbonInterface $to): Money;
+    public function expenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, ?CarbonInterface $to, bool $onBudgetOnly = false): Money;
+
+    /**
+     * Whether one of the user's accounts counts in the budget (false when it is off budget or not theirs).
+     */
+    public function isOnBudget(int $userId, int $accountId): bool;
+
+    /**
+     * @return list<int> ids of the user's on-budget accounts (archived ones included)
+     */
+    public function onBudgetAccountIds(int $userId): array;
 
     /**
      * @return Collection<int, \stdClass> active accounts (id, name, currency) ordered by name

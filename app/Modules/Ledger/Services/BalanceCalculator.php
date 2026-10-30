@@ -35,6 +35,21 @@ class BalanceCalculator implements Balances
         return Money::of($decimal);
     }
 
+    public function budgetBalances(User $user): Collection
+    {
+        return $user->accounts()
+            ->where('is_active', true)
+            ->where('on_budget', true)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Account $account) => [
+                'id' => $account->id,
+                'currency' => $account->currency,
+                'balance' => $this->accountBalance($account),
+            ])
+            ->values();
+    }
+
     public function yieldBearing(User $user): Collection
     {
         return $user->accounts()

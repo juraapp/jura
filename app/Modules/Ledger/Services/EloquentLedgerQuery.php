@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 
 class EloquentLedgerQuery implements LedgerQuery
 {
-    public function expenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, CarbonInterface $to): Money
+    public function expenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, ?CarbonInterface $to, bool $onBudgetOnly = false): Money
     {
         return Money::of(
             Transaction::forUser($userId)
@@ -23,9 +23,21 @@ class EloquentLedgerQuery implements LedgerQuery
                 ->where('transactions.category_id', $categoryId)
                 ->where('transactions.type', TransactionType::Expense->value)
                 ->where('accounts.currency', $currency)
-                ->whereBetween('transactions.date', [$from, $to])
+                ->where('transactions.date', '>=', $from->toDateString())
+                ->when($to !== null, fn ($query) => $query->where('transactions.date', '<=', $to->toDateString()))
+                ->when($onBudgetOnly, fn ($query) => $query->where('accounts.on_budget', true))
                 ->sum('transactions.amount')
         );
+    }
+
+    public function isOnBudget(int $userId, int $accountId): bool
+    {
+        return Account::forUser($userId)->whereKey($accountId)->where('on_budget', true)->exists();
+    }
+
+    public function onBudgetAccountIds(int $userId): array
+    {
+        return Account::forUser($userId)->where('on_budget', true)->pluck('id')->map(fn ($id) => (int) $id)->all();
     }
 
     public function activeAccountOptions(int $userId): Collection
