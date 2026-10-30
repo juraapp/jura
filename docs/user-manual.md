@@ -513,6 +513,20 @@ accurate.
 **Why do I see separate totals for each currency?** Jura does not convert between currencies, so it never
 mixes them.
 
+**What is "ready to assign"?** The money in your on-budget accounts that no bucket holds yet. Every peso is either in a
+bucket or ready to assign; give it a job by moving it into a bucket. It is always calculated from your balances and
+buckets, never typed in.
+
+**Ready to assign is red (over-assigned).** Your buckets hold more than your accounts: an expense, a transfer to an
+off-budget account, an income you deleted after using its money, or a confirmed over-assignment. Take money out of a
+bucket (*Move money → Ready to assign*) or record the income that is missing.
+
+**A bucket says Overspent.** More was paid from it than it held. Move money into it, from another bucket or from ready
+to assign.
+
+**Where did my "Unallocated" bucket go?** It was replaced by ready to assign, which is calculated instead of stored.
+What it held is now simply ready to assign, and buckets that sent leftovers to it now return them to ready to assign.
+
 ## Limits of this version
 
 - Interest exists on accounts only, never on buckets, and is only projected; record it as a real transaction when the
