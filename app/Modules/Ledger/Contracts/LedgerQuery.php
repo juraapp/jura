@@ -42,6 +42,13 @@ interface LedgerQuery
     public function transactionCurrency(int $userId, int $transactionId): ?string;
 
     /**
+     * One of the user's income transactions, or null if it is not theirs or not an income.
+     *
+     * @return array{account_id: int, amount: Money, currency: string, date: CarbonInterface}|null
+     */
+    public function income(int $userId, int $transactionId): ?array;
+
+    /**
      * Real transactions that look like a planned one: same type and currency, a similar amount and a nearby date.
      * Closest amount first.
      *

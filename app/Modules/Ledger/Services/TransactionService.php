@@ -112,37 +112,48 @@ class TransactionService implements RecordsTransactions
         });
     }
 
+    /**
+     * Fields whose change means an income has to be released and allocated to buckets again.
+     * Editing only the description, notes, time, category or payment method leaves its buckets alone.
+     */
+    private const MONEY_FIELDS = ['account_id', 'amount', 'date', 'type'];
+
     public function updateSimple(Transaction $transaction, array $data): Transaction
     {
-        $affectedAccounts = collect([$transaction->account]);
-        $isIncome = $transaction->type === TransactionType::Income;
+        return DB::transaction(function () use ($transaction, $data) {
+            $affectedAccounts = collect([$transaction->account]);
 
-        if ($isIncome) {
-            IncomeRemoved::dispatch($transaction->user, $transaction->id);
-        }
+            $transaction->fill([
+                'account_id' => $data['account_id'],
+                'category_id' => $data['category_id'],
+                'amount' => Money::of($data['amount']),
+                'date' => $data['date'],
+                'time' => $data['time'] ?? null,
+                'description' => $data['description'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'payment_method' => $data['payment_method'] ?? null,
+            ]);
 
-        $transaction->update([
-            'account_id' => $data['account_id'],
-            'category_id' => $data['category_id'],
-            'amount' => Money::of($data['amount']),
-            'date' => $data['date'],
-            'time' => $data['time'] ?? null,
-            'description' => $data['description'] ?? null,
-            'notes' => $data['notes'] ?? null,
-            'payment_method' => $data['payment_method'] ?? null,
-        ]);
+            $reallocate = $transaction->type === TransactionType::Income && $transaction->isDirty(self::MONEY_FIELDS);
 
-        if ($transaction->wasChanged('account_id')) {
-            $affectedAccounts->push($transaction->account);
-        }
+            if ($reallocate) {
+                IncomeRemoved::dispatch($transaction->user, $transaction->id);
+            }
 
-        $this->announce($transaction->user, $affectedAccounts);
+            $transaction->save();
 
-        if ($isIncome) {
-            $this->announceIncome($transaction->refresh());
-        }
+            if ($transaction->wasChanged('account_id')) {
+                $affectedAccounts->push($transaction->account()->first());
+            }
 
-        return $transaction;
+            $this->announce($transaction->user, $affectedAccounts);
+
+            if ($reallocate) {
+                $this->announceIncome($transaction->refresh());
+            }
+
+            return $transaction;
+        });
     }
 
     /**

@@ -248,10 +248,21 @@ class PlannedEventService
      */
     public function link(PlannedEvent $event, int $transactionId): void
     {
-        $event->update([
-            'status' => PlannedEventStatus::Realized,
-            'realized_transaction_id' => $transactionId,
-        ]);
+        DB::transaction(function () use ($event, $transactionId) {
+            $event->update([
+                'status' => PlannedEventStatus::Realized,
+                'realized_transaction_id' => $transactionId,
+            ]);
+
+            if (! $event->isIncome() || empty($event->allocation_overrides)) {
+                return;
+            }
+
+            $income = $this->ledger->income($event->user_id, $transactionId);
+            if ($income !== null) {
+                $this->allocator->reallocate($event->user, $transactionId, $income['account_id'], $income['amount'], $income['currency'], $income['date']);
+            }
+        });
     }
 
     /**

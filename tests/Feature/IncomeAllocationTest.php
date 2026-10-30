@@ -227,6 +227,97 @@ class IncomeAllocationTest extends TestCase
         $this->assertSame(1, Transaction::count());
     }
 
+    /**
+     * @return array{0: PlannedEvent, 1: Bucket, 2: Bucket, 3: int}
+     */
+    private function realizedPlanWithSplit(): array
+    {
+        $car = $this->bucket('Car', 10, FillRule::Percent, 90);
+        $trip = $this->bucket('Trip', 20, FillRule::Percent, 5);
+        $event = PlannedEvent::factory()->for($this->user)->income()->create([
+            'amount' => 1000, 'currency' => 'COP',
+            'allocation_overrides' => [['bucket_id' => $trip->id, 'amount' => 300]],
+        ]);
+
+        $this->post("/planning/cash-flow/{$event->id}/realize", [
+            'account_id' => $this->debit->id,
+            'category_id' => $this->incomeCategory->id,
+        ])->assertSessionHasNoErrors();
+
+        return [$event, $car, $trip, $event->fresh()->realized_transaction_id];
+    }
+
+    /**
+     * @param  array<string, mixed>  $changes
+     */
+    private function editIncome(int $transactionId, array $changes): void
+    {
+        $this->patch("/finances/transactions/{$transactionId}", array_merge([
+            'account_id' => $this->debit->id,
+            'category_id' => $this->incomeCategory->id,
+            'amount' => 1000,
+            'date' => '2026-10-12',
+            'description' => 'Pay',
+        ], $changes))->assertSessionHasNoErrors();
+    }
+
+    public function test_editing_only_the_description_or_category_of_an_income_leaves_its_allocations_alone(): void
+    {
+        [, $car, $trip, $transactionId] = $this->realizedPlanWithSplit();
+        $before = Allocation::orderBy('id')->pluck('id')->all();
+        $otherCategory = Category::factory()->income()->create(['user_id' => $this->user->id]);
+
+        $this->editIncome($transactionId, ['description' => 'Pay (fixed typo)', 'notes' => 'note', 'category_id' => $otherCategory->id]);
+
+        $this->assertSame($before, Allocation::orderBy('id')->pluck('id')->all());
+        $this->assertSame(300.0, $this->funded($trip));
+        $this->assertSame(0.0, $this->funded($car));
+    }
+
+    public function test_changing_the_amount_of_a_realized_income_reapplies_the_plans_split_not_the_rules(): void
+    {
+        [, $car, $trip, $transactionId] = $this->realizedPlanWithSplit();
+
+        $this->editIncome($transactionId, ['amount' => 2000]);
+
+        $this->assertSame(300.0, $this->funded($trip));
+        $this->assertSame(0.0, $this->funded($car));
+        $default = app(BucketLedger::class)->defaultBucket($this->user, 'COP');
+        $this->assertSame(1700.0, $this->funded($default));
+    }
+
+    public function test_restoring_or_moving_a_realized_income_keeps_the_plans_split(): void
+    {
+        [, $car, $trip, $transactionId] = $this->realizedPlanWithSplit();
+
+        $this->delete("/finances/transactions/{$transactionId}")->assertRedirect();
+        $this->post("/settings/trash/transactions/{$transactionId}/restore")->assertRedirect();
+        $this->assertSame(300.0, $this->funded($trip));
+        $this->assertSame(0.0, $this->funded($car));
+
+        $this->post('/finances/transactions/bulk-update', ['ids' => [$transactionId], 'account_id' => $this->cash->id])->assertSessionHasNoErrors();
+        $this->assertSame($this->cash->id, Transaction::find($transactionId)->account_id);
+        $this->assertSame(300.0, $this->funded($trip));
+        $this->assertSame(0.0, $this->funded($car));
+    }
+
+    public function test_linking_an_income_to_a_plan_applies_the_plans_split(): void
+    {
+        $car = $this->bucket('Car', 10, FillRule::Percent, 90);
+        $trip = $this->bucket('Trip', 20, FillRule::Percent, 5);
+        $transactionId = $this->income(1000);
+        $this->assertSame(900.0, $this->funded($car));
+        $event = PlannedEvent::factory()->for($this->user)->income()->create([
+            'amount' => 1000, 'currency' => 'COP', 'date' => '2026-10-12',
+            'allocation_overrides' => [['bucket_id' => $trip->id, 'amount' => 300]],
+        ]);
+
+        $this->post("/planning/cash-flow/{$event->id}/link", ['transaction_id' => $transactionId])->assertSessionHasNoErrors();
+
+        $this->assertSame(300.0, $this->funded($trip));
+        $this->assertSame(0.0, $this->funded($car));
+    }
+
     public function test_a_planned_event_can_store_allocation_overrides_but_only_for_own_buckets(): void
     {
         $car = $this->bucket('Car', 10, FillRule::Percent, 10);

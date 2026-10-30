@@ -8,16 +8,20 @@ use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Support\Waterfall;
 use App\Modules\Planning\Support\WaterfallBucket;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonInterface;
 use Closure;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Splits a recorded income across the user's buckets. Runs automatically only
  * when at least one bucket has a fill rule, or when a planned income carries
- * explicit per-bucket amounts.
+ * explicit per-bucket amounts. An income that realizes (or is linked to) a plan
+ * with explicit amounts always uses them, also when it is allocated again after
+ * an edit, a bulk change or a restore from the Trash.
  */
 class IncomeAllocator
 {
@@ -54,7 +58,7 @@ class IncomeAllocator
         }
 
         $buckets = Bucket::forUser($user)->where('currency', $currency)->inPriorityOrder()->get();
-        $overrides = array_intersect_key($this->pendingOverrides, $buckets->pluck('id', 'id')->all());
+        $overrides = array_intersect_key($this->overridesFor($user, $transactionId), $buckets->pluck('id', 'id')->all());
 
         if ($overrides === [] && $buckets->every(fn (Bucket $bucket) => $bucket->fill_rule === null)) {
             return;
@@ -88,12 +92,45 @@ class IncomeAllocator
         }
     }
 
+    /**
+     * Releases an income and allocates it again (a plan was linked to it, so its explicit amounts now apply).
+     */
+    public function reallocate(User $user, int $transactionId, int $accountId, Money $amount, string $currency, CarbonInterface $date): void
+    {
+        DB::transaction(function () use ($user, $transactionId, $accountId, $amount, $currency, $date) {
+            $this->release($user, $transactionId);
+            $this->allocate($user, $transactionId, $accountId, $amount, $currency, $date);
+        });
+    }
+
     public function release(User $user, int $transactionId): void
     {
         Allocation::forUser($user)
             ->whereIn('source', [AllocationSource::Income->value, AllocationSource::Planned->value])
             ->where('source_id', $transactionId)
             ->delete();
+    }
+
+    /**
+     * Explicit per-bucket amounts for this income: the ones being realized right now, or those of the plan the
+     * income realizes.
+     *
+     * @return array<int, Money>
+     */
+    private function overridesFor(User $user, int $transactionId): array
+    {
+        if ($this->pendingOverrides !== []) {
+            return $this->pendingOverrides;
+        }
+
+        $planned = PlannedEvent::forUser($user)
+            ->where('realized_transaction_id', $transactionId)
+            ->where('type', 'income')
+            ->first(['id', 'allocation_overrides']);
+
+        return collect($planned?->allocation_overrides ?? [])
+            ->mapWithKeys(fn (array $row) => [(int) $row['bucket_id'] => Money::of($row['amount'])])
+            ->all();
     }
 
     private function alreadyAllocated(User $user, int $transactionId): bool
