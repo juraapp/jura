@@ -105,6 +105,7 @@ trait BucketRules
                     : null,
             ],
             'opening_balance' => ['nullable', ...MoneyRules::nonNegative()],
+            'confirm_over_assign' => ['sometimes', 'boolean'],
         ];
     }
 }

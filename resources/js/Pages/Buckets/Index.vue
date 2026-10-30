@@ -96,6 +96,7 @@ const blank = () => ({
     step_up_after_bucket_id: '',
     step_up_value: '',
     completes_on_purchase: false,
+    confirm_over_assign: false,
     carry_over: 'carry',
     overflow_bucket_id: '',
     allowed_account_ids: [],
@@ -162,14 +163,37 @@ const closeModal = () => {
     showModal.value = false;
 };
 
+/* ---- putting money in a bucket that is not ready to assign asks for confirmation first ---- */
+const overAssign = ref(null);
+const submitGuarded = (target, action, onSuccess) => {
+    target.submit(action, {
+        preserveScroll: true,
+        onSuccess,
+        onError: (errors) => {
+            if (errors.over_assign) {
+                overAssign.value = { message: errors.over_assign, retry: () => {
+                    target.confirm_over_assign = true;
+                    submitGuarded(target, action, onSuccess);
+                } };
+            }
+        },
+        onFinish: () => (target.confirm_over_assign = false),
+    });
+};
+const confirmOverAssign = () => {
+    const retry = overAssign.value.retry;
+    overAssign.value = null;
+    retry();
+};
+
 const submit = () => {
     const action = editingBucket.value ? update(editingBucket.value.id) : store();
-    form.submit(action, { preserveScroll: true, onSuccess: () => closeModal() });
+    submitGuarded(form, action, () => closeModal());
 };
 
 /* ---- move / adjust / delete ---- */
 const movingFrom = ref(null);
-const moveForm = useForm({ to_bucket_id: '', amount: '', description: '' });
+const moveForm = useForm({ from_ready: false, to_bucket_id: '', amount: '', description: '', confirm_over_assign: false });
 const moveTargets = computed(() => props.buckets.filter((bucket) => movingFrom.value && bucket.currency === movingFrom.value.currency && bucket.id !== movingFrom.value.id));
 
 const openMove = (bucket) => {
@@ -179,7 +203,7 @@ const openMove = (bucket) => {
 };
 
 const submitMove = () => {
-    moveForm.submit(move(movingFrom.value.id), { preserveScroll: true, onSuccess: () => (movingFrom.value = null) });
+    submitGuarded(moveForm, move(movingFrom.value.id), () => (movingFrom.value = null));
 };
 
 /* ---- full history: every allocation, removable when entered by hand ---- */
@@ -264,7 +288,7 @@ const resetToZero = () => {
 };
 
 const adjusting = ref(null);
-const adjustForm = useForm({ amount: '', description: '' });
+const adjustForm = useForm({ amount: '', description: '', confirm_over_assign: false });
 
 const openAdjust = (bucket) => {
     adjusting.value = bucket;
@@ -273,7 +297,7 @@ const openAdjust = (bucket) => {
 };
 
 const submitAdjust = () => {
-    adjustForm.submit(adjust(adjusting.value.id), { preserveScroll: true, onSuccess: () => (adjusting.value = null) });
+    submitGuarded(adjustForm, adjust(adjusting.value.id), () => (adjusting.value = null));
 };
 
 const confirmingDelete = ref(null);
@@ -620,16 +644,23 @@ const deleteBucket = () => {
         >
             <form id="move-form" class="space-y-4" @submit.prevent="submitMove">
                 <div>
+                    <InputLabel for="move_direction" :value="$t('ui.buckets.move_direction')" />
+                    <SelectInput id="move_direction" v-model="moveForm.from_ready">
+                        <option :value="false">{{ $t('ui.buckets.move_out') }}</option>
+                        <option :value="true">{{ $t('ui.buckets.move_in_from_ready') }}</option>
+                    </SelectInput>
+                </div>
+                <div v-if="!moveForm.from_ready">
                     <InputLabel for="to_bucket_id" :value="$t('ui.buckets.to')" />
                     <SelectInput id="to_bucket_id" v-model="moveForm.to_bucket_id">
                         <option value="">{{ $t('ui.buckets.select_bucket') }}</option>
+                        <option value="ready">{{ $t('ui.money_map.ready_to_assign') }}</option>
                         <option v-for="bucket in moveTargets" :key="bucket.id" :value="bucket.id">{{ bucket.name }}</option>
                     </SelectInput>
                     <InputError class="mt-1" :message="moveForm.errors.to_bucket_id" />
-                    <p v-if="movingFrom && moveTargets.length === 0" class="mt-1 text-xs text-gray-500">{{ $t('ui.buckets.need_another', { currency: movingFrom.currency }) }}</p>
                 </div>
                 <div>
-                    <InputLabel for="move_amount" :value="movingFrom ? $t('ui.buckets.amount_available', { amount: money(movingFrom.available, movingFrom.currency) }) : $t('ui.buckets.amount')" />
+                    <InputLabel for="move_amount" :value="movingFrom && !moveForm.from_ready ? $t('ui.buckets.amount_available', { amount: money(movingFrom.available, movingFrom.currency) }) : $t('ui.buckets.amount')" />
                     <TextInput id="move_amount" v-model="moveForm.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                     <InputError class="mt-1" :message="moveForm.errors.amount" />
                 </div>
@@ -643,6 +674,17 @@ const deleteBucket = () => {
                 <PrimaryButton form="move-form" type="submit" :disabled="moveForm.processing">{{ $t('ui.buckets.move') }}</PrimaryButton>
             </template>
         </ModalForm>
+
+        <Modal :show="overAssign !== null" max-width="md" @close="overAssign = null">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.buckets.over_assign_title') }}</h2>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ overAssign?.message }}</p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <SecondaryButton type="button" @click="overAssign = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <PrimaryButton type="button" @click="confirmOverAssign">{{ $t('ui.buckets.over_assign_confirm') }}</PrimaryButton>
+                </div>
+            </div>
+        </Modal>
 
         <ModalForm
             :show="adjusting !== null"

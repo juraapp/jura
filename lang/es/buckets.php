@@ -19,4 +19,7 @@ return [
     'cycle_limit_saved' => 'Límite de este ciclo guardado.',
     'currency_locked' => 'La moneda no se puede cambiar cuando el balde ya tiene dinero.',
     'account_currency_mismatch' => 'Solo las cuentas en la moneda del balde pueden llenarlo.',
+    'from_ready' => 'Desde disponible para asignar',
+    'to_ready' => 'Devuelto a disponible para asignar',
+    'over_assign' => 'Son :amount más de lo disponible para asignar. Tus baldes tendrían más dinero que tus cuentas.',
 ];

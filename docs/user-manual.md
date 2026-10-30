@@ -252,9 +252,13 @@ the plan to an income you already recorded, and again whenever that income's fil
 change or a restore from the Trash).
 
 **Moving money around.**
-- **Move money** (the arrows icon) transfers funds from one bucket to another of the same currency.
-- **Opening balance** (in the bucket form) is the money a bucket already holds when you start. Change it or clear it
-  at any time; it only affects the bucket, never your real accounts.
+- **Move money** (the arrows icon) transfers funds from one bucket to another of the same currency, or back to
+  **Ready to assign**. Choose *Into this bucket, from ready to assign* to put unassigned money in the bucket instead.
+- **Assign from ready to assign** (in the bucket form) is the money a bucket starts with, taken from ready to assign.
+  Change it or clear it at any time; it only affects buckets, never your real accounts.
+- **More than is ready.** Putting more money in a bucket than is ready to assign (by the starting amount, an addition
+  or a move from ready to assign) asks you to confirm first, because your buckets would then hold more than your
+  accounts. If you confirm, the money map shows the difference as **over-assigned** until you fix it.
 - **Add or remove funds** (the banknotes icon) corrects a balance by hand. Use a negative amount to remove, down to
   the available amount (for a spending bucket, what is left after this cycle's spending).
 - **All activity, edit or remove entries** (under *Recent activity*) lists everything that ever went in or out of the

@@ -23,6 +23,7 @@ class BucketOpeningBalanceTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
+        Account::factory()->for($this->user)->create(['currency' => 'COP', 'initial_balance' => 1000000]); // enough ready to assign
     }
 
     private function savingsPayload(array $overrides = []): array

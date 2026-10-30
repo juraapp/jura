@@ -20,6 +20,7 @@ class AdjustBucketFundsRequest extends FormRequest
         return [
             'amount' => ['required', ...MoneyRules::signed(), 'not_in:0'],
             'description' => ['nullable', 'string', 'max:255'],
+            'confirm_over_assign' => ['sometimes', 'boolean'],
         ];
     }
 }
