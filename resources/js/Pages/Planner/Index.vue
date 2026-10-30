@@ -206,6 +206,7 @@ const showSave = ref(false);
 
 const saveOrder = (ids) => {
     order.value = ids.map((id) => ({ itemId: id, notBefore: '' }));
+    runSimulation();
     showSave.value = true;
 };
 
@@ -263,11 +264,15 @@ const loadScenario = (scenario) => {
     if (scenario.currency !== currency.value) {
         keepOrderOnCurrencyChange = true;
     }
+    /* A new view or horizon already reruns the simulation through its watcher; only run it here when neither changes. */
+    const settingsChange = view.value !== scenario.view || horizon.value !== scenario.horizonMonths;
     currency.value = scenario.currency;
     view.value = scenario.view;
     horizon.value = scenario.horizonMonths;
     order.value = scenario.lines.map((line) => ({ itemId: line.itemId, name: line.name, wanted: line.wanted, notBefore: line.notBefore ?? '' }));
-    runSimulation();
+    if (!settingsChange) {
+        runSimulation();
+    }
     document.getElementById('builder')?.scrollIntoView({ behavior: 'smooth' });
 };
 
