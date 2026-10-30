@@ -50,4 +50,6 @@ return [
     'err_server' => 'Could not reach the server.',
     'err_pick' => 'Pick at least one item first.',
     'item_n' => 'Item {id}',
+    'left_out' => 'No longer on your wish list (bought, dropped or in another currency), so it is left out of this plan.',
+    'nothing_plannable' => 'None of these items is still on your wish list. Remove them or add others.',
 ];

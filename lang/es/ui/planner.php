@@ -50,4 +50,6 @@ return [
     'err_server' => 'No se pudo conectar con el servidor.',
     'err_pick' => 'Primero elige al menos un artículo.',
     'item_n' => 'Artículo {id}',
+    'left_out' => 'Ya no está en tu lista de deseos (comprado, descartado o en otra moneda), así que queda fuera de este plan.',
+    'nothing_plannable' => 'Ninguno de estos artículos sigue en tu lista de deseos. Quítalos o agrega otros.',
 ];

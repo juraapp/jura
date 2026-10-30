@@ -37,7 +37,7 @@ class PlannerController extends Controller
                 'bucket' => $item->bucket ? ['id' => $item->bucket->id, 'name' => $item->bucket->name] : null,
             ])->values(),
             'currencies' => $items->pluck('currency')->unique()->sort()->values(),
-            'scenarios' => Scenario::with('lines')->orderByDesc('id')->get()->map(fn (Scenario $scenario) => [
+            'scenarios' => Scenario::with('lines.item')->orderByDesc('id')->get()->map(fn (Scenario $scenario) => [
                 'id' => $scenario->id,
                 'name' => $scenario->name,
                 'currency' => $scenario->currency,
@@ -45,6 +45,8 @@ class PlannerController extends Controller
                 'horizonMonths' => $scenario->horizon_months,
                 'lines' => $scenario->lines->map(fn ($line) => [
                     'itemId' => $line->wishlist_item_id,
+                    'name' => $line->item?->name,
+                    'wanted' => $line->item?->status === WishlistStatus::Wanted,
                     'notBefore' => $line->not_before?->toDateString(),
                 ])->values(),
             ])->values(),
