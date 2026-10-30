@@ -10,6 +10,7 @@ use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Shared\Support\UserFormat;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use ArrayObject;
 use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -88,9 +89,13 @@ class User extends Authenticatable
         return CarbonImmutable::parse(CarbonImmutable::now($this->timezoneName())->toDateString(), config('app.timezone'));
     }
 
+    /** Container key of the users looked up by todayFor() in the current request, job or command. */
+    private const DATE_OWNERS = 'identity.date-owners';
+
     /**
      * Today for a user given by id, without a query when it is the authenticated user (services that only
-     * hold a user_id, such as bucket maths, call this on every request).
+     * hold a user_id, such as bucket maths, call this on every request). Other users are looked up once per
+     * request or queued job (a scoped instance, reset between jobs), not on every call.
      */
     public static function todayFor(self|int $user): CarbonImmutable
     {
@@ -103,7 +108,14 @@ class User extends Authenticatable
             return $current->today();
         }
 
-        return (static::find($user) ?? new static)->today();
+        if (! app()->bound(self::DATE_OWNERS)) {
+            app()->scoped(self::DATE_OWNERS, fn () => new ArrayObject);
+        }
+
+        $owners = app(self::DATE_OWNERS);
+        $owners[$user] ??= static::find($user) ?? new static;
+
+        return $owners[$user]->today();
     }
 
     public function accounts(): HasMany

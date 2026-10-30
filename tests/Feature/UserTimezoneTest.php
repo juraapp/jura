@@ -17,6 +17,7 @@ use App\Modules\Planning\Services\CashFlowProjector;
 use App\Modules\Planning\Services\RecurringTransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -49,6 +50,16 @@ class UserTimezoneTest extends TestCase
         $this->assertSame('2026-10-13', User::factory()->make(['timezone' => 'UTC'])->today()->toDateString());
         $this->assertSame('2026-10-13', User::factory()->make(['timezone' => 'Not/AZone'])->today()->toDateString());
         $this->assertSame('2026-10-12', User::todayFor($this->user->id)->toDateString());
+    }
+
+    public function test_today_for_a_user_id_looks_the_user_up_once(): void
+    {
+        DB::enableQueryLog();
+
+        User::todayFor($this->user->id);
+        User::todayFor($this->user->id);
+
+        $this->assertCount(1, DB::getQueryLog());
     }
 
     public function test_pages_share_today_in_the_users_timezone(): void
