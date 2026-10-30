@@ -177,7 +177,7 @@ class BucketController extends Controller
     {
         $amount = Money::of($request->validated('amount'));
 
-        if ($amount->isNegative() && $funds->balance($bucket)->lessThan($amount->abs())) {
+        if ($amount->isNegative() && $funds->available($bucket)->lessThan($amount->abs())) {
             return back()->withErrors(['amount' => __('buckets.not_enough_funds')]);
         }
 

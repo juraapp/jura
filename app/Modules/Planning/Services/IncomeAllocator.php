@@ -103,12 +103,48 @@ class IncomeAllocator
         });
     }
 
+    /**
+     * Takes an income's money back out of its buckets. A bucket only gives back what it still has: when part of
+     * the income was already moved, spent or carried away, the bucket is brought back to zero (not below) with a
+     * move from the currency's default bucket, so the totals still match the real income and the shortfall shows
+     * up in the default ("Unallocated") bucket, which may go negative.
+     */
     public function release(User $user, int $transactionId): void
     {
-        Allocation::forUser($user)
-            ->whereIn('source', [AllocationSource::Income->value, AllocationSource::Planned->value])
-            ->where('source_id', $transactionId)
-            ->delete();
+        DB::transaction(function () use ($user, $transactionId) {
+            $rows = Allocation::forUser($user)
+                ->whereIn('source', [AllocationSource::Income->value, AllocationSource::Planned->value])
+                ->where('source_id', $transactionId)
+                ->get();
+
+            if ($rows->isEmpty()) {
+                return;
+            }
+
+            Allocation::forUser($user)->whereKey($rows->modelKeys())->delete();
+
+            foreach ($rows->groupBy('bucket_id') as $bucketId => $bucketRows) {
+                $bucket = Bucket::forUser($user)->find($bucketId);
+                $released = $bucketRows->reduce(fn (Money $sum, Allocation $row) => $sum->add($row->amount), Money::zero());
+
+                if ($bucket === null || $bucket->is_default || ! $released->isPositive()) {
+                    continue;
+                }
+
+                $available = $this->funds->available($bucket);
+                if (! $available->isNegative()) {
+                    continue;
+                }
+
+                $shortfall = $available->abs()->lessThan($released) ? $available->abs() : $released;
+                $this->funds->move(
+                    $this->funds->ensureDefaultBucket($user, $bucket->currency),
+                    $bucket,
+                    $shortfall,
+                    __('buckets.release_shortfall'),
+                );
+            }
+        });
     }
 
     /**

@@ -318,6 +318,34 @@ class IncomeAllocationTest extends TestCase
         $this->assertSame(0.0, $this->funded($car));
     }
 
+    public function test_deleting_an_income_whose_money_was_moved_never_leaves_the_bucket_negative(): void
+    {
+        $car = $this->bucket('Car', 10, FillRule::Percent, 100);
+        $trip = Bucket::factory()->savings()->for($this->user)->create(['name' => 'Trip', 'currency' => 'COP']);
+        $transactionId = $this->income(500);
+        app(BucketLedger::class)->move($car, $trip, Money::of(400));
+
+        $this->delete("/finances/transactions/{$transactionId}")->assertRedirect();
+
+        $default = app(BucketLedger::class)->defaultBucket($this->user, 'COP');
+        $this->assertSame(0.0, $this->funded($car));
+        $this->assertSame(400.0, $this->funded($trip));
+        $this->assertSame(-400.0, $this->funded($default), 'the shortfall shows in Unallocated');
+        $this->assertSame(0.0, (float) Allocation::sum('amount'), 'earmarked money still matches the (now zero) income');
+    }
+
+    public function test_deleting_an_income_after_its_bucket_was_completed_does_not_leave_it_negative(): void
+    {
+        $goal = $this->bucket('Goal', 10, FillRule::Percent, 50);
+        $transactionId = $this->income(1000);
+        app(BucketLedger::class)->complete($goal->fresh(), today());
+
+        $this->delete("/finances/transactions/{$transactionId}")->assertRedirect();
+
+        $this->assertSame(0.0, $this->funded($goal));
+        $this->assertSame(0.0, (float) Allocation::sum('amount'));
+    }
+
     public function test_a_planned_event_can_store_allocation_overrides_but_only_for_own_buckets(): void
     {
         $car = $this->bucket('Car', 10, FillRule::Percent, 10);

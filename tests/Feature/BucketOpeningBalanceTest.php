@@ -70,7 +70,7 @@ class BucketOpeningBalanceTest extends TestCase
         $this->assertSame('500.00', $this->funded($bucket));
     }
 
-    public function test_funds_can_be_removed_down_to_zero_even_when_spending_lowers_what_is_available(): void
+    public function test_removing_funds_stops_at_what_is_available_after_spending_but_reset_still_empties_the_bucket(): void
     {
         $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
         $account = Account::factory()->for($this->user)->create(['currency' => 'COP']);
@@ -79,11 +79,11 @@ class BucketOpeningBalanceTest extends TestCase
         Transaction::factory()->for($this->user)->for($account)->create(['category_id' => $category->id, 'type' => 'expense', 'amount' => 500, 'date' => today()]);
 
         $this->actingAs($this->user)->post("/planning/buckets/{$bucket->id}/adjust", ['amount' => -300])
-            ->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertSame('0.00', $this->funded($bucket));
-
-        $this->actingAs($this->user)->post("/planning/buckets/{$bucket->id}/adjust", ['amount' => -1])
             ->assertSessionHasErrors('amount');
+        $this->assertSame('300.00', $this->funded($bucket));
+
+        $this->post("/planning/buckets/{$bucket->id}/reset")->assertSessionHas('success');
+        $this->assertSame('0.00', $this->funded($bucket));
     }
 
     public function test_reset_to_zero_removes_all_funded_money(): void
