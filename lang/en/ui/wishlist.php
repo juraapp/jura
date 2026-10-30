@@ -7,6 +7,7 @@ return [
     'empty_title' => 'Everything you want, in one place',
     'empty_hint' => 'Add the things you would like to get, group them into projects or hobbies, and rate how much you want each one. Link an item to a bucket to see how funded it is.',
     'add_first' => 'Add my first item',
+    'all_closed' => 'Everything here is purchased or dropped. Tick "Show purchased and dropped items" to see it.',
     'show_closed' => 'Show purchased and dropped items',
     'select_all' => 'Select all',
     'noun' => 'wish list items',

@@ -7,6 +7,7 @@ return [
     'empty_title' => 'Todo lo que quieres, en un solo lugar',
     'empty_hint' => 'Agrega lo que te gustaría tener, agrúpalo en proyectos o pasatiempos y califica cuánto quieres cada cosa. Vincula un artículo a un balde para ver cuánto lleva financiado.',
     'add_first' => 'Agregar mi primer artículo',
+    'all_closed' => 'Todo aquí está comprado o descartado. Marca "Mostrar artículos comprados y descartados" para verlo.',
     'show_closed' => 'Mostrar artículos comprados y descartados',
     'select_all' => 'Seleccionar todo',
     'noun' => 'artículos de la lista de deseos',
