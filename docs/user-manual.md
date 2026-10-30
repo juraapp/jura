@@ -279,7 +279,7 @@ current cycle (for example a holiday month). Clear it to go back to the usual li
 default bucket, or **move it** to another bucket (the overflow bucket).
 
 **Only from certain accounts (advanced).** Tick accounts to make a bucket fill only from income that lands there, for
-example a "Physical money" stash. Income in other accounts skips it.
+example a "Physical money" stash. Income in other accounts skips it. Only accounts in the bucket's currency are listed.
 
 **Planned spending.** Expenses you plan in **Cash flow** for a spending bucket's category show on its card as
 **planned**, with what would remain **after plans**.
@@ -325,14 +325,15 @@ A place for everything you would like to get. Group things into **projects** (a 
   "No project".
 - **New item** needs a name and a price. Set **how much you want it** (1 to 5), and under *Funding, dates and limits*
   you can add a **bucket** to pay for it from, a date you would like it by, and a link.
-- **Can only be bought with**: tick the accounts that may pay for it, for example "Physical money" only. Leave all
-  unchecked to allow any account. If the bucket is also restricted to certain accounts, only accounts allowed by both
+- **Can only be bought with**: tick the accounts that may pay for it, for example "Physical money" only; only accounts
+  in the item's currency are listed. Leave all unchecked to allow any account. If the bucket is also restricted to certain accounts, only accounts allowed by both
   can be used.
 - When an item is linked to a bucket, it shows a **% funded** bar: the bucket's available money compared with the
   price. Items that share one bucket each compare against the same pot, so their bars overlap rather than add up.
 
 **Buying.** Press the check button (*Mark as purchased*), choose the account and category, and confirm the final
-price. Only accounts in the item's currency (and allowed for the item and its bucket) are offered. Account lists across
+price. Only accounts in the item's currency (and allowed for the item and its bucket) are offered. If you have no account in
+that currency, the dialog says so; add one in **Accounts** first. Account lists across
 Jura show each account's currency, for example "Nu · COP". Jura records the real expense and, if the item has a bucket, spends that money from the bucket in the same step.
 If the bucket holds less than the price, it pays what it has and the rest is simply paid from your account.
 **Undo purchase** removes the expense for good (it does not go to the Trash) and returns the money to the bucket.
