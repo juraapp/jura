@@ -6,6 +6,7 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import NetWorthBadge from '@/Components/NetWorthBadge.vue';
 import NotificationBell from '@/Components/NotificationBell.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { useDarkMode } from '@/composables/useDarkMode';
 import { useSidebar } from '@/composables/useSidebar';
 import { useTransactionModal } from '@/composables/useTransactionModal';
@@ -35,14 +36,14 @@ const initial = ref(page.props.auth.user.name.charAt(0).toUpperCase());
         <NetWorthBadge />
 
         <div class="ms-auto flex items-center gap-2">
-            <button
+            <PrimaryButton
                 type="button"
-                class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-800"
+                :aria-label="$t('ui.shell.topbar.new_transaction')"
                 @click="openTransactionModal(null, 'expense')"
             >
                 <DynamicIcon name="plus" class="h-4 w-4" />
                 <span class="hidden sm:inline">{{ $t('ui.shell.topbar.new_transaction') }}</span>
-            </button>
+            </PrimaryButton>
 
             <button
                 type="button"

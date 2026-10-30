@@ -234,9 +234,7 @@ const comparisonRows = computed(() => {
                 :description="$t('ui.planner.empty_hint')"
             >
                 <template #action>
-                    <Link :href="wishlistIndex.url()">
-                        <PrimaryButton type="button">{{ $t('ui.planner.go_wishlist') }}</PrimaryButton>
-                    </Link>
+                    <PrimaryButton :as="Link" :href="wishlistIndex.url()">{{ $t('ui.planner.go_wishlist') }}</PrimaryButton>
                 </template>
             </EmptyState>
 
