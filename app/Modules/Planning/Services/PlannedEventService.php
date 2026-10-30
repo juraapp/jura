@@ -9,7 +9,9 @@ use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
+use App\Modules\Planning\Support\Recurrence;
 use App\Modules\Shared\Support\Money;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -24,9 +26,6 @@ class PlannedEventService
     public const SERIES_HORIZON_MONTHS = 12;
 
     public const SERIES_MAX_OCCURRENCES = 120;
-
-    /** Safety bound on how many occurrences one call walks through (a weekly series spans about 190 years). */
-    private const SERIES_MAX_STEPS = 10000;
 
     private const MATCH_WINDOW_DAYS = 5;
 
@@ -82,27 +81,20 @@ class PlannedEventService
      */
     public function materialize(PlannedEventSeries $series, CarbonInterface $until, ?CarbonInterface $from = null): int
     {
-        $limit = Carbon::instance($until)->startOfDay();
-        if ($series->ends_on !== null && $series->ends_on->lt($limit)) {
-            $limit = $series->ends_on->copy();
-        }
-
         $lastDate = PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date');
-        $after = $lastDate !== null ? Carbon::parse($lastDate) : null;
-        $from = $from !== null ? Carbon::instance($from)->startOfDay() : null;
 
-        $created = 0;
-        for ($step = 0; $step < self::SERIES_MAX_STEPS && $created < self::SERIES_MAX_OCCURRENCES; $step++) {
-            $date = $series->frequency->occurrence($series->starts_on, $step);
-            if ($date->gt($limit)) {
-                break;
-            }
-            if (($after !== null && $date->lte($after))
-                || ($from !== null && $date->lt($from))
-                || in_array($date->toDateString(), $series->excluded_dates ?? [], true)) {
-                continue;
-            }
+        $dates = Recurrence::occurrences(
+            $series->frequency,
+            CarbonImmutable::parse($series->starts_on->toDateString()),
+            $series->ends_on !== null ? CarbonImmutable::parse($series->ends_on->toDateString()) : null,
+            $series->excluded_dates ?? [],
+            $lastDate !== null ? CarbonImmutable::parse($lastDate) : null,
+            $from !== null ? CarbonImmutable::instance($from) : null,
+            CarbonImmutable::instance($until),
+            self::SERIES_MAX_OCCURRENCES,
+        );
 
+        foreach ($dates as $date) {
             $event = new PlannedEvent([
                 'series_id' => $series->id,
                 'type' => $series->type,
@@ -116,10 +108,9 @@ class PlannedEventService
             ]);
             $event->user_id = $series->user_id;
             $event->save();
-            $created++;
         }
 
-        return $created;
+        return count($dates);
     }
 
     /**
