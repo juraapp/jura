@@ -9,6 +9,7 @@ use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Planning\Enums\Certainty;
 use App\Modules\Planning\Enums\PlannedEventStatus;
+use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -493,5 +494,104 @@ class PlannedEventsTest extends TestCase
 
         $this->assertGreaterThanOrEqual(12, $first);
         $this->assertSame($first, $series->events()->count());
+    }
+
+    public function test_a_series_keeps_notes_a_bucket_split_and_auto_post_and_copies_them_to_its_occurrences(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->income()->create(['user_id' => $user->id]);
+        $bucket = Bucket::factory()->for($user)->create(['currency' => 'COP']);
+        $start = Carbon::now()->addDays(5);
+
+        $this->actingAs($user)->post('/planning/cash-flow', $this->payload([
+            'date' => $start->toDateString(),
+            'frequency' => 'monthly',
+            'ends_on' => $start->copy()->addMonthsNoOverflow(1)->toDateString(),
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'notes' => 'Invoice by the 25th',
+            'auto_post' => true,
+            'allocation_overrides' => [['bucket_id' => $bucket->id, 'amount' => 300]],
+        ]))->assertSessionHasNoErrors();
+
+        $series = PlannedEventSeries::firstOrFail();
+        $this->assertTrue($series->auto_post);
+        $this->assertSame('Invoice by the 25th', $series->notes);
+        $this->assertSame([['bucket_id' => $bucket->id, 'amount' => '300.00']], $series->allocation_overrides);
+
+        $this->assertSame(2, PlannedEvent::count());
+        PlannedEvent::all()->each(function (PlannedEvent $event) use ($bucket) {
+            $this->assertTrue($event->auto_post);
+            $this->assertSame('Invoice by the 25th', $event->notes);
+            $this->assertSame([['bucket_id' => $bucket->id, 'amount' => '300.00']], $event->allocation_overrides);
+        });
+    }
+
+    public function test_auto_post_needs_an_active_account_and_a_category(): void
+    {
+        $user = User::factory()->create();
+        $archived = Account::factory()->for($user)->inactive()->create();
+
+        $this->actingAs($user)
+            ->post('/planning/cash-flow', $this->payload(['auto_post' => true]))
+            ->assertSessionHasErrors(['account_id', 'category_id']);
+
+        $this->actingAs($user)
+            ->post('/planning/cash-flow', $this->payload(['auto_post' => true, 'account_id' => $archived->id]))
+            ->assertSessionHasErrors(['account_id', 'category_id']);
+
+        $this->actingAs($user)
+            ->post('/planning/cash-flow', $this->payload(['account_id' => $archived->id]))
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_an_expense_never_keeps_a_bucket_split(): void
+    {
+        $user = User::factory()->create();
+        $bucket = Bucket::factory()->for($user)->create();
+
+        $this->actingAs($user)->post('/planning/cash-flow', $this->payload([
+            'type' => 'expense',
+            'allocation_overrides' => [['bucket_id' => $bucket->id, 'amount' => 300]],
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertNull(PlannedEvent::firstOrFail()->allocation_overrides);
+    }
+
+    public function test_future_scope_also_updates_notes_and_auto_post(): void
+    {
+        [$user, $events] = $this->userWithMonthlySeries();
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->income()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)->patch("/planning/cash-flow/{$events[1]->id}", $this->payload([
+            'date' => $events[1]->date->toDateString(),
+            'scope' => 'future',
+            'notes' => 'New rate',
+            'auto_post' => true,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+        ]))->assertSessionHasNoErrors();
+
+        $fresh = PlannedEvent::orderBy('date')->get();
+        $this->assertNull($fresh[0]->notes);
+        $this->assertFalse($fresh[0]->auto_post);
+        $this->assertSame('New rate', $fresh[3]->notes);
+        $this->assertTrue($fresh[3]->auto_post);
+        $this->assertSame('New rate', PlannedEventSeries::firstOrFail()->notes);
+    }
+
+    public function test_an_inactive_series_is_never_materialized_or_extended(): void
+    {
+        $user = User::factory()->create();
+        $series = PlannedEventSeries::factory()->for($user)->create([
+            'starts_on' => Carbon::now()->toDateString(),
+            'is_active' => false,
+        ]);
+
+        $this->artisan('planning:extend-series')->assertSuccessful();
+
+        $this->assertSame(0, $series->events()->count());
     }
 }
