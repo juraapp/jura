@@ -42,7 +42,7 @@ trait BucketRules
                 Rule::requiredIf($spending),
                 'nullable',
                 'integer',
-                LedgerRules::category($userId),
+                LedgerRules::category($userId, 'expense'),
                 ...($spending() && $editing !== null ? [$categoryUnique] : []),
             ],
             'cycle' => [Rule::requiredIf($spending), 'nullable', Rule::enum(BudgetPeriodType::class)],

@@ -24,7 +24,7 @@ class PurchaseWishlistItemRequest extends FormRequest
 
         return [
             'account_id' => ['required', 'integer', LedgerRules::account($userId, activeOnly: true)],
-            'category_id' => ['required', 'integer', LedgerRules::category($userId)->where('type', 'expense')],
+            'category_id' => ['required', 'integer', LedgerRules::category($userId, 'expense')],
             'amount' => ['nullable', ...MoneyRules::positive()],
             'date' => ['nullable', 'date'],
         ];

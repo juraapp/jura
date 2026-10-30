@@ -26,7 +26,7 @@ class StorePlannedEventRequest extends FormRequest
             'date' => ['required', 'date'],
             'currency' => ['nullable', 'string', 'size:3'],
             'account_id' => ['nullable', 'integer', LedgerRules::account($userId)],
-            'category_id' => ['nullable', 'integer', LedgerRules::category($userId)],
+            'category_id' => ['nullable', 'integer', LedgerRules::category($userId, (string) $this->input('type'))],
             'certainty' => ['required', 'in:confirmed,expected,speculative'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'allocation_overrides' => ['nullable', 'array'],

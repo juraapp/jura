@@ -19,7 +19,7 @@ class StoreRecurringTransactionRequest extends FormRequest
         return [
             'type' => ['required', 'in:income,expense'],
             'account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true)],
-            'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id)],
+            'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id, (string) $this->input('type'))],
             'amount' => ['required', ...MoneyRules::positive()],
             'description' => ['nullable', 'string', 'max:255'],
             'frequency' => ['required', 'in:weekly,biweekly,monthly,yearly'],
