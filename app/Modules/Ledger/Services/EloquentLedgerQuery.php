@@ -30,7 +30,7 @@ class EloquentLedgerQuery implements LedgerQuery
 
     public function activeAccountOptions(int $userId): Collection
     {
-        return Account::forUser($userId)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        return Account::forUser($userId)->where('is_active', true)->orderBy('name')->get(['id', 'name', 'currency']);
     }
 
     public function categoryOptions(int $userId, CategoryType $type, array $columns = ['id', 'name']): Collection
