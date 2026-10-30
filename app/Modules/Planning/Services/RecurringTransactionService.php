@@ -22,7 +22,11 @@ class RecurringTransactionService
         $generated = 0;
 
         RecurringTransaction::withoutGlobalScope('user')
-            ->with(['user', 'account' => fn ($query) => $query->withoutGlobalScope('user')])
+            ->with([
+                'user',
+                'account' => fn ($query) => $query->withoutGlobalScope('user'),
+                'category' => fn ($query) => $query->withoutGlobalScope('visibleToUser')->withTrashed(),
+            ])
             ->where('is_active', true)
             ->where('next_due_date', '<=', now()->addDay()->toDateString())
             ->chunkById(50, function ($recurrences) use (&$generated) {
@@ -42,10 +46,19 @@ class RecurringTransactionService
 
     private function tryGenerate(RecurringTransaction $recurring): bool
     {
-        if ($recurring->user === null || $recurring->account === null) {
-            Log::warning('Skipped a recurring transaction whose account is deleted or missing.', [
+        $problem = match (true) {
+            $recurring->user === null => 'its user is missing',
+            $recurring->account === null => 'its account is deleted or missing',
+            ! $recurring->account->is_active => 'its account is archived',
+            $recurring->category === null || $recurring->category->trashed() => 'its category is deleted or missing',
+            default => null,
+        };
+
+        if ($problem !== null) {
+            Log::warning("Skipped a recurring transaction because {$problem}.", [
                 'recurring_transaction_id' => $recurring->id,
                 'account_id' => $recurring->account_id,
+                'category_id' => $recurring->category_id,
             ]);
 
             return false;
