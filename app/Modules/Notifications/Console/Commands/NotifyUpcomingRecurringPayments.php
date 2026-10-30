@@ -14,7 +14,8 @@ class NotifyUpcomingRecurringPayments extends Command
 {
     public function handle(): void
     {
-        $recurrences = RecurringTransaction::with(['user', 'category'])
+        $recurrences = RecurringTransaction::with(['user', 'category', 'account'])
+            ->whereHas('account')
             ->where('is_active', true)
             ->whereBetween('next_due_date', [now()->toDateString(), now()->addDays(3)->toDateString()])
             ->get();
