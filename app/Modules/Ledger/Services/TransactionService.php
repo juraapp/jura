@@ -190,8 +190,8 @@ class TransactionService implements RecordsTransactions
     }
 
     /**
-     * Moves a simple transaction to another account and/or category. Transfers, and a
-     * category of the wrong kind, are left alone. Returns whether anything changed.
+     * Moves a simple transaction to another account and/or category. Transfers, a category of
+     * the wrong kind and an account in another currency are left alone. Returns whether anything changed.
      */
     public function reassign(Transaction $transaction, ?int $accountId, ?Category $category): bool
     {
@@ -201,6 +201,10 @@ class TransactionService implements RecordsTransactions
 
         if ($category !== null && $category->type->value !== $transaction->type->value) {
             $category = null;
+        }
+
+        if ($accountId !== null && Account::whereKey($accountId)->value('currency') !== $transaction->account->currency) {
+            $accountId = null;
         }
 
         $newAccountId = $accountId ?? $transaction->account_id;

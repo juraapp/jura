@@ -12,4 +12,5 @@ return [
     'linked' => 'Vinculado a la transacción existente.',
     'already_closed' => 'Este evento planeado ya está cerrado.',
     'account_required' => 'Elige una cuenta para registrar esta transacción.',
+    'currency_mismatch' => 'Este plan está en :currency. Elige una cuenta o transacción en la misma moneda.',
 ];

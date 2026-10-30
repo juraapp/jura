@@ -17,4 +17,6 @@ return [
     'allocation_locked' => 'Este movimiento viene de tus ingresos o de un ciclo cerrado y no se puede eliminar aquí.',
     'allocation_removed' => 'Movimiento eliminado.',
     'cycle_limit_saved' => 'Límite de este ciclo guardado.',
+    'currency_locked' => 'La moneda no se puede cambiar cuando el balde ya tiene dinero.',
+    'account_currency_mismatch' => 'Solo las cuentas en la moneda del balde pueden llenarlo.',
 ];

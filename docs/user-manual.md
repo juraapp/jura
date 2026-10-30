@@ -88,6 +88,9 @@ an optional **time** (it defaults to now and can be cleared), an optional descri
 
 - You can **edit** or **delete** any transaction; balances update automatically.
 - **Filter** the list by type to see only incomes, expenses or transfers.
+- **One currency per transaction.** A transfer must be between two accounts of the same currency, and a transaction
+  can only move to another account of its currency (bulk *Change account* skips the ones that don't match). An
+  account's currency can no longer change once it has transactions, and a bucket's once it holds money.
 - Editing or deleting one side of a transfer updates the other side too. Each transfer appears twice in the full list:
   the row says **Transfer out → (destination)** on the source account and **Transfer in ← (source)** on the destination.
 - Within a day, transactions are listed latest time first; ones without a time come last. The time is shown in the format
@@ -99,7 +102,7 @@ Long lists (transactions, planned events, wish list, recurring expenses, savings
 every row and a **Select all** box. Selecting rows opens a bar with **Delete** and **Clear**.
 
 - On **Transactions** the bar also offers **Change category / account** for the selected rows (transfers are never
-  changed, and a category only applies to transactions of the same kind), and, once you tick the whole page, **Select
+  changed, a category only applies to transactions of the same kind, and an account only to transactions of its currency), and, once you tick the whole page, **Select
   all N that match** to act on every row your filters match, not just this page.
 - After deleting transactions a toast offers **Undo**; deleted transactions also wait in **Settings → Trash**.
 - Deleting planned events removes only the chosen occurrences of a repeating event. Deleting buckets moves their money

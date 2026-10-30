@@ -2,9 +2,11 @@
 
 namespace App\Modules\Planning\Http\Requests\Wishlist;
 
+use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Shared\Validation\LedgerRules;
 use App\Modules\Shared\Validation\MoneyRules;
+use Closure;
 use Illuminate\Validation\Rule;
 
 /**
@@ -33,7 +35,13 @@ trait WishlistItemRules
             ],
             'desired_by' => ['nullable', 'date'],
             'allowed_account_ids' => ['nullable', 'array'],
-            'allowed_account_ids.*' => ['integer', LedgerRules::account($userId)],
+            'allowed_account_ids.*' => [
+                'integer',
+                LedgerRules::account($userId),
+                fn (string $attribute, mixed $value, Closure $fail) => app(LedgerQuery::class)->accountCurrency($userId, (int) $value) !== $currency
+                    ? $fail(__('wishlist.currency_mismatch'))
+                    : null,
+            ],
             'url' => ['nullable', 'url', 'max:2048'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];

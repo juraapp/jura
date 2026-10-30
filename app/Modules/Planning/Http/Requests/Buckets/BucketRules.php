@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Http\Requests\Buckets;
 
+use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\CarryOverPolicy;
@@ -9,6 +10,7 @@ use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Shared\Validation\LedgerRules;
 use App\Modules\Shared\Validation\MoneyRules;
+use Closure;
 use Illuminate\Validation\Rule;
 
 /**
@@ -36,7 +38,16 @@ trait BucketRules
         return [
             'kind' => ['required', Rule::enum(BucketKind::class)],
             'name' => [Rule::requiredIf(fn () => ! $spending()), 'nullable', 'string', 'max:100'],
-            'currency' => ['required', 'string', 'size:3'],
+            'currency' => [
+                'required',
+                'string',
+                'size:3',
+                fn (string $attribute, mixed $value, Closure $fail) => $editing !== null
+                    && strtoupper((string) $value) !== $editing->currency
+                    && $editing->allocations()->exists()
+                        ? $fail(__('buckets.currency_locked'))
+                        : null,
+            ],
             'priority' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'category_id' => [
                 Rule::requiredIf($spending),
@@ -80,7 +91,13 @@ trait BucketRules
                 ...($editing !== null ? [Rule::notIn([$editing->id])] : []),
             ],
             'allowed_account_ids' => ['nullable', 'array'],
-            'allowed_account_ids.*' => ['integer', LedgerRules::account($userId)],
+            'allowed_account_ids.*' => [
+                'integer',
+                LedgerRules::account($userId),
+                fn (string $attribute, mixed $value, Closure $fail) => app(LedgerQuery::class)->accountCurrency($userId, (int) $value) !== strtoupper((string) $this->input('currency'))
+                    ? $fail(__('buckets.account_currency_mismatch'))
+                    : null,
+            ],
             'opening_balance' => ['nullable', ...MoneyRules::nonNegative()],
             'is_default' => ['nullable', 'boolean'],
         ];
