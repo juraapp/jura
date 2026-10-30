@@ -56,7 +56,7 @@ const sections = [
             { label: 'ui.shell.nav.wish_list', route: wishlistIndex, icon: 'flag' },
             { label: 'ui.shell.nav.planner', route: plannerIndex, icon: 'scale' },
             { label: 'ui.shell.nav.savings_goals', route: savingsGoalsIndex, icon: 'flag' },
-            { label: 'ui.shell.nav.recurring_expenses', route: recurringTransactionsIndex, icon: 'arrow-path' },
+            { label: 'ui.shell.nav.recurring_transactions', route: recurringTransactionsIndex, icon: 'arrow-path' },
         ],
     },
     {
@@ -82,7 +82,29 @@ const sections = [
     },
 ];
 
-const isActive = (routeFn) => computed(() => page.url === routeFn.url());
+const pathOf = (url) => new URL(url, window.location.origin).pathname.replace(/\/+$/, '') || '/';
+
+/*
+ * The active item is the one whose path is the longest prefix of the current path (query string ignored),
+ * so /finances/transactions?page=2 highlights Transactions, /finances/transactions/import only Import CSV,
+ * and /planning/buckets/1/history Buckets, while /reports/buckets highlights the Buckets report.
+ */
+const activeUrl = computed(() => {
+    const current = pathOf(page.url);
+    let best = null;
+
+    sections.forEach((section) => section.items.forEach((item) => {
+        const candidate = pathOf(item.route.url());
+        const matches = current === candidate || (candidate !== '/' && current.startsWith(`${candidate}/`));
+        if (matches && (best === null || candidate.length > best.length)) {
+            best = candidate;
+        }
+    }));
+
+    return best;
+});
+
+const isActive = (routeFn) => activeUrl.value === pathOf(routeFn.url());
 </script>
 
 <template>
@@ -109,7 +131,7 @@ const isActive = (routeFn) => computed(() => page.url === routeFn.url());
                         <Link
                             :href="item.route.url()"
                             class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition"
-                            :class="isActive(item.route).value
+                            :class="isActive(item.route)
                                 ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-400'
                                 : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'"
                             @click="close"

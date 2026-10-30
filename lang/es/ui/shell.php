@@ -19,7 +19,7 @@ return [
         'wish_list' => 'Lista de deseos',
         'planner' => 'Planificador',
         'savings_goals' => 'Metas de ahorro',
-        'recurring_expenses' => 'Gastos recurrentes',
+        'recurring_transactions' => 'Transacciones recurrentes',
         'monthly' => 'Mensual',
         'annual' => 'Anual',
         'custom' => 'Personalizado',

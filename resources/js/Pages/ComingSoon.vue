@@ -1,14 +1,20 @@
 <script setup>
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 
-defineProps({
-    title: {
+const props = defineProps({
+    /** Translation key of the page title, so it follows the user's language. */
+    titleKey: {
         type: String,
         required: true,
     },
 });
+
+const { t } = useI18n();
+const title = computed(() => t(props.titleKey));
 </script>
 
 <template>

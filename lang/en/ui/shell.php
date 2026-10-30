@@ -19,7 +19,7 @@ return [
         'wish_list' => 'Wish list',
         'planner' => 'Planner',
         'savings_goals' => 'Savings goals',
-        'recurring_expenses' => 'Recurring expenses',
+        'recurring_transactions' => 'Recurring transactions',
         'monthly' => 'Monthly',
         'annual' => 'Annual',
         'custom' => 'Custom',
