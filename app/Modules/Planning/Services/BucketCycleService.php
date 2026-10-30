@@ -134,8 +134,9 @@ class BucketCycleService
 
         $spent = Money::zero();
         if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null) {
-            $from = $start->lt($bucket->tracking_started_on) ? $bucket->tracking_started_on : $start;
-            $spent = $from->gt($end) ? Money::zero() : $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $from, $end);
+            $since = $this->funds->fundedSince($bucket) ?? $bucket->tracking_started_on;
+            $from = $start->lt($since) ? $since : $start;
+            $spent = $from->gt($end) ? Money::zero() : $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $from, $end, onBudgetOnly: true);
         }
 
         return [

@@ -37,20 +37,60 @@ class BucketLedger
     }
 
     /**
-     * Funded money still available to use. For a category-linked spending
-     * bucket, real spending since tracking began is subtracted, so the
-     * envelope shrinks as the category is spent.
+     * Funded money still available to use. For a category-linked spending bucket, real spending in on-budget
+     * accounts since the bucket was funded is subtracted, so the envelope shrinks as the category is spent.
+     * Without a date every recorded allocation and expense counts (future-dated ones included, the same cut-off
+     * as account balances); with one, only those up to that date.
      */
     public function available(Bucket $bucket, ?CarbonInterface $asOf = null): Money
     {
         $balance = $this->balance($bucket, $asOf);
 
         if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null) {
-            $spent = $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $bucket->tracking_started_on, $asOf ?? User::todayFor($bucket->user_id));
+            $from = $this->fundedSince($bucket) ?? $bucket->tracking_started_on;
+            $spent = $asOf !== null && $from->gt($asOf)
+                ? Money::zero()
+                : $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $from, $asOf, onBudgetOnly: true);
             $balance = $balance->subtract($spent);
         }
 
         return $balance;
+    }
+
+    /**
+     * The bucket's envelope: what it holds right now, every recorded movement counted. Only funded buckets
+     * have one in the money map; a limit-only spending bucket is a spending limit, not earmarked money.
+     */
+    public function envelope(Bucket $bucket): Money
+    {
+        return $this->available($bucket);
+    }
+
+    /**
+     * Whether money was ever put in the bucket (at least one allocation).
+     */
+    public function isFunded(Bucket $bucket): bool
+    {
+        return Allocation::forUser($bucket->user_id)->where('bucket_id', $bucket->id)->exists();
+    }
+
+    /**
+     * From when the bucket's category spending comes out of its envelope: tracking start or its first
+     * allocation, whichever is later. Null while the bucket has never been funded.
+     */
+    public function fundedSince(Bucket $bucket): ?Carbon
+    {
+        $first = Allocation::forUser($bucket->user_id)->where('bucket_id', $bucket->id)->min('date');
+
+        if ($first === null) {
+            return null;
+        }
+
+        $first = Carbon::parse($first)->startOfDay();
+
+        return $bucket->tracking_started_on !== null && $bucket->tracking_started_on->gt($first)
+            ? $bucket->tracking_started_on->copy()
+            : $first;
     }
 
     /**
