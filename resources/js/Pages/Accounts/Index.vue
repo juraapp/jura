@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
+import MoneyMapStrip from '@/Components/MoneyMapStrip.vue';
 import ModalForm from '@/Components/ModalForm.vue';
 import Modal from '@/Components/Modal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -128,7 +129,9 @@ const deleteAccount = () => {
                 </template>
             </EmptyState>
 
-            <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <MoneyMapStrip v-if="accounts.length > 0" class="mb-6" />
+
+            <div v-if="accounts.length > 0" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div
                     v-for="account in accounts"
                     :key="account.id"

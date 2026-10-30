@@ -6,6 +6,7 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import NetWorthBadge from '@/Components/NetWorthBadge.vue';
 import NotificationBell from '@/Components/NotificationBell.vue';
+import ReadyToAssignBadge from '@/Components/ReadyToAssignBadge.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { useDarkMode } from '@/composables/useDarkMode';
 import { useSidebar } from '@/composables/useSidebar';
@@ -34,6 +35,7 @@ const initial = ref(page.props.auth.user.name.charAt(0).toUpperCase());
         </button>
 
         <NetWorthBadge />
+        <ReadyToAssignBadge />
 
         <div class="ms-auto flex items-center gap-2">
             <PrimaryButton

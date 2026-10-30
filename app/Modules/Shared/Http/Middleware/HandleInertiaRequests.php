@@ -3,6 +3,7 @@
 namespace App\Modules\Shared\Http\Middleware;
 
 use App\Modules\Ledger\Contracts\Balances;
+use App\Modules\Planning\Contracts\MoneyMap;
 use App\Modules\Shared\Support\UiMessages;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -58,6 +59,19 @@ class HandleInertiaRequests extends Middleware
                     ->netWorthByCurrency($request->user())
                     ->map(fn ($money) => $money->toFloat())
                     ->all();
+            }, 'topbar'),
+            'moneyMap' => Inertia::defer(function () use ($request) {
+                if (! $request->user()) {
+                    return [];
+                }
+
+                return array_values(array_map(fn (array $row) => [
+                    'currency' => $row['currency'],
+                    'inAccounts' => $row['inAccounts']->toFloat(),
+                    'inBuckets' => $row['inBuckets']->toFloat(),
+                    'readyToAssign' => $row['readyToAssign']->toFloat(),
+                    'overAssigned' => $row['overAssigned'],
+                ], app(MoneyMap::class)->summary($request->user())));
             }, 'topbar'),
             'notifications' => Inertia::defer(function () use ($request) {
                 if (! $request->user()) {

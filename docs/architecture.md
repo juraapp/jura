@@ -51,6 +51,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
    - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record`, `recordRecurring`).
    - `Planning\Contracts\BucketProgress`: spending-bucket spent/remaining/status.
    - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances and planned money in a date window.
+   - `Planning\Contracts\MoneyMap`: per currency, money in on-budget accounts, in funded bucket envelopes, and ready to assign (computed, never stored).
    - `Planning\Contracts\PlanningOverview`: bucket balances, allocation history, projected bucket balances and project summaries for reports.
 4. Contracts are bound in each module's service provider; providers are listed in `bootstrap/providers.php`.
 
@@ -65,7 +66,7 @@ To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to 
 - `auth.user` — the authenticated user, or `null`.
 - `today` — the user's current date (`Y-m-d`) in their timezone (`$user->today()`), or `null` for guests. Vue reads it through `useToday()` (see `frontend-conventions.md`).
 - `flash` — `{ success, error, warning }`, read by pages that want to react to a flash message (most currently rely on the flash surfacing naturally via a full Inertia re-render rather than reading this explicitly).
-- `netWorth` / `notifications` — deferred (`Inertia::defer(..., 'topbar')`) since the topbar needs them on every page but they're not worth blocking the initial render for. The Vue-side `NetWorthBadge`/`NotificationBell` components consume them; see `frontend-conventions.md`.
+- `netWorth` / `moneyMap` / `notifications` — deferred (`Inertia::defer(..., 'topbar')`) since the topbar needs them on every page but they're not worth blocking the initial render for. The Vue-side `NetWorthBadge`/`ReadyToAssignBadge`/`NotificationBell` components consume them, and `MoneyMapStrip` shows `moneyMap` (`[{currency, inAccounts, inBuckets, readyToAssign, overAssigned}]`) on the Dashboard, Accounts and Buckets pages; see `frontend-conventions.md`.
 
 ## Frontend directory layout
 

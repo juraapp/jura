@@ -19,6 +19,11 @@ evening west of Greenwich. Use `const todayDate = useToday()` (`composables/useT
 form opens: it is today in the user's Preferences timezone (pure `resources/js/today.js`, tested with `npm run test:js`),
 falling back to the shared `today` prop.
 
+## Money map
+`Components/MoneyMapStrip.vue` (in accounts | in buckets | ready to assign, red "Over-assigned by" when negative) and
+the topbar's `ReadyToAssignBadge.vue` read the shared deferred `moneyMap` prop inside `<Deferred data="moneyMap"
+group="topbar">`, so a page only drops `<MoneyMapStrip />` in; never recompute ready to assign on the client.
+
 ## Pages vs Components vs Layouts
 
 - **`Pages/`** — one file per `Inertia::render('X')` target, same path (`Pages/Accounts/Index.vue` ↔ `Inertia::render('Accounts/Index', ...)`). A Page always wraps its content in `<AuthenticatedLayout>` (or `<GuestLayout>` for auth screens) and receives its data exclusively via `defineProps()` — never fetches its own initial data.
