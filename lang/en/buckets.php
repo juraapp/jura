@@ -10,6 +10,7 @@ return [
     'not_enough_funds' => 'That bucket does not have enough available funds.',
     'cannot_move' => 'Choose a different bucket of the same currency.',
     'opening_balance' => 'Opening balance',
+    'release_shortfall' => 'Covers an income removed after its money was used',
     'reset_note' => 'Reset to zero',
     'reset' => 'Funds reset to zero.',
     'completed' => 'Bucket completed. What was left moved on.',

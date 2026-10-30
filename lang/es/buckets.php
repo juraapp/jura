@@ -10,6 +10,7 @@ return [
     'not_enough_funds' => 'Ese balde no tiene fondos suficientes disponibles.',
     'cannot_move' => 'Elige otro balde de la misma moneda.',
     'opening_balance' => 'Saldo inicial',
+    'release_shortfall' => 'Cubre un ingreso eliminado después de usar su dinero',
     'reset_note' => 'Restablecido a cero',
     'reset' => 'Fondos restablecidos a cero.',
     'completed' => 'Balde completado. Lo que sobraba se movió.',

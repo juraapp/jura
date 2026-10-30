@@ -222,7 +222,9 @@ the rest. A bucket with a target stops filling once the target is reached. Whate
 **default bucket** (called *Unallocated* until you pick your own). Filling happens by itself, but **only once at least
 one bucket has a fill rule**; with no rules, nothing is allocated. If you change an income's amount, date or account,
 its fills are redone; changing only its description, notes, category or payment method leaves the buckets alone.
-Deleting an income removes its fills.
+Deleting an income removes its fills. A bucket only gives back what it still has: if part of that income was
+already moved to another bucket, spent or carried away, the bucket stops at zero and the difference is taken from
+the default bucket instead, which can then show a negative amount (money you had earmarked but no longer have).
 
 **Deciding for one income.** In **Cash flow**, when you plan an income, *More options* lets you type exactly how much
 goes to each bucket for that income only. The rest goes to the default bucket. The same split is used when you link
@@ -234,7 +236,7 @@ change or a restore from the Trash).
 - **Opening balance** (in the bucket form) is the money a bucket already holds when you start. Change it or clear it
   at any time; it only affects the bucket, never your real accounts.
 - **Add or remove funds** (the banknotes icon) corrects a balance by hand. Use a negative amount to remove, down to
-  the funded amount.
+  the available amount (for a spending bucket, what is left after this cycle's spending).
 - **All activity, edit or remove entries** (under *Recent activity*) lists everything that ever went in or out of the
   bucket. Entries you made yourself (opening balance, adjustments, moves between buckets) have a trash button, and
   **Reset to zero** empties the bucket. Removing an entry asks for confirmation first: it is deleted for good, and

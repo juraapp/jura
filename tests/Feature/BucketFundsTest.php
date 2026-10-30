@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Models\Account;
+use App\Modules\Ledger\Models\Category;
+use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
@@ -94,6 +97,24 @@ class BucketFundsTest extends TestCase
         $this->post("/planning/buckets/{$this->from->id}/adjust", ['amount' => 0])->assertSessionHasErrors('amount');
 
         $this->assertSame(1000.0, $this->balance($this->from));
+    }
+
+    public function test_a_negative_adjustment_is_checked_against_available_money_not_the_funded_balance(): void
+    {
+        $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
+        $account = Account::factory()->for($this->user)->create(['currency' => 'COP']);
+        $groceries = Bucket::factory()->for($this->user)->create([
+            'kind' => 'spending', 'category_id' => $category->id, 'currency' => 'COP', 'tracking_started_on' => today()->subMonth(),
+        ]);
+        Allocation::factory()->for($this->user)->for($groceries)->create(['amount' => 500, 'currency' => 'COP']);
+        Transaction::factory()->for($this->user)->for($account)->for($category)->create(['type' => 'expense', 'amount' => 400, 'date' => today()]);
+
+        $this->actingAs($this->user)
+            ->post("/planning/buckets/{$groceries->id}/adjust", ['amount' => -150])
+            ->assertSessionHasErrors('amount');
+
+        $this->post("/planning/buckets/{$groceries->id}/adjust", ['amount' => -100])->assertSessionHasNoErrors();
+        $this->assertSame(400.0, $this->balance($groceries));
     }
 
     public function test_other_users_buckets_cannot_be_touched(): void
