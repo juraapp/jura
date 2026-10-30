@@ -29,6 +29,7 @@ return [
     'date' => 'Fecha',
     'save' => 'Guardar',
     'delete_title' => '¿Eliminar esta meta?',
+    'delete_hint' => 'Se mueve a Metas eliminadas, más abajo, desde donde puedes restaurarla.',
     'purge_title' => '¿Eliminar "{name}" definitivamente?',
     'purge_hint' => 'Sus aportes también se eliminan. Esta acción no se puede deshacer.',
 ];

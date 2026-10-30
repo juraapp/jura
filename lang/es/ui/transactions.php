@@ -30,7 +30,7 @@ return [
     'keep_account' => 'Mantener cuenta',
     'apply' => 'Aplicar',
     'delete_one' => '¿Eliminar esta transacción?',
-    'delete_one_hint' => 'Si es una transferencia, se eliminarán ambos movimientos (origen y destino). Esta acción no se puede deshacer.',
+    'delete_one_hint' => 'Si es una transferencia, se eliminarán ambos movimientos (origen y destino). Puedes restaurarla desde la Papelera.',
     'income' => 'Ingreso',
     'expense' => 'Gasto',
 ];

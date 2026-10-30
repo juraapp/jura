@@ -29,6 +29,7 @@ return [
     'date' => 'Date',
     'save' => 'Save',
     'delete_title' => 'Delete this goal?',
+    'delete_hint' => 'It moves to Deleted goals below, where you can restore it.',
     'purge_title' => 'Delete "{name}" permanently?',
     'purge_hint' => 'Its contributions are deleted too. This action cannot be undone.',
 ];
