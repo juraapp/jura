@@ -21,7 +21,7 @@ framework imports and is tested with `npm run test:js` (`node --test`).
 
 ## The established CRUD-page shape
 
-Every domain `Index.vue` (Accounts, Categories, Budgets, SavingsGoals, RecurringTransactions) follows the same shape — copy the closest existing one rather than inventing a new structure:
+Every domain `Index.vue` (Accounts, Categories, Buckets, SavingsGoals, RecurringTransactions) follows the same shape — copy the closest existing one rather than inventing a new structure:
 
 ```vue
 <script setup>
@@ -39,9 +39,23 @@ const submit = () => {
 </script>
 ```
 
-- **A disabled `<select>`/`<input>` still submits its value.** Inertia's `useForm()` serializes the reactive JS form object directly (not a native `FormData` collected from the DOM), so `:disabled="editingBudget !== null"` on a field only prevents the *user* from changing it — the value is still sent. This mirrors the original Livewire behavior (a `wire:model`-bound property stays in server-side state regardless of `@disabled` on the rendered element) and is relied on deliberately in `Budgets/Index.vue` to lock `category_id`/`currency`/`period_type` visually on edit while still round-tripping the existing values.
+- **A disabled `<select>`/`<input>` still submits its value.** Inertia's `useForm()` serializes the reactive JS form object directly (not a native `FormData` collected from the DOM), so `:disabled="editingBucket !== null"` on a field only prevents the *user* from changing it — the value is still sent. This mirrors the original Livewire behavior (a `wire:model`-bound property stays in server-side state regardless of `@disabled` on the rendered element) and is relied on deliberately in `Buckets/Index.vue` to lock `currency` visually on edit while still round-tripping the existing value.
 - Delete confirmation is a plain `Modal`, not `ModalForm` (no form inside, just a yes/no).
-- Flash messages (`back()->with('success', ...)`) are **not** currently wired to the `ToastContainer` — `useToast()` exists and `flash` is a shared prop, but no page reads `page.props.flash` to push a toast yet. This is a known gap, not a page you copied wrong.
+- Flash messages (`back()->with('success'|'error'|'warning', ...)`, plus `undo`) are shown as toasts by `ToastContainer`; pages do not read `page.props.flash` themselves.
+- Delete-dialog copy must match what happens: say the record can be restored from the Trash for soft-deleted models (transactions, accounts, categories, savings goals) and use `ui.common.cannot_be_undone` only for hard deletes.
+
+## Buttons
+
+Use the shared components, never a hand-styled `bg-primary-600` element:
+
+- `PrimaryButton` (main action), `SecondaryButton` (outlined, secondary or cancel), `DangerButton` (destructive). They share the brand look: `rounded-lg`, sentence case, `text-sm font-medium`, a `focus:ring-4` ring and distinct `disabled:` styles in light and dark mode. Their content is spaced with `gap-1.5`, so an icon needs no margin (`<DynamicIcon name="plus" class="h-4 w-4" />`).
+- `PrimaryButton` and `DangerButton` default to `type="submit"` (the HTML default the auth and profile forms rely on), `SecondaryButton` to `type="button"`. Pass `type="button"` for a click handler that is not a form submit.
+- For navigation or downloads, render the same look as a link with `as`: `<PrimaryButton :as="Link" :href="...">` for Inertia pages, `<PrimaryButton as="a" :href="pdfUrl" target="_blank">` for files. Never nest a button inside a `Link`.
+- Icon-only buttons need both `:title` and `:aria-label` (translated).
+
+## Plain fetch() calls
+
+JSON endpoints called with `fetch()` (global transaction modal, import wizard, bucket history, planner) must check `response.ok`, catch network errors and tell the user, through `useToast().push({ type: 'error', message })` or an inline error with a retry, never by silently showing an empty or "done" state. When a newer request can supersede an older one (planner runs, opening another transaction), number the requests and ignore responses that are no longer the latest. Labels built with `t()` in `<script setup>` go in a `computed`, so they follow a language switch without a reload.
 
 ## The global transaction modal
 
@@ -57,7 +71,7 @@ open(transaction.id);    // edit — pass the transaction's *id*, not a hydrated
 
 `useTransactionModal.js` holds its state in **module-scope `ref`s** (a plain shared-singleton pattern), not Vue's `provide`/`inject` — simpler than the original plan's provide/inject sketch and equally global since ES modules are singletons. If you need the same "any component can drive shared state" pattern elsewhere, copy this composable's shape rather than reaching for `provide`/`inject` or a state library.
 
-The modal fetches its own reference data **on open**, via plain `fetch()` against two small non-Inertia JSON endpoints (`TransactionController@formOptions`, `@editData`) rather than via shared Inertia props — deliberately, so every page doesn't have to carry `accounts`/`categories` just in case the modal opens. These `fetch()` calls need a manual CSRF header (`resources/js/csrf.js`'s `withCsrfHeader()`, reading the `XSRF-TOKEN` cookie) since they bypass Inertia's router, which handles CSRF automatically. The CSV import wizard (`Pages/Transactions/Import.vue`) uses the same `fetch()` + `withCsrfHeader()` pattern against its own `parse`/`store` JSON endpoints, for the same reason (multi-step wizard state that doesn't map to a single Inertia page visit).
+The modal fetches its own reference data **on open**, via plain `fetch()` against two small non-Inertia JSON endpoints (`TransactionController@formOptions`, `@editData`) rather than via shared Inertia props — deliberately, so every page doesn't have to carry `accounts`/`categories` just in case the modal opens. Account options carry `id`, `name` and `currency` (shown as "Name · CUR" everywhere an account is picked), and `editData` also returns the transaction's own `accounts`, so an inactive account still shows its name when editing. These `fetch()` calls need a manual CSRF header (`resources/js/csrf.js`'s `withCsrfHeader()`, reading the `XSRF-TOKEN` cookie) since they bypass Inertia's router, which handles CSRF automatically. The CSV import wizard (`Pages/Transactions/Import.vue`) uses the same `fetch()` + `withCsrfHeader()` pattern against its own `parse`/`store` JSON endpoints, for the same reason (multi-step wizard state that doesn't map to a single Inertia page visit).
 
 ## Flowbite + Inertia navigation
 
