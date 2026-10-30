@@ -92,6 +92,14 @@ There are three kinds:
 To add one, use the add button (it is available from any page). Choose the account, category, amount, date and
 an optional **time** (it defaults to now and can be cleared), an optional description, notes and payment method (cash, debit card, credit card, bank transfer or other).
 
+**Pay from bucket (optional, expenses only).** Pick the bucket that pays for an expense, for example *Trip* for a
+hotel. The whole amount comes out of that bucket, even if that takes it below zero (the card then says
+**Overspent**), and ready to assign stays the same. Only buckets in the account's currency that do not track a
+category are offered; a category's spending already comes out of its spending bucket, and the form tells you when
+the category you picked is counted in one (an expense paid from a bucket is not counted there as well). Editing or
+deleting the expense, or restoring it from the Trash, updates the bucket too. Accounts that do not count in your budget
+cannot pay from a bucket, and moving an expense to one forgets its bucket. Deleting the bucket keeps the expense.
+
 - You can **edit** or **delete** any transaction; balances update automatically. A transaction keeps its account and
   category when you edit it, even if that account was archived or the category deleted since.
 - **Filter** the list by type to see only incomes, expenses or transfers.

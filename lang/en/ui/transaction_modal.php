@@ -25,4 +25,8 @@ return [
     'description' => 'Description',
     'notes' => 'Notes',
     'save' => 'Save',
+    'pay_from_bucket' => 'Pay from bucket (optional)',
+    'no_bucket' => 'No bucket',
+    'counted_in_bucket' => 'Counted in {name} by its category.',
+    'paid_instead' => 'Paid from the bucket you chose, so it does not also count in {name}.',
 ];

@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'account_id', 'type', 'category_id', 'amount', 'date', 'time', 'description',
+    'account_id', 'type', 'category_id', 'bucket_id', 'amount', 'date', 'time', 'description',
     'notes', 'payment_method', 'is_recurring_generated', 'recurring_transaction_id',
     'transfer_group_id',
 ])]

@@ -124,4 +124,6 @@ return [
     'move_in_from_ready' => 'Into this bucket, from ready to assign',
     'over_assign_title' => 'Assign more than is ready?',
     'over_assign_confirm' => 'Assign anyway',
+    'overspent' => 'Overspent',
+    'overspent_hint' => 'More was spent from this bucket than it held. Move money into it to cover the difference.',
 ];

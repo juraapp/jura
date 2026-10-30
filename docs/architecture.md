@@ -26,7 +26,7 @@ Browser → routes/web.php → Controller → Form Request (validation + authori
 - Controllers stay thin: validation lives in each module's `Http/Requests/{Domain}/{Store,Update}...Request.php`, business logic lives in the module's `Services/*Service.php`. Livewire's per-component validation had no controller equivalent, so every domain module got a matching Form Request pair during the migration.
 - `Inertia::render()` return values become the page's `props`. Props are plain arrays/collections of primitives — Eloquent models and `App\Modules\Shared\Support\Money` value objects are never passed directly; controllers map them to floats/strings first (`$money->toFloat()`, `$model->toArray()`-style shaping). See any `*Controller@index` for the pattern.
 - Mutating actions (`store`/`update`/`destroy`) return `back()->with('success', __('domain.saved'))` rather than an Inertia redirect to a different page — the current page's props are simply re-fetched.
-- A handful of JSON (non-Inertia) endpoints exist alongside the Inertia ones, for data a page needs to fetch on demand rather than as a prop: `TransactionController@formOptions`/`editData` (feeds the global transaction modal, see `frontend-conventions.md`) and `TransactionImportController@parse`/`store` (feeds the CSV import wizard). These are plain `response()->json(...)` responses hit via `fetch()`, not `router.get()`/`useForm()`.
+- A handful of JSON (non-Inertia) endpoints exist alongside the Inertia ones, for data a page needs to fetch on demand rather than as a prop: `TransactionController@formOptions`/`editData` (feeds the global transaction modal, see `frontend-conventions.md`) and `TransactionImportController@parse`/`store` (feeds the CSV import wizard) and `BucketController@spendOptions` (the modal's *Pay from bucket* picker). These are plain `response()->json(...)` responses hit via `fetch()`, not `router.get()`/`useForm()`.
 
 ## Modules
 
@@ -36,7 +36,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
 |---|---|
 | `Shared` | `Money`, `AsMoney`, `BelongsToUser`, base `Controller`, `HandleInertiaRequests` |
 | `Identity` | `User`, auth, profile, preferences |
-| `Ledger` | `Account`, `Category`, `Transaction`, balances, CSV import, the `TransactionsMutated`, `Income*` and `Transaction{Deleted,Restored,Purged}` events. Source of truth for **actual** data. |
+| `Ledger` | `Account`, `Category`, `Transaction`, balances, CSV import, the `TransactionsMutated`, `Income*`, `Expense*` and `Transaction{Deleted,Restored,Purged}` events. Source of truth for **actual** data. |
 | `Planning` | `PlannedEvent`, `Bucket`, `Allocation`, `SavingsGoal`, `RecurringTransaction` (and, next, wish list and scenarios). Owns **projected** and **earmarked** (virtual) money. |
 | `Reporting` | dashboard, reports, insights, PDF/CSV export (read-side) |
 | `Notifications` | alert notifications, their listeners and scheduled commands, the notification inbox (read-side) |

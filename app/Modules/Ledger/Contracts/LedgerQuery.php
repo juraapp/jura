@@ -18,7 +18,8 @@ interface LedgerQuery
     /**
      * Sum of expense transactions in one category, in accounts of one currency, between two dates (inclusive;
      * no end date = every expense from the start date on, future-dated ones included). With $onBudgetOnly, only
-     * expenses in on-budget accounts count (the spending that shrinks a bucket envelope).
+     * expenses in on-budget accounts that were not paid from a bucket count (the spending that shrinks a
+     * category's envelope; an expense paid from a bucket comes out of that bucket instead).
      */
     public function expenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, ?CarbonInterface $to, bool $onBudgetOnly = false): Money;
 
