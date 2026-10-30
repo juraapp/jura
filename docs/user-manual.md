@@ -91,7 +91,8 @@ an optional **time** (it defaults to now and can be cleared), an optional descri
 - **Filter** the list by type to see only incomes, expenses or transfers.
 - **One currency per transaction.** A transfer must be between two accounts of the same currency, and a transaction
   can only move to another account of its currency (bulk *Change account* skips the ones that don't match). An
-  account's currency can no longer change once it has transactions, and a bucket's once it holds money.
+  account's currency can no longer change once it has transactions or a recurring transaction, plan, bucket or
+  wish-list item uses it, and a bucket's once it holds money.
 - Editing or deleting one side of a transfer updates the other side too. Each transfer appears twice in the full list:
   the row says **Transfer out → (destination)** on the source account and **Transfer in ← (source)** on the destination.
 - Within a day, transactions are listed latest time first; ones without a time come last. The time is shown in the format

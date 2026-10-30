@@ -33,7 +33,7 @@ class UpdateAccountRequest extends FormRequest
                 function (string $attribute, mixed $value, Closure $fail) {
                     $account = $this->route('account');
 
-                    if (strtoupper(trim((string) $value)) !== $account->currency && $account->transactions()->withTrashed()->exists()) {
+                    if (strtoupper(trim((string) $value)) !== $account->currency && $account->isCurrencyLocked()) {
                         $fail(__('accounts.currency_locked'));
                     }
                 },
