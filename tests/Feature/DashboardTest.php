@@ -29,6 +29,24 @@ class DashboardTest extends TestCase
         );
     }
 
+    public function test_dashboard_shows_balances_when_accounts_exist_without_transactions(): void
+    {
+        $user = User::factory()->create();
+        Account::factory()->for($user)->create(['currency' => 'COP', 'initial_balance' => 120000]);
+
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Dashboard')
+            ->where('hasAnyAccount', true)
+            ->where('hasAnyTransaction', false)
+            ->has('currencies', 1)
+            ->where('currencies.0.currency', 'COP')
+            ->where('currencies.0.netWorth', 120000)
+        );
+    }
+
     public function test_dashboard_shows_summary_when_data_exists(): void
     {
         $user = User::factory()->create();
