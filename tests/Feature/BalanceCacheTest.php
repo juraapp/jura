@@ -10,6 +10,7 @@ use App\Modules\Ledger\Services\TransactionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -81,5 +82,27 @@ class BalanceCacheTest extends TestCase
         });
 
         $this->assertSame('70.00', $balances->accountBalance($this->account->fresh())->toDecimalString());
+    }
+
+    public function test_a_balance_cached_inside_a_transaction_that_rolls_back_is_dropped(): void
+    {
+        $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
+        $balances = app(Balances::class);
+
+        try {
+            DB::transaction(function () use ($category, $balances) {
+                app(TransactionService::class)->createExpense($this->user, [
+                    'account_id' => $this->account->id, 'category_id' => $category->id, 'amount' => 30, 'date' => '2026-10-12',
+                ]);
+
+                // A listener reads (and caches) the balance that includes the uncommitted expense, then the write fails.
+                $balances->accountBalance($this->account->fresh());
+
+                throw new RuntimeException('write failed');
+            });
+        } catch (RuntimeException) {
+        }
+
+        $this->assertSame('100.00', $balances->accountBalance($this->account->fresh())->toDecimalString());
     }
 }

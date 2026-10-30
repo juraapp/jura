@@ -75,8 +75,9 @@ class BalanceCalculator implements Balances
     }
 
     /**
-     * Forgets the cached balance now (so the rest of this request reads fresh) and again once the
-     * open DB transaction commits, so a concurrent read made before the commit can't stay cached.
+     * Forgets the cached balance now (so the rest of this request reads fresh), again once the open DB
+     * transaction commits (so a concurrent read made before the commit can't stay cached), and again if it
+     * rolls back (so a balance read inside the failed transaction, e.g. by a listener, can't stay cached).
      */
     public function forgetAccount(Account $account): void
     {
@@ -84,6 +85,7 @@ class BalanceCalculator implements Balances
 
         Cache::forget($key);
         DB::afterCommit(fn () => Cache::forget($key));
+        DB::afterRollBack(fn () => Cache::forget($key));
     }
 
     private function computeAccountBalance(Account $account): Money
