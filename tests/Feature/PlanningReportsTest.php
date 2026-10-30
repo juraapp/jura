@@ -78,7 +78,6 @@ class PlanningReportsTest extends TestCase
     public function test_the_buckets_report_shows_balances_monthly_movements_and_projected_balances(): void
     {
         $car = Bucket::factory()->savings()->for($this->user)->priority(10)->rule(FillRule::Fixed, 400000)->create(['name' => 'Car', 'currency' => 'COP', 'cap_amount' => 5000000]);
-        Bucket::factory()->savings()->for($this->user)->asDefault()->create(['name' => 'Unallocated', 'currency' => 'COP']);
         Allocation::factory()->for($this->user)->for($car)->create(['amount' => 1000000, 'currency' => 'COP', 'date' => '2026-08-10', 'source' => AllocationSource::Income]);
         Allocation::factory()->for($this->user)->for($car)->create(['amount' => -250000, 'currency' => 'COP', 'date' => '2026-10-02', 'source' => AllocationSource::Spend]);
         Allocation::factory()->create(['amount' => 777, 'currency' => 'COP']); // someone else's
@@ -107,7 +106,6 @@ class PlanningReportsTest extends TestCase
     public function test_the_projects_report_summarises_wanted_purchased_and_funded_items_per_project(): void
     {
         $fund = Bucket::factory()->savings()->for($this->user)->rule(FillRule::Fixed, 500000)->create(['name' => 'Hobby fund', 'currency' => 'COP']);
-        Bucket::factory()->savings()->for($this->user)->asDefault()->create(['currency' => 'COP']);
         Allocation::factory()->for($this->user)->for($fund)->create(['amount' => 500000, 'currency' => 'COP']);
         $other = Bucket::factory()->savings()->for($this->user)->create(['name' => 'Rainy day', 'currency' => 'COP']);
         Allocation::factory()->for($this->user)->for($other)->create(['amount' => 500000, 'currency' => 'COP']); // nothing left to assign

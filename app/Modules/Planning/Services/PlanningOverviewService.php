@@ -32,7 +32,6 @@ class PlanningOverviewService implements PlanningOverview
                 'id' => $bucket->id,
                 'name' => $bucket->name,
                 'kind' => $bucket->kind->value,
-                'isDefault' => $bucket->is_default,
                 'balance' => $this->funds->balance($bucket)->toFloat(),
                 'available' => $this->funds->available($bucket)->toFloat(),
                 'cap' => $bucket->cap_amount?->toFloat(),

@@ -28,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'name', 'kind', 'currency', 'priority', 'category_id', 'cycle', 'cycle_every', 'cycle_anchor', 'cycle_goal', 'cap_amount', 'fill_rule', 'fill_value',
-    'step_up_value', 'step_up_after_bucket_id', 'completed_on', 'completes_on_purchase', 'carry_over', 'overflow_bucket_id', 'allowed_account_ids', 'is_default', 'tracking_started_on', 'cycle_closed_through',
+    'step_up_value', 'step_up_after_bucket_id', 'completed_on', 'completes_on_purchase', 'carry_over', 'overflow_bucket_id', 'allowed_account_ids', 'tracking_started_on', 'cycle_closed_through',
 ])]
 class Bucket extends Model
 {
@@ -46,7 +46,6 @@ class Bucket extends Model
             'fill_rule' => FillRule::class,
             'carry_over' => CarryOverPolicy::class,
             'allowed_account_ids' => 'array',
-            'is_default' => 'boolean',
             'tracking_started_on' => 'date',
             'cycle_closed_through' => 'date',
             'completed_on' => 'date',

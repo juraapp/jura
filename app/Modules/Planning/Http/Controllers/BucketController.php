@@ -81,7 +81,6 @@ class BucketController extends Controller
                 'allowedAccountIds' => $bucket->allowed_account_ids ?? [],
                 'allowedAccounts' => collect($bucket->allowed_account_ids ?? [])
                     ->map(fn (int $id) => ['id' => $id, 'name' => $accountNames->get($id, '?')])->values(),
-                'isDefault' => $bucket->is_default,
                 'balance' => $funds->balance($bucket)->toFloat(),
                 'openingBalance' => $funds->openingBalance($bucket)->toFloat(),
                 'available' => $funds->available($bucket)->toFloat(),

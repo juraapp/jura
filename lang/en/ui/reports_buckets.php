@@ -18,6 +18,5 @@ return [
     'target' => 'Target',
     'in_12' => 'In 12 months (projected)',
     'change' => 'Change',
-    'default' => 'Default',
     'limit_per_cycle' => 'limit {amount} per cycle',
 ];

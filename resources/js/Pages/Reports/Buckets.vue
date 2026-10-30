@@ -131,7 +131,7 @@ const targetPercent = (bucket) => (bucket.cap ? Math.max(0, Math.min(100, (bucke
                             </thead>
                             <tbody class="divide-y divide-gray-100 tabular-nums dark:divide-gray-700">
                                 <tr v-for="bucket in currency.buckets" :key="bucket.id" class="text-gray-700 dark:text-gray-200">
-                                    <td class="px-4 py-2 font-medium">{{ bucket.name }}<span v-if="bucket.isDefault" class="ml-1.5 rounded-full bg-primary-50 px-1.5 py-0.5 text-xs text-primary-700 dark:bg-primary-500/10 dark:text-primary-400">{{ $t('ui.reports_buckets.default') }}</span></td>
+                                    <td class="px-4 py-2 font-medium">{{ bucket.name }}</td>
                                     <td class="px-4 py-2 text-right"><Money :amount="bucket.available" :currency="currency.currency" /></td>
                                     <td class="px-4 py-2 text-right">
                                         <template v-if="bucket.cap && bucket.kind === 'savings'"><Money :amount="bucket.cap" :currency="currency.currency" /> <span class="text-xs text-gray-400">({{ format.number(targetPercent(bucket), 0) }}%)</span></template>

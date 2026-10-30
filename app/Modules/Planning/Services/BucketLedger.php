@@ -299,33 +299,4 @@ class BucketLedger
             $allocation->delete();
         });
     }
-
-    public function defaultBucket(User|int $user, string $currency): ?Bucket
-    {
-        return Bucket::forUser($user)->where('currency', $currency)->where('is_default', true)->first();
-    }
-
-    /**
-     * The currency's catch-all bucket, created on first need.
-     */
-    public function ensureDefaultBucket(User $user, string $currency): Bucket
-    {
-        $existing = $this->defaultBucket($user, $currency);
-        if ($existing !== null) {
-            return $existing;
-        }
-
-        $bucket = new Bucket([
-            'name' => __('buckets.default_name'),
-            'kind' => BucketKind::Savings,
-            'currency' => $currency,
-            'priority' => 9999,
-            'is_default' => true,
-            'tracking_started_on' => $user->today()->toDateString(),
-        ]);
-        $bucket->user_id = $user->id;
-        $bucket->save();
-
-        return $bucket;
-    }
 }
