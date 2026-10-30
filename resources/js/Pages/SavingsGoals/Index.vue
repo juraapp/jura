@@ -236,15 +236,14 @@ const formatDate = (date) => format.date(date);
                         </p>
                     </div>
 
-                    <button
+                    <SecondaryButton
                         v-if="goal.status !== 'completed'"
-                        type="button"
-                        class="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100 dark:border-primary-500/30 dark:bg-primary-500/10 dark:text-primary-400"
+                        class="mt-4"
                         @click="openContributionModal(goal)"
                     >
-                        <DynamicIcon name="plus" class="h-3.5 w-3.5" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.savings_goals.contribute') }}
-                    </button>
+                    </SecondaryButton>
                 </div>
             </div>
             </div>
