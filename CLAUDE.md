@@ -28,7 +28,9 @@ certainty), `Bucket` + `Allocation` (virtual earmarked money filled from income 
 
 ## Project conventions
 - Keep these docs and this section current as the code changes; do it in the same change, not later.
-- Money is `decimal(15,2)` via `Shared/Support/Money` and `AsMoney`. Actual data is `Transaction`; projected
+- Money is `decimal(15,2)` via `Shared/Support/Money` and `AsMoney`. Validate money input with
+  `Shared/Validation/MoneyRules` and account/category foreign keys with `Shared/Validation/LedgerRules` (owner, not
+  trashed, active, category type). Code reachable from jobs/console must scope by user explicitly (no auth there). Actual data is `Transaction`; projected
   (forecast) data must stay separate from actual data and be labelled as such.
 - Commits are atomic Conventional Commits with no `Co-Authored-By` trailer (`.ai/rules/general.md`).
 - Local ports: if 80/3306/6379/5173 are taken by another Sail project, set `APP_PORT`, `FORWARD_DB_PORT`,
