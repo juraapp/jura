@@ -9,14 +9,20 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { useTransactionModal } from '@/composables/useTransactionModal';
+import { useToast } from '@/composables/useToast';
 import { store, update, formOptions, editData } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
 
 const { t } = useI18n();
 
 const { isOpen, editingTransaction, defaultType, close } = useTransactionModal();
+const { push: pushToast } = useToast();
 
 const activeTab = ref('expense');
-const accounts = ref([]);
+const activeAccounts = ref([]);
+/** Accounts of the transaction being edited, so an inactive one still shows its name instead of "Select account". */
+const editAccounts = ref([]);
+const loading = ref(false);
+let openRequest = 0;
 const expenseCategories = ref([]);
 const incomeCategories = ref([]);
 let optionsLoaded = false;
@@ -34,11 +40,25 @@ const form = useForm({
     payment_method: '',
 });
 
-const tabs = [
+const tabs = computed(() => [
     { value: 'expense', label: t('ui.transaction_modal.expense') },
     { value: 'income', label: t('ui.transaction_modal.income') },
     { value: 'transfer', label: t('ui.transaction_modal.transfer') },
-];
+]);
+
+const accounts = computed(() => [
+    ...activeAccounts.value,
+    ...editAccounts.value.filter((account) => !activeAccounts.value.some((active) => active.id === account.id)),
+]);
+
+const fetchJson = async (url) => {
+    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+
+    return response.json();
+};
 
 const categoriesForTab = computed(() => (activeTab.value === 'income' ? incomeCategories.value : expenseCategories.value));
 
@@ -47,9 +67,8 @@ const loadOptions = async () => {
         return;
     }
 
-    const response = await fetch(formOptions.url());
-    const data = await response.json();
-    accounts.value = data.accounts;
+    const data = await fetchJson(formOptions.url());
+    activeAccounts.value = data.accounts;
     expenseCategories.value = data.expenseCategories;
     incomeCategories.value = data.incomeCategories;
     optionsLoaded = true;
@@ -67,14 +86,26 @@ watch(isOpen, async (open) => {
         return;
     }
 
-    await loadOptions();
+    const request = ++openRequest;
+    resetForm();
+    editAccounts.value = [];
+    activeTab.value = editingTransaction.value ? activeTab.value : defaultType.value;
+    loading.value = true;
 
-    if (editingTransaction.value) {
-        const response = await fetch(editData.url(editingTransaction.value));
-        const data = await response.json();
+    try {
+        await loadOptions();
 
-        resetForm();
+        if (!editingTransaction.value) {
+            return;
+        }
+
+        const data = await fetchJson(editData.url(editingTransaction.value));
+        if (request !== openRequest) {
+            return;
+        }
+
         activeTab.value = data.type;
+        editAccounts.value = data.accounts ?? [];
         form.date = data.date;
         form.time = data.time ?? '';
         form.description = data.description ?? '';
@@ -89,9 +120,15 @@ watch(isOpen, async (open) => {
             form.category_id = data.category_id;
             form.payment_method = data.payment_method ?? '';
         }
-    } else {
-        resetForm();
-        activeTab.value = defaultType.value;
+    } catch {
+        if (request === openRequest) {
+            pushToast({ type: 'error', message: t('ui.common.request_failed') });
+            close();
+        }
+    } finally {
+        if (request === openRequest) {
+            loading.value = false;
+        }
     }
 });
 
@@ -161,7 +198,9 @@ const submit = () => {
             </button>
         </div>
 
-        <form id="transaction-form" class="space-y-4" @submit.prevent="submit">
+        <div v-if="loading && editingTransaction" class="py-12 text-center text-sm text-gray-500 dark:text-gray-400">{{ $t('ui.common.loading') }}</div>
+
+        <form v-show="!(loading && editingTransaction)" id="transaction-form" class="space-y-4" @submit.prevent="submit">
             <template v-if="activeTab === 'transfer'">
                 <div>
                     <InputLabel for="from_account_id" :value="$t('ui.transaction_modal.from_account')" />
@@ -171,7 +210,7 @@ const submit = () => {
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
                         <option value="">{{ $t('ui.transaction_modal.select_account') }}</option>
-                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.from_account_id" />
                 </div>
@@ -184,7 +223,7 @@ const submit = () => {
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
                         <option value="">{{ $t('ui.transaction_modal.select_account') }}</option>
-                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.to_account_id" />
                 </div>
@@ -199,7 +238,7 @@ const submit = () => {
                         class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                     >
                         <option value="">{{ $t('ui.transaction_modal.select_account') }}</option>
-                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </select>
                     <InputError class="mt-1" :message="form.errors.account_id" />
                 </div>
@@ -218,7 +257,7 @@ const submit = () => {
                 </div>
             </template>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                     <InputLabel for="amount" :value="$t('ui.transaction_modal.amount')" />
                     <TextInput id="amount" v-model="form.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
@@ -273,7 +312,7 @@ const submit = () => {
 
         <template #footer>
             <SecondaryButton type="button" @click="close">{{ $t('ui.common.cancel') }}</SecondaryButton>
-            <PrimaryButton form="transaction-form" type="submit" :disabled="form.processing">{{ $t('ui.transaction_modal.save') }}</PrimaryButton>
+            <PrimaryButton form="transaction-form" type="submit" :disabled="form.processing || loading">{{ $t('ui.transaction_modal.save') }}</PrimaryButton>
         </template>
     </ModalForm>
 </template>

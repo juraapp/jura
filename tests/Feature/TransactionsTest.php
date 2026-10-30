@@ -306,7 +306,22 @@ class TransactionsTest extends TestCase
         $response = $this->actingAs($user)->getJson('/finances/transactions/form-options');
 
         $response->assertOk();
-        $response->assertJsonStructure(['accounts', 'expenseCategories', 'incomeCategories']);
+        $response->assertJsonStructure(['accounts' => [['id', 'name', 'currency']], 'expenseCategories', 'incomeCategories']);
+    }
+
+    public function test_edit_data_includes_an_inactive_account_so_the_form_can_show_it(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create(['is_active' => false, 'currency' => 'USD']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $transaction = Transaction::factory()->for($user)->for($account)->for($category)->create();
+
+        $response = $this->actingAs($user)->getJson("/finances/transactions/{$transaction->id}/edit-data");
+
+        $response->assertOk();
+        $response->assertJsonPath('accounts.0.id', $account->id);
+        $response->assertJsonPath('accounts.0.currency', 'USD');
+        $response->assertJsonPath('accounts.0.is_active', false);
     }
 
     public function test_edit_data_endpoint_returns_simple_transaction_data(): void

@@ -184,7 +184,7 @@ class TransactionController extends Controller
     public function formOptions(): JsonResponse
     {
         return response()->json([
-            'accounts' => Account::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'accounts' => Account::where('is_active', true)->orderBy('name')->get(['id', 'name', 'currency']),
             'expenseCategories' => Category::where('type', CategoryType::Expense)->orderBy('name')->get(['id', 'name']),
             'incomeCategories' => Category::where('type', CategoryType::Income)->orderBy('name')->get(['id', 'name']),
         ]);
@@ -207,6 +207,7 @@ class TransactionController extends Controller
                 'type' => 'transfer',
                 'from_account_id' => $out?->account_id,
                 'to_account_id' => $in?->account_id,
+                'accounts' => $this->editAccounts([$out?->account_id, $in?->account_id]),
                 'amount' => $transaction->amount->toFloat(),
                 'date' => $transaction->date->toDateString(),
                 'time' => $transaction->time,
@@ -219,6 +220,7 @@ class TransactionController extends Controller
             'id' => $transaction->id,
             'type' => $transaction->type->value,
             'account_id' => $transaction->account_id,
+            'accounts' => $this->editAccounts([$transaction->account_id]),
             'category_id' => $transaction->category_id,
             'amount' => $transaction->amount->toFloat(),
             'date' => $transaction->date->toDateString(),
@@ -227,6 +229,17 @@ class TransactionController extends Controller
             'notes' => $transaction->notes,
             'payment_method' => $transaction->payment_method?->value,
         ]);
+    }
+
+    /**
+     * The accounts a transaction being edited uses, including inactive ones the form options leave out.
+     *
+     * @param  array<int, int|null>  $accountIds
+     * @return Collection<int, Account>
+     */
+    private function editAccounts(array $accountIds): Collection
+    {
+        return Account::whereIn('id', array_filter($accountIds))->get(['id', 'name', 'currency', 'is_active']);
     }
 
     public function store(StoreTransactionRequest $request, TransactionService $service): RedirectResponse
