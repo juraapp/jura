@@ -9,6 +9,7 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The single source of truth for "how much money is where". Account balances
@@ -50,26 +51,6 @@ class BalanceCalculator implements Balances
             ->values();
     }
 
-    public function netWorth(User $user): Money
-    {
-        $decimal = Cache::remember(
-            $this->netWorthCacheKey($user),
-            self::TTL,
-            function () use ($user) {
-                return $user->accounts()
-                    ->where('is_active', true)
-                    ->get()
-                    ->reduce(
-                        fn (Money $carry, Account $account) => $carry->add($this->accountBalance($account)),
-                        Money::zero(),
-                    )
-                    ->toDecimalString();
-            },
-        );
-
-        return Money::of($decimal);
-    }
-
     /**
      * Net worth grouped by currency, so balances in different currencies are
      * never added together as if they were the same unit.
@@ -93,10 +74,16 @@ class BalanceCalculator implements Balances
             : $byCurrency;
     }
 
+    /**
+     * Forgets the cached balance now (so the rest of this request reads fresh) and again once the
+     * open DB transaction commits, so a concurrent read made before the commit can't stay cached.
+     */
     public function forgetAccount(Account $account): void
     {
-        Cache::forget($this->accountCacheKey($account));
-        Cache::forget($this->netWorthCacheKey($account->user));
+        $key = $this->accountCacheKey($account);
+
+        Cache::forget($key);
+        DB::afterCommit(fn () => Cache::forget($key));
     }
 
     private function computeAccountBalance(Account $account): Money
@@ -119,10 +106,5 @@ class BalanceCalculator implements Balances
     private function accountCacheKey(Account $account): string
     {
         return "account:{$account->id}:balance";
-    }
-
-    private function netWorthCacheKey(User $user): string
-    {
-        return "user:{$user->id}:net-worth";
     }
 }

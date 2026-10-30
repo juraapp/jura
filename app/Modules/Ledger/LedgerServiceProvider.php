@@ -7,6 +7,7 @@ use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Ledger\Listeners\InvalidateBalanceCache;
+use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Services\BalanceCalculator;
 use App\Modules\Ledger\Services\EloquentLedgerQuery;
 use App\Modules\Ledger\Services\TransactionService;
@@ -25,5 +26,10 @@ class LedgerServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(TransactionsMutated::class, InvalidateBalanceCache::class);
+
+        $forgetBalance = fn (Account $account) => $this->app->make(BalanceCalculator::class)->forgetAccount($account);
+        Account::saved($forgetBalance);
+        Account::deleted($forgetBalance);
+        Account::restored($forgetBalance);
     }
 }
