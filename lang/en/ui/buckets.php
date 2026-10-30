@@ -116,5 +116,11 @@ return [
     'reset_zero' => 'Reset to zero',
     'history_hint' => 'Entries you made by hand (opening balance, adjustments, moves) can be removed. Income and end-of-cycle entries cannot.',
     'remove_entry' => 'Remove entry',
+    'adjust_placeholder' => '250000 or -50000',
+    'remove_entry_title' => 'Remove this entry?',
+    'remove_entry_hint' => 'It is deleted for good and the bucket balance changes.',
+    'remove_entry_transfer' => 'This is a move between buckets, so the matching entry in the other bucket is removed too.',
+    'history_error' => 'Could not load the activity.',
+    'retry' => 'Try again',
     'no_activity' => 'No activity yet.',
 ];
