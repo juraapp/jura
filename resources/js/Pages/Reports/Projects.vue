@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -22,11 +23,11 @@ const changeView = (value) => {
     router.get(projectsReport.url({ query: { view: value } }), {}, { preserveScroll: true, preserveState: true });
 };
 
-const viewHints = {
+const viewHints = computed(() => ({
     conservative: t('ui.reports_projects.hint_conservative'),
     expected: t('ui.reports_projects.hint_expected'),
     optimistic: t('ui.reports_projects.hint_optimistic'),
-};
+}));
 
 const formatMonth = (date) => format.month(date);
 </script>

@@ -61,11 +61,11 @@ const locale = () => page.props.auth.user?.locale ?? 'en';
 const palette = () => CHART_PALETTE[isDark.value ? 'dark' : 'light'];
 const today = new Date().toISOString().slice(0, 10);
 
-const viewHints = {
+const viewHints = computed(() => ({
     conservative: t('ui.cash_flow.hint_conservative'),
     expected: t('ui.cash_flow.hint_expected'),
     optimistic: t('ui.cash_flow.hint_optimistic'),
-};
+}));
 
 const changeView = (value) => {
     router.get(plannedEventsIndex.url({ query: { view: value, months: props.months } }), {}, { preserveScroll: true, preserveState: true });

@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -29,11 +30,11 @@ const changeView = (value) => {
     router.get(bucketsReport.url({ query: { view: value } }), {}, { preserveScroll: true, preserveState: true });
 };
 
-const viewHints = {
+const viewHints = computed(() => ({
     conservative: t('ui.reports_buckets.hint_conservative'),
     expected: t('ui.reports_buckets.hint_expected'),
     optimistic: t('ui.reports_buckets.hint_optimistic'),
-};
+}));
 
 const balanceOptions = (currency) => ({
     chart: { type: 'bar', height: Math.max(180, currency.buckets.length * 46), fontFamily: 'Roboto, sans-serif', toolbar: { show: false } },
