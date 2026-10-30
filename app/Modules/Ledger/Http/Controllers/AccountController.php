@@ -65,7 +65,7 @@ class AccountController extends Controller
     {
         $this->authorize('delete', $account);
 
-        if ($account->transactions()->exists() || $account->recurringTransactions()->exists()) {
+        if ($account->transactions()->withTrashed()->exists() || $account->recurringTransactions()->exists()) {
             $account->update(['is_active' => false]);
 
             return back()->with('warning', __('accounts.archived'));

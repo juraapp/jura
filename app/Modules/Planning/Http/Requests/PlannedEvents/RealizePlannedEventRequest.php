@@ -2,8 +2,8 @@
 
 namespace App\Modules\Planning\Http\Requests\PlannedEvents;
 
+use App\Modules\Shared\Validation\LedgerRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class RealizePlannedEventRequest extends FormRequest
 {
@@ -17,8 +17,8 @@ class RealizePlannedEventRequest extends FormRequest
         $userId = $this->user()->id;
 
         return [
-            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $userId)],
-            'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $userId)->orWhereNull('user_id'))],
+            'account_id' => ['required', 'integer', LedgerRules::account($userId, activeOnly: true)],
+            'category_id' => ['required', 'integer', LedgerRules::category($userId)],
             'amount' => ['nullable', 'numeric', 'gt:0'],
             'date' => ['nullable', 'date'],
             'description' => ['nullable', 'string', 'max:255'],

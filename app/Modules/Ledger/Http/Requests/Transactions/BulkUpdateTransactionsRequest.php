@@ -2,7 +2,7 @@
 
 namespace App\Modules\Ledger\Http\Requests\Transactions;
 
-use Illuminate\Validation\Rule;
+use App\Modules\Shared\Validation\LedgerRules;
 
 class BulkUpdateTransactionsRequest extends BulkTransactionsRequest
 {
@@ -16,9 +16,9 @@ class BulkUpdateTransactionsRequest extends BulkTransactionsRequest
         return parent::rules() + [
             'category_id' => [
                 'nullable', 'integer', 'required_without:account_id',
-                Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $userId)->orWhereNull('user_id')),
+                LedgerRules::category($userId),
             ],
-            'account_id' => ['nullable', 'integer', 'required_without:category_id', Rule::exists('accounts', 'id')->where('user_id', $userId)],
+            'account_id' => ['nullable', 'integer', 'required_without:category_id', LedgerRules::account($userId, activeOnly: true)],
         ];
     }
 }

@@ -266,22 +266,24 @@ class TransactionService implements RecordsTransactions
 
     private function createSimple(User $user, TransactionType $type, array $data): Transaction
     {
-        $transaction = $user->transactions()->create([
-            'account_id' => $data['account_id'],
-            'type' => $type,
-            'category_id' => $data['category_id'],
-            'amount' => Money::of($data['amount']),
-            'date' => $data['date'],
-            'time' => $data['time'] ?? null,
-            'description' => $data['description'] ?? null,
-            'notes' => $data['notes'] ?? null,
-            'payment_method' => $data['payment_method'] ?? null,
-        ]);
+        return DB::transaction(function () use ($user, $type, $data) {
+            $transaction = $user->transactions()->create([
+                'account_id' => $data['account_id'],
+                'type' => $type,
+                'category_id' => $data['category_id'],
+                'amount' => Money::of($data['amount']),
+                'date' => $data['date'],
+                'time' => $data['time'] ?? null,
+                'description' => $data['description'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'payment_method' => $data['payment_method'] ?? null,
+            ]);
 
-        $this->announce($user, collect([$transaction->account]));
-        $this->announceIncome($transaction);
+            $this->announce($user, collect([$transaction->account]));
+            $this->announceIncome($transaction);
 
-        return $transaction;
+            return $transaction;
+        });
     }
 
     private function announceIncome(Transaction $transaction): void

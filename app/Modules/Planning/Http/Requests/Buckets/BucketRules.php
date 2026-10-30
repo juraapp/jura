@@ -7,6 +7,7 @@ use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Models\Bucket;
+use App\Modules\Shared\Validation\LedgerRules;
 use Illuminate\Validation\Rule;
 
 /**
@@ -40,7 +41,7 @@ trait BucketRules
                 Rule::requiredIf($spending),
                 'nullable',
                 'integer',
-                Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $userId)->orWhereNull('user_id')),
+                LedgerRules::category($userId),
                 ...($spending() && $editing !== null ? [$categoryUnique] : []),
             ],
             'cycle' => [Rule::requiredIf($spending), 'nullable', Rule::enum(BudgetPeriodType::class)],
@@ -76,7 +77,7 @@ trait BucketRules
                 ...($editing !== null ? [Rule::notIn([$editing->id])] : []),
             ],
             'allowed_account_ids' => ['nullable', 'array'],
-            'allowed_account_ids.*' => ['integer', Rule::exists('accounts', 'id')->where('user_id', $userId)],
+            'allowed_account_ids.*' => ['integer', LedgerRules::account($userId)],
             'opening_balance' => ['nullable', 'numeric', 'min:0'],
             'is_default' => ['nullable', 'boolean'],
         ];

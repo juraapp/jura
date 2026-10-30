@@ -45,14 +45,17 @@ class Transaction extends Model
         );
     }
 
+    /**
+     * Includes a trashed account: a transaction always has one, so lists and balances never meet a null.
+     */
     public function account(): BelongsTo
     {
-        return $this->belongsTo(Account::class);
+        return $this->belongsTo(Account::class)->withTrashed();
     }
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class)->withTrashed();
     }
 
     public function recurringTransaction(): BelongsTo

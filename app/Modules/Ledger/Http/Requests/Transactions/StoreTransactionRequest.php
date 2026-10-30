@@ -4,6 +4,7 @@ namespace App\Modules\Ledger\Http\Requests\Transactions;
 
 use App\Modules\Ledger\Enums\PaymentMethod;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Shared\Validation\LedgerRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -19,8 +20,8 @@ class StoreTransactionRequest extends FormRequest
         if ($this->input('type') === 'transfer') {
             return [
                 'type' => ['required', 'in:transfer'],
-                'from_account_id' => ['required', 'integer', 'different:to_account_id', Rule::exists('accounts', 'id')->where('user_id', $this->user()->id)],
-                'to_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $this->user()->id)],
+                'from_account_id' => ['required', 'integer', 'different:to_account_id', LedgerRules::account($this->user()->id, activeOnly: true)],
+                'to_account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true)],
                 'amount' => ['required', 'numeric', 'gt:0'],
                 'date' => ['required', 'date'],
                 'time' => ['nullable', 'date_format:H:i'],
@@ -31,8 +32,8 @@ class StoreTransactionRequest extends FormRequest
 
         return [
             'type' => ['required', 'in:income,expense'],
-            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $this->user()->id)],
-            'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $this->user()->id)->orWhereNull('user_id'))],
+            'account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true)],
+            'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id)],
             'amount' => ['required', 'numeric', 'gt:0'],
             'date' => ['required', 'date'],
             'time' => ['nullable', 'date_format:H:i'],
