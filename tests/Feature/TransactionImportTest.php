@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Testing\File;
 use Illuminate\Http\UploadedFile;
 use Inertia\Testing\AssertableInertia as Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class TransactionImportTest extends TestCase
@@ -205,5 +206,85 @@ class TransactionImportTest extends TestCase
         $this->assertSame('14:30', Transaction::where('description', 'Late shop')->firstOrFail()->time);
         $this->assertSame('14:05', Transaction::where('description', 'Afternoon')->firstOrFail()->time);
         $this->assertNull(Transaction::where('description', 'No time')->firstOrFail()->time);
+    }
+
+    /**
+     * Imports one row through the confirm endpoint and returns the stored amount, or null when the row was rejected.
+     */
+    private function importAmount(User $user, string $amount, string $date = '2026-08-01'): ?string
+    {
+        $account = Account::factory()->for($user)->create(['name' => 'Wallet']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id, 'name' => 'Groceries']);
+
+        $this->actingAs($user)->postJson('/finances/transactions/import', ['rows' => [[
+            'line' => 2, 'date' => $date, 'description' => 'Row', 'category' => $category->name,
+            'account' => $account->name, 'type' => 'Expense', 'notes' => null, 'amount' => $amount,
+        ]]])->assertOk();
+
+        return Transaction::first()?->amount->toDecimalString();
+    }
+
+    /**
+     * @return array<string, array{string, ?string}>
+     */
+    public static function amountsForADotDecimalUser(): array
+    {
+        return [
+            'thousands without decimals' => ['1,234', '1234.00'],
+            'thousands with decimals' => ['1,234.56', '1234.56'],
+            'spanish style is unambiguous' => ['1.234,56', '1234.56'],
+            'comma decimal that cannot be thousands' => ['12,5', '12.50'],
+            'exponent' => ['1e3', null],
+            'more than two decimals' => ['10.999', null],
+            'zero' => ['0', null],
+            'beyond decimal(15,2)' => ['100000000000000', null],
+        ];
+    }
+
+    #[DataProvider('amountsForADotDecimalUser')]
+    public function test_amounts_follow_a_dot_decimal_separator_preference(string $raw, ?string $expected): void
+    {
+        $user = User::factory()->create(['locale' => 'en', 'decimal_separator' => '.']);
+
+        $this->assertSame($expected, $this->importAmount($user, $raw));
+    }
+
+    /**
+     * @return array<string, array{string, ?string}>
+     */
+    public static function amountsForACommaDecimalUser(): array
+    {
+        return [
+            'dot thousands' => ['1.234', '1234.00'],
+            'comma decimal' => ['1,5', '1.50'],
+            'three decimals are not cents' => ['1,234', null],
+        ];
+    }
+
+    #[DataProvider('amountsForACommaDecimalUser')]
+    public function test_amounts_follow_a_comma_decimal_separator_preference(string $raw, ?string $expected): void
+    {
+        $user = User::factory()->create(['locale' => 'es', 'decimal_separator' => ',']);
+
+        $this->assertSame($expected, $this->importAmount($user, $raw));
+    }
+
+    public function test_impossible_dates_are_rejected_instead_of_rolling_over(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertNull($this->importAmount($user, '100', '31/02/2026'));
+        $this->assertNull($this->importAmount($user, '100', '2026-02-31'));
+        $this->assertSame('100.00', $this->importAmount($user, '100', '28/02/2026'));
+    }
+
+    public function test_confirming_malformed_rows_is_a_validation_error(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/finances/transactions/import', ['rows' => [['line' => 2]]])->assertOk()->assertJson(['imported' => 0, 'skipped' => 1]);
+        $this->actingAs($user)->postJson('/finances/transactions/import', ['rows' => ['not a row']])->assertUnprocessable();
+        $this->actingAs($user)->postJson('/finances/transactions/import', ['rows' => [['line' => 2, 'amount' => ['nested']]]])->assertUnprocessable();
+        $this->actingAs($user)->postJson('/finances/transactions/import', ['rows' => array_fill(0, 1001, ['line' => 2])])->assertUnprocessable();
     }
 }

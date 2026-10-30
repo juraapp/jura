@@ -24,7 +24,7 @@ return [
         'invalid_type' => "Tipo inválido: ':value' (use 'Ingreso' o 'Gasto').",
         'account_not_found' => "Cuenta ':account' no encontrada.",
         'category_not_found' => "Categoría ':category' no existe para el tipo ':type'.",
-        'invalid_amount' => "Monto inválido: ':value'.",
+        'invalid_amount' => "Monto inválido: ':value'. Usa un número positivo con máximo dos decimales.",
         'invalid_time' => "Hora inválida: ':value'.",
         'invalid_date' => "Fecha inválida: ':value'.",
         'description_too_long' => 'Descripción supera 255 caracteres.',

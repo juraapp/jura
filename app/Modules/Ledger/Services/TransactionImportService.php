@@ -9,6 +9,7 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Support\Money;
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,6 +23,8 @@ use Illuminate\Support\Str;
 class TransactionImportService
 {
     public const MAX_ROWS = 1000;
+
+    private const ROW_FIELDS = ['date', 'time', 'description', 'category', 'account', 'type', 'notes', 'amount'];
 
     /** Extra header synonyms not already covered by the en/es messages.csv labels. */
     private const EXTRA_COLUMN_ALIASES = [
@@ -105,8 +108,12 @@ class TransactionImportService
     {
         $accounts = $this->loadAccountLookup($user);
         $categories = $this->loadCategoryLookup();
+        $decimalSeparator = $user->formatter()->decimalSeparator();
 
-        return array_map(fn (array $row) => $this->validateRow($row, $accounts, $categories), $rows);
+        return array_map(
+            fn (array $row) => $this->validateRow($row + array_fill_keys(self::ROW_FIELDS, null), $accounts, $categories, $decimalSeparator),
+            $rows,
+        );
     }
 
     /**
@@ -136,7 +143,7 @@ class TransactionImportService
         return ['imported' => $imported];
     }
 
-    private function validateRow(array $row, array $accounts, array $categories): array
+    private function validateRow(array $row, array $accounts, array $categories, string $decimalSeparator): array
     {
         $errors = [];
 
@@ -159,7 +166,7 @@ class TransactionImportService
             }
         }
 
-        $amount = $this->parseAmount($row['amount']);
+        $amount = $this->parseAmount($row['amount'], $decimalSeparator);
         if ($amount === null) {
             $errors[] = __('messages.import.invalid_amount', ['value' => (string) $row['amount']]);
         }
@@ -224,31 +231,76 @@ class TransactionImportService
     }
 
     /**
-     * Accepts "1234.56", "1234", "1.234,56" (es) and "1,234.56" (en); returns
-     * a normalized DECIMAL(15,2)-ready string, or null if unparseable/not positive.
+     * Reads a positive amount written with either separator: "1234.56", "1.234,56", "1,234.56", "1 234,56".
+     * When both separators appear, the last one is the decimal point. A single separator followed by exactly
+     * three digits ("1,234" or "1.234") is ambiguous, so it follows the user's decimal separator preference.
+     * Returns a DECIMAL(15,2)-ready string, or null for anything else (exponents, more than two decimals,
+     * zero, negatives, values beyond decimal(15,2)).
      */
-    private function parseAmount(?string $raw): ?string
+    private function parseAmount(?string $raw, string $decimalSeparator): ?string
     {
-        $raw = trim((string) $raw);
+        $raw = preg_replace('/[\s\x{00A0}\x{202F}]+/u', '', trim((string) $raw));
 
-        if ($raw === '') {
+        if (preg_match('/^\d[\d.,]*$/', (string) $raw) !== 1) {
             return null;
         }
 
-        if (preg_match('/^-?\d{1,3}(\.\d{3})+(,\d+)?$/', $raw) || (str_contains($raw, ',') && ! str_contains($raw, '.'))) {
-            $raw = str_replace('.', '', $raw);
-            $raw = str_replace(',', '.', $raw);
-        } elseif (preg_match('/^-?\d{1,3}(,\d{3})+(\.\d+)?$/', $raw)) {
-            $raw = str_replace(',', '', $raw);
-        }
+        $normalized = $this->normalizeSeparators($raw, $decimalSeparator);
 
-        if (! is_numeric($raw)) {
+        if ($normalized === null || preg_match('/^\d+(\.\d{1,2})?$/', $normalized) !== 1) {
             return null;
         }
 
-        $amount = Money::of($raw);
+        $amount = Money::of($normalized);
 
-        return $amount->isPositive() ? $amount->toDecimalString() : null;
+        if (! $amount->isPositive() || $amount->greaterThan(Money::of(MoneyRules::MAX))) {
+            return null;
+        }
+
+        return $amount->toDecimalString();
+    }
+
+    /**
+     * @return string|null the amount with no thousands separators and "." as the decimal point
+     */
+    private function normalizeSeparators(string $raw, string $decimalSeparator): ?string
+    {
+        $hasDot = str_contains($raw, '.');
+        $hasComma = str_contains($raw, ',');
+
+        if (! $hasDot && ! $hasComma) {
+            return $raw;
+        }
+
+        if ($hasDot && $hasComma) {
+            $decimal = strrpos($raw, '.') > strrpos($raw, ',') ? '.' : ',';
+        } else {
+            $separator = $hasDot ? '.' : ',';
+            $isThousandsGrouping = preg_match('/^[1-9]\d{0,2}('.preg_quote($separator, '/').'\d{3})+$/', $raw) === 1;
+
+            if (substr_count($raw, $separator) > 1) {
+                return $isThousandsGrouping ? str_replace($separator, '', $raw) : null;
+            }
+
+            if ($isThousandsGrouping && $separator !== $decimalSeparator) {
+                return str_replace($separator, '', $raw);
+            }
+
+            $decimal = $separator;
+        }
+
+        $thousands = $decimal === '.' ? ',' : '.';
+        [$whole, $fraction] = explode($decimal, $raw, 2);
+
+        if (str_contains($fraction, $thousands)) {
+            return null;
+        }
+
+        if (str_contains($whole, $thousands) && preg_match('/^[1-9]\d{0,2}('.preg_quote($thousands, '/').'\d{3})+$/', $whole) !== 1) {
+            return null;
+        }
+
+        return str_replace($thousands, '', $whole).'.'.$fraction;
     }
 
     /**
@@ -294,15 +346,19 @@ class TransactionImportService
             return null;
         }
 
-        foreach (['Y-m-d', 'd/m/Y'] as $format) {
-            try {
-                return Carbon::createFromFormat('!'.$format, $raw);
-            } catch (\Throwable) {
-                continue;
-            }
+        if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $raw, $parts) === 1) {
+            [, $year, $month, $day] = $parts;
+        } elseif (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $raw, $parts) === 1) {
+            [, $day, $month, $year] = $parts;
+        } else {
+            return null;
         }
 
-        return null;
+        if (! checkdate((int) $month, (int) $day, (int) $year)) {
+            return null;
+        }
+
+        return Carbon::createStrict((int) $year, (int) $month, (int) $day, 0, 0, 0);
     }
 
     /** @return array<string, int> lowercased account name => id, active accounts only */

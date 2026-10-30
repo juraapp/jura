@@ -55,8 +55,17 @@ class TransactionImportController extends Controller
         $this->authorize('create', Transaction::class);
 
         $request->validate([
-            'rows' => ['required', 'array'],
+            'rows' => ['required', 'array', 'max:'.TransactionImportService::MAX_ROWS],
+            'rows.*' => ['required', 'array'],
             'rows.*.line' => ['required', 'integer'],
+            'rows.*.date' => ['nullable', 'string', 'max:50'],
+            'rows.*.time' => ['nullable', 'string', 'max:50'],
+            'rows.*.description' => ['nullable', 'string'],
+            'rows.*.category' => ['nullable', 'string', 'max:255'],
+            'rows.*.account' => ['nullable', 'string', 'max:255'],
+            'rows.*.type' => ['nullable', 'string', 'max:50'],
+            'rows.*.notes' => ['nullable', 'string'],
+            'rows.*.amount' => ['nullable', 'string', 'max:50'],
             'include_duplicates' => ['boolean'],
         ]);
 

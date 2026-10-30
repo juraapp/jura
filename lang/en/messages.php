@@ -24,7 +24,7 @@ return [
         'invalid_type' => "Invalid type: ':value' (use 'Income' or 'Expense').",
         'account_not_found' => "Account ':account' not found.",
         'category_not_found' => "Category ':category' does not exist for type ':type'.",
-        'invalid_amount' => "Invalid amount: ':value'.",
+        'invalid_amount' => "Invalid amount: ':value'. Use a positive number with at most two decimals.",
         'invalid_time' => "Invalid time: ':value'.",
         'invalid_date' => "Invalid date: ':value'.",
         'description_too_long' => 'Description exceeds 255 characters.',
