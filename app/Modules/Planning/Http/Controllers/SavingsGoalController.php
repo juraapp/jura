@@ -146,9 +146,9 @@ class SavingsGoalController extends Controller
 
         $savingsGoal->contributions()->create($data);
 
-        $saved = $savingsGoal->contributions()->sum('amount');
+        $saved = Money::of($savingsGoal->contributions()->sum('amount'));
 
-        if ($saved >= $savingsGoal->target_amount->toFloat() && $savingsGoal->status === SavingsGoalStatus::Active) {
+        if (! $saved->lessThan($savingsGoal->target_amount) && $savingsGoal->status === SavingsGoalStatus::Active) {
             $savingsGoal->update(['status' => SavingsGoalStatus::Completed]);
         }
 
