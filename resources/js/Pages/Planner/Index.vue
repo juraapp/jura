@@ -36,11 +36,11 @@ const currency = ref(props.currencies[0] ?? 'COP');
 const view = ref('conservative');
 const horizon = ref(12);
 
-const viewHints = {
+const viewHints = computed(() => ({
     conservative: t('ui.planner.hint_conservative'),
     expected: t('ui.planner.hint_expected'),
     optimistic: t('ui.planner.hint_optimistic'),
-};
+}));
 
 const itemsInCurrency = computed(() => props.items.filter((item) => item.currency === currency.value));
 const selected = ref(new Set(props.items.filter((item) => item.currency === (props.currencies[0] ?? '')).map((item) => item.id)));

@@ -30,13 +30,13 @@ const form = useForm({
     currency_position: page.props.auth.user.currency_position ?? 'auto',
 });
 
-const numberPresets = [
+const numberPresets = computed(() => [
     { label: t('ui.preferences.follow'), decimal: '', thousands: '', digits: '' },
     { label: '1,234,567.89', decimal: '.', thousands: ',', digits: 2 },
     { label: '1.234.567,89', decimal: ',', thousands: '.', digits: 2 },
     { label: '1 234 567,89', decimal: ',', thousands: ' ', digits: 2 },
     { label: '1234567.89', decimal: '.', thousands: 'none', digits: 2 },
-];
+]);
 
 const applyPreset = (preset) => {
     form.decimal_separator = preset.decimal;
