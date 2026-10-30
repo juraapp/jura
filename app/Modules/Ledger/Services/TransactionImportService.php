@@ -305,10 +305,10 @@ class TransactionImportService
         return null;
     }
 
-    /** @return array<string, int> lowercased account name => id */
+    /** @return array<string, int> lowercased account name => id, active accounts only */
     private function loadAccountLookup(User $user): array
     {
-        return $user->accounts()->get(['id', 'name'])
+        return $user->accounts()->where('is_active', true)->get(['id', 'name'])
             ->mapWithKeys(fn (Account $account) => [Str::lower(trim($account->name)) => $account->id])
             ->all();
     }

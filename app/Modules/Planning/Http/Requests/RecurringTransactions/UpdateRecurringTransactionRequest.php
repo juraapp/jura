@@ -2,8 +2,8 @@
 
 namespace App\Modules\Planning\Http\Requests\RecurringTransactions;
 
+use App\Modules\Shared\Validation\LedgerRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateRecurringTransactionRequest extends FormRequest
 {
@@ -16,8 +16,8 @@ class UpdateRecurringTransactionRequest extends FormRequest
     {
         return [
             'type' => ['required', 'in:income,expense'],
-            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $this->user()->id)],
-            'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $this->user()->id)->orWhereNull('user_id'))],
+            'account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true, keepId: $this->route('recurringTransaction')->account_id)],
+            'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id)],
             'amount' => ['required', 'numeric', 'gt:0'],
             'description' => ['nullable', 'string', 'max:255'],
             'frequency' => ['required', 'in:weekly,biweekly,monthly,yearly'],

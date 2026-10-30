@@ -66,8 +66,10 @@ An account is any place that holds money: a bank account, digital wallet, cash, 
   real transaction yourself. Do not also plan the same interest as a planned income, or it counts twice.
 - **The balance is calculated for you** from the starting balance plus every transaction. You never type the
   current balance directly. To correct it, add a transaction.
-- **Deleting an account:** if it has no transactions it is removed. If it has transactions it is **archived**
-  (hidden from new entries but kept in your history) so your reports stay correct.
+- **Deleting an account:** if it has no transactions it is removed. If it has transactions (including ones you
+  deleted that are still in the Trash) it is **archived**: kept in your history so your reports stay correct, but it
+  can no longer receive new transactions, transfers, recurring transactions or purchases. Existing transactions on
+  it can still be edited.
 
 ## Transactions
 

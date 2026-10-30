@@ -3,6 +3,7 @@
 namespace App\Modules\Planning\Http\Requests\PlannedEvents;
 
 use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Shared\Validation\LedgerRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,8 +24,8 @@ class StorePlannedEventRequest extends FormRequest
             'amount' => ['required', 'numeric', 'gt:0'],
             'date' => ['required', 'date'],
             'currency' => ['nullable', 'string', 'size:3'],
-            'account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('user_id', $userId)],
-            'category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $userId)->orWhereNull('user_id'))],
+            'account_id' => ['nullable', 'integer', LedgerRules::account($userId)],
+            'category_id' => ['nullable', 'integer', LedgerRules::category($userId)],
             'certainty' => ['required', 'in:confirmed,expected,speculative'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'allocation_overrides' => ['nullable', 'array'],
