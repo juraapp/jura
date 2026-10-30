@@ -33,6 +33,7 @@ class AccountController extends Controller
                 'color' => $account->color,
                 'masked_number' => $account->masked_number,
                 'is_active' => $account->is_active,
+                'on_budget' => $account->on_budget,
                 'notes' => $account->notes,
                 'balance' => $calculator->accountBalance($account)->toFloat(),
             ]);

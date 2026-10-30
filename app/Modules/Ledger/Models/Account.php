@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'name', 'type', 'institution', 'initial_balance', 'currency',
-    'color', 'icon', 'masked_number', 'is_active', 'notes', 'yield_rate', 'yield_compounding',
+    'color', 'icon', 'masked_number', 'is_active', 'on_budget', 'notes', 'yield_rate', 'yield_compounding',
 ])]
 class Account extends Model
 {
@@ -34,6 +34,7 @@ class Account extends Model
             'yield_rate' => 'decimal:4',
             'yield_compounding' => YieldCompounding::class,
             'is_active' => 'boolean',
+            'on_budget' => 'boolean',
         ];
     }
 
