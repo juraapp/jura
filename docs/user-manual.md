@@ -140,8 +140,10 @@ categories** shared by everyone, and you can add your own.
 - A category is either **Income** or **Expense**.
 - System categories, and categories that already have transactions, **cannot be edited or deleted**, so your
   history never changes meaning. Create a new category instead.
+- A category used by a recurring transaction, a bucket, an open planned event or a repeating plan can't be deleted
+  (or removed from the Trash) either; change or delete those first.
 - Your own categories have a checkbox, plus edit and delete buttons. Tick several (or **Select all**) to delete them
-  together; those that already have transactions are kept, and deleted ones go to the **Trash**.
+  together; those that already have transactions or are used by plans are kept, and deleted ones go to the **Trash**.
 
 ## Cash flow (planned income and expenses)
 

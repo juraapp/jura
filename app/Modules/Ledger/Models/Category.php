@@ -4,6 +4,11 @@ namespace App\Modules\Ledger\Models;
 
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Enums\CategoryType;
+use App\Modules\Planning\Enums\PlannedEventStatus;
+use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\PlannedEventSeries;
+use App\Modules\Planning\Models\RecurringTransaction;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -66,6 +71,38 @@ class Category extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function recurringTransactions(): HasMany
+    {
+        return $this->hasMany(RecurringTransaction::class);
+    }
+
+    public function buckets(): HasMany
+    {
+        return $this->hasMany(Bucket::class);
+    }
+
+    public function plannedEvents(): HasMany
+    {
+        return $this->hasMany(PlannedEvent::class);
+    }
+
+    public function plannedEventSeries(): HasMany
+    {
+        return $this->hasMany(PlannedEventSeries::class);
+    }
+
+    /**
+     * Whether a plan still points at this category: a recurring template, a bucket, an open planned event or a
+     * planned series. Such a category can't be deleted (or purged), so those plans never meet a missing category.
+     */
+    public function isUsedByPlans(): bool
+    {
+        return $this->recurringTransactions()->withoutGlobalScope('user')->exists()
+            || $this->buckets()->withoutGlobalScope('user')->exists()
+            || $this->plannedEvents()->withoutGlobalScope('user')->where('status', PlannedEventStatus::Planned->value)->exists()
+            || $this->plannedEventSeries()->withoutGlobalScope('user')->exists();
     }
 
     /**
