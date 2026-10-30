@@ -17,6 +17,7 @@ use App\Modules\Planning\Http\Requests\Buckets\UpdateBucketRequest;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\BucketCycle;
+use App\Modules\Planning\Services\AssignGuard;
 use App\Modules\Planning\Services\BucketCycleService;
 use App\Modules\Planning\Services\BucketLedger;
 use App\Modules\Planning\Services\BucketManager;
@@ -28,6 +29,7 @@ use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -122,15 +124,27 @@ class BucketController extends Controller
         ]);
     }
 
-    public function store(StoreBucketRequest $request, BucketManager $manager): RedirectResponse
+    public function store(StoreBucketRequest $request, BucketManager $manager, AssignGuard $guard): RedirectResponse
     {
+        $opening = Money::of($request->validated('opening_balance') ?? 0);
+        if ($warning = $this->overAssignWarning($request, $guard, (string) $request->validated('currency'), $opening)) {
+            return $warning;
+        }
+
         $manager->save($request->user(), $request->validated());
 
         return back()->with('success', __('buckets.saved'));
     }
 
-    public function update(UpdateBucketRequest $request, Bucket $bucket, BucketManager $manager): RedirectResponse
+    public function update(UpdateBucketRequest $request, Bucket $bucket, BucketManager $manager, BucketLedger $funds, AssignGuard $guard): RedirectResponse
     {
+        if ($request->has('opening_balance')) {
+            $delta = Money::of($request->validated('opening_balance') ?? 0)->subtract($funds->openingBalance($bucket));
+            if ($warning = $this->overAssignWarning($request, $guard, (string) $request->validated('currency'), $delta)) {
+                return $warning;
+            }
+        }
+
         $manager->save($request->user(), $request->validated(), $bucket);
 
         return back()->with('success', __('buckets.saved'));
@@ -158,21 +172,41 @@ class BucketController extends Controller
         return back()->with('success', __('messages.bulk.deleted', ['count' => $count]));
     }
 
-    public function move(MoveBucketFundsRequest $request, Bucket $bucket, BucketLedger $funds): RedirectResponse
+    /**
+     * Moves money out of a bucket (to another bucket or back to ready to assign), or into it from ready to assign.
+     */
+    public function move(MoveBucketFundsRequest $request, Bucket $bucket, BucketLedger $funds, AssignGuard $guard): RedirectResponse
     {
         $amount = Money::of($request->validated('amount'));
+        $description = $request->validated('description');
+
+        if ($request->boolean('from_ready')) {
+            if ($warning = $this->overAssignWarning($request, $guard, $bucket->currency, $amount)) {
+                return $warning;
+            }
+
+            $funds->credit($bucket, $amount, AllocationSource::Adjustment, null, null, $description ?? __('buckets.from_ready'));
+
+            return back()->with('success', __('buckets.moved'));
+        }
 
         if ($funds->available($bucket)->lessThan($amount)) {
             return back()->withErrors(['amount' => __('buckets.not_enough_funds')]);
         }
 
+        if ($request->validated('to_bucket_id') === MoveBucketFundsRequest::READY) {
+            $funds->credit($bucket, $amount->negate(), AllocationSource::Adjustment, null, null, $description ?? __('buckets.to_ready'));
+
+            return back()->with('success', __('buckets.moved'));
+        }
+
         $target = Bucket::findOrFail($request->validated('to_bucket_id'));
-        $funds->move($bucket, $target, $amount, $request->validated('description'));
+        $funds->move($bucket, $target, $amount, $description);
 
         return back()->with('success', __('buckets.moved'));
     }
 
-    public function adjust(AdjustBucketFundsRequest $request, Bucket $bucket, BucketLedger $funds): RedirectResponse
+    public function adjust(AdjustBucketFundsRequest $request, Bucket $bucket, BucketLedger $funds, AssignGuard $guard): RedirectResponse
     {
         $amount = Money::of($request->validated('amount'));
 
@@ -180,9 +214,30 @@ class BucketController extends Controller
             return back()->withErrors(['amount' => __('buckets.not_enough_funds')]);
         }
 
+        if ($warning = $this->overAssignWarning($request, $guard, $bucket->currency, $amount)) {
+            return $warning;
+        }
+
         $funds->credit($bucket, $amount, AllocationSource::Adjustment, null, null, $request->validated('description'));
 
         return back()->with('success', __('buckets.adjusted'));
+    }
+
+    /**
+     * Sends the user back with an `over_assign` error when putting this much more in buckets would assign more
+     * than is ready, unless they already confirmed it.
+     */
+    private function overAssignWarning(Request $request, AssignGuard $guard, string $currency, Money $delta): ?RedirectResponse
+    {
+        if ($request->boolean('confirm_over_assign')) {
+            return null;
+        }
+
+        $over = $guard->wouldOverAssign($request->user(), $currency, $delta);
+
+        return $over === null ? null : back()->withErrors([
+            'over_assign' => __('buckets.over_assign', ['amount' => $request->user()->formatter()->money($over, strtoupper($currency))]),
+        ]);
     }
 
     /**

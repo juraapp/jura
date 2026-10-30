@@ -27,6 +27,7 @@ class BucketFundsTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
+        Account::factory()->for($this->user)->create(['currency' => 'COP', 'initial_balance' => 1000000]); // enough ready to assign
         $this->from = Bucket::factory()->savings()->for($this->user)->create(['currency' => 'COP', 'name' => 'Car']);
         $this->to = Bucket::factory()->savings()->for($this->user)->create(['currency' => 'COP', 'name' => 'Trip']);
         Allocation::factory()->for($this->user)->for($this->from)->create(['amount' => 1000, 'currency' => 'COP']);

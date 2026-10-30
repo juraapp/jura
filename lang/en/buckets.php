@@ -19,4 +19,7 @@ return [
     'cycle_limit_saved' => 'Limit for this cycle saved.',
     'currency_locked' => 'The currency cannot change once the bucket holds money.',
     'account_currency_mismatch' => 'Only accounts in the bucket\'s currency can fill it.',
+    'from_ready' => 'From ready to assign',
+    'to_ready' => 'Back to ready to assign',
+    'over_assign' => 'That is :amount more than is ready to assign. Your buckets would hold more money than your accounts.',
 ];
