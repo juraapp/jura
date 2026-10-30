@@ -146,7 +146,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/trash/categories/{id}', [TrashController::class, 'purgeCategory'])->name('trash.categories.purge');
     Route::get('settings/preferences', [PreferenceController::class, 'edit'])->name('preferences.edit');
     Route::patch('settings/preferences', [PreferenceController::class, 'update'])->name('preferences.update');
-    Route::get('settings/export', fn () => Inertia::render('ComingSoon', ['title' => 'Export my data']))->name('data-export.index');
+    Route::get('settings/export', fn () => Inertia::render('ComingSoon', ['titleKey' => 'ui.shell.nav.export_data']))->name('data-export.index');
 });
 
 require __DIR__.'/auth.php';

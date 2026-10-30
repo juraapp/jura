@@ -18,7 +18,7 @@ for everyday use. Sections marked **Advanced** are optional extras.
 9. [Wish list and projects](#wish-list-and-projects)
 10. [Planner](#planner)
 11. [Savings goals](#savings-goals)
-12. [Recurring expenses](#recurring-expenses)
+12. [Recurring transactions](#recurring-transactions)
 13. [Reports](#reports)
 14. [Notifications](#notifications)
 15. [Preferences, profile and appearance](#preferences-profile-and-appearance)
@@ -373,9 +373,9 @@ A goal is something you are saving toward, with a target amount and an optional 
 - A deleted goal appears under **Deleted goals** at the bottom, where you can restore it or delete it permanently.
 - If a goal is falling behind its target date you get a notification.
 
-## Recurring expenses
+## Recurring transactions
 
-Menu: **Planning → Recurring expenses**.
+Menu: **Planning → Recurring transactions**.
 
 For income or expenses that repeat (rent, salary, subscriptions). Pick the account, category, amount, how often
 (weekly, biweekly, monthly or yearly), the next due date and an optional end date.
