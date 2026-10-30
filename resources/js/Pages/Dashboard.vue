@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
 import StatCard from '@/Components/StatCard.vue';
 import BadgeVariation from '@/Components/BadgeVariation.vue';
 import Money from '@/Components/Money.vue';
@@ -11,11 +12,12 @@ import { useDarkMode } from '@/composables/useDarkMode';
 import { CHART_PALETTE, formatCompact, formatMoney } from '@/chartPalette';
 import { index as accountsIndex } from '@/routes/accounts';
 import { index as plannedEventsIndex } from '@/routes/planned-events';
-import { index as transactionsIndex } from '@/routes/transactions';
 import { dashboard } from '@/routes';
 import { useFormat } from '@/composables/useFormat';
+import { useTransactionModal } from '@/composables/useTransactionModal';
 
 const format = useFormat();
+const { open: openTransactionModal } = useTransactionModal();
 const { t } = useI18n();
 
 const props = defineProps({
@@ -122,34 +124,32 @@ const netWorthEvolutionOptions = (currency) => ({
                 :description="$t('ui.dashboard.no_account_hint')"
             >
                 <template #action>
-                    <Link
-                        :href="accountsIndex().url"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-                    >
+                    <PrimaryButton :as="Link" :href="accountsIndex().url">
                         <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.dashboard.create_account') }}
-                    </Link>
-                </template>
-            </EmptyState>
-
-            <EmptyState
-                v-else-if="!hasAnyTransaction"
-                icon="list-bullet"
-                :title="$t('ui.dashboard.no_tx_title')"
-                :description="$t('ui.dashboard.no_tx_hint')"
-            >
-                <template #action>
-                    <Link
-                        :href="transactionsIndex().url"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-                    >
-                        <DynamicIcon name="plus" class="h-4 w-4" />
-                        {{ $t('ui.dashboard.new_transaction') }}
-                    </Link>
+                    </PrimaryButton>
                 </template>
             </EmptyState>
 
             <template v-else>
+                <!-- Accounts but no transactions yet: show balances, with a light nudge to record the first one -->
+                <div
+                    v-if="!hasAnyTransaction"
+                    class="flex flex-col gap-3 rounded-xl border border-primary-100 bg-primary-50/60 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-primary-500/20 dark:bg-primary-500/5"
+                >
+                    <div class="flex items-start gap-3">
+                        <DynamicIcon name="list-bullet" class="mt-0.5 h-5 w-5 shrink-0 text-primary-600 dark:text-primary-400" />
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ $t('ui.dashboard.no_tx_title') }}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ $t('ui.dashboard.no_tx_hint') }}</p>
+                        </div>
+                    </div>
+                    <PrimaryButton type="button" class="shrink-0" @click="openTransactionModal(null, 'expense')">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.dashboard.new_transaction') }}
+                    </PrimaryButton>
+                </div>
+
                 <!-- Total net worth never mixes currencies, one line per currency -->
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard :label="$t('ui.dashboard.total_net_worth')" icon="banknotes">

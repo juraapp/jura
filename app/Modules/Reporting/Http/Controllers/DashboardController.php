@@ -25,10 +25,10 @@ class DashboardController extends Controller
         $hasAnyAccount = $user->accounts()->exists();
         $hasAnyTransaction = $user->transactions()->exists();
 
-        if (! $hasAnyAccount || ! $hasAnyTransaction) {
+        if (! $hasAnyAccount) {
             return Inertia::render('Dashboard', [
                 'evolutionMonths' => $evolutionMonths,
-                'hasAnyAccount' => $hasAnyAccount,
+                'hasAnyAccount' => false,
                 'hasAnyTransaction' => $hasAnyTransaction,
                 'currencies' => [],
                 'upcoming' => [],
@@ -77,7 +77,7 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'evolutionMonths' => $evolutionMonths,
             'hasAnyAccount' => true,
-            'hasAnyTransaction' => true,
+            'hasAnyTransaction' => $hasAnyTransaction,
             'currencies' => $currencies,
             'upcoming' => $planning->upcoming($user),
         ]);
