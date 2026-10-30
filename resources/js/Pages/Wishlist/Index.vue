@@ -48,9 +48,6 @@ const props = defineProps({
     projectKinds: { type: Array, required: true },
 });
 
-const bulk = useBulkSelection(() => groups.value.flatMap((group) => group.items));
-watch(() => groups.value.flatMap((group) => group.items), () => bulk.clear());
-
 const page = usePage();
 const locale = () => page.props.auth.user?.locale ?? 'en';
 const money = (value, currency) => formatMoney(value, currency, locale());
@@ -73,6 +70,10 @@ const groups = computed(() => {
 
     return result.filter((group) => group.items.length || group.project);
 });
+
+/* Declared after `groups`: the watch getter runs during setup. Clearing on every change also drops items that just got hidden. */
+const bulk = useBulkSelection(() => groups.value.flatMap((group) => group.items));
+watch(() => groups.value.flatMap((group) => group.items.map((item) => item.id)).join(','), () => bulk.clear());
 
 const totalsByCurrency = (items) => {
     const totals = {};
@@ -131,6 +132,13 @@ const blankItem = (projectId = '') => ({
 
 const itemForm = useForm(blankItem());
 const bucketChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === itemForm.currency));
+
+/* A bucket in another currency would stay selected but invisible, and the server rejects it. */
+watch(() => itemForm.currency, () => {
+    if (itemForm.bucket_id && !bucketChoices.value.some((bucket) => bucket.id === itemForm.bucket_id)) {
+        itemForm.bucket_id = '';
+    }
+});
 
 const openItemModal = (item = null, projectId = '') => {
     editingItem.value = item;
@@ -192,7 +200,8 @@ const accountChoices = computed(() => {
     const bucket = props.buckets.find((candidate) => candidate.id === buying.value.bucket?.id);
     const restrictions = [buying.value.allowedAccountIds, bucket?.allowed_account_ids ?? []].filter((list) => list.length);
 
-    return props.accounts.filter((account) => restrictions.every((list) => list.includes(account.id)));
+    return props.accounts.filter((account) => account.currency === buying.value.currency
+        && restrictions.every((list) => list.includes(account.id)));
 });
 
 const openPurchase = (item) => {
@@ -253,6 +262,10 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                 </label>
                 <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> {{ $t('ui.wishlist.select_all') }}</label>
                 <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" :noun="$t('ui.wishlist.noun')" />
+
+                <p v-if="groups.length === 0" class="rounded-xl border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    {{ $t('ui.wishlist.all_closed') }}
+                </p>
 
                 <section v-for="group in groups" :key="group.project?.id ?? 'none'" class="space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -446,7 +459,7 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                             <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.wishlist.only_bought_hint') }}</p>
                             <label v-for="account in accounts" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
                                 <input v-model="itemForm.allowed_account_ids" type="checkbox" :value="account.id" class="rounded border-gray-300 text-primary-600" />
-                                {{ account.name }}
+                                {{ account.name }} · {{ account.currency }}
                             </label>
                             <InputError class="mt-1" :message="itemForm.errors['allowed_account_ids.0']" />
                         </fieldset>
@@ -479,7 +492,7 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                     <InputLabel for="purchase_account" :value="$t('ui.wishlist.paid_with')" />
                     <SelectInput id="purchase_account" v-model="purchaseForm.account_id">
                         <option value="">{{ $t('ui.wishlist.select_account') }}</option>
-                        <option v-for="account in accountChoices" :key="account.id" :value="account.id">{{ account.name }}</option>
+                        <option v-for="account in accountChoices" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </SelectInput>
                     <p v-if="buying && accountChoices.length === 0" class="mt-1 text-xs text-red-600">{{ $t('ui.wishlist.no_account_allowed') }}</p>
                     <InputError class="mt-1" :message="purchaseForm.errors.account_id" />
