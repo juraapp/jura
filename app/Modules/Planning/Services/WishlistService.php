@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Services;
 
+use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Enums\AllocationSource;
@@ -9,12 +10,14 @@ use App\Modules\Planning\Enums\WishlistStatus;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\WishlistItem;
 use App\Modules\Shared\Support\Money;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Buying a wish-list item: the real expense and the matching spend from its
- * bucket happen together and are undone together.
+ * bucket happen together and are undone together. Deleting the expense from the
+ * ledger reverses the purchase; restoring it from the Trash applies it again.
  */
 class WishlistService
 {
@@ -41,55 +44,117 @@ class WishlistService
                 'notes' => $item->notes,
             ]);
 
-            $allocationId = null;
-            if ($item->bucket !== null) {
-                $covered = $this->smaller($amount, $this->funds->available($item->bucket));
-
-                if ($covered->isPositive()) {
-                    $allocationId = $this->funds
-                        ->credit($item->bucket, $covered->negate(), AllocationSource::Spend, $transactionId, $date, $item->name)
-                        ->id;
-                }
-            }
-
-            if ($item->bucket !== null && $item->bucket->completes_on_purchase && ! $item->bucket->isCompletedOn($date)) {
-                $this->funds->complete($item->bucket, $date);
-            }
-
-            $item->update([
-                'status' => WishlistStatus::Purchased,
-                'purchased_on' => $date->toDateString(),
-                'purchased_transaction_id' => $transactionId,
-                'purchase_allocation_id' => $allocationId,
-            ]);
+            $this->applyPurchase($item, $transactionId, $amount, $date);
 
             return $transactionId;
         });
     }
 
+    /**
+     * Undoes a purchase: the spend goes back to the bucket and the expense is removed for good
+     * (a system revert, so it does not land in the Trash).
+     */
     public function undoPurchase(WishlistItem $item): void
     {
         DB::transaction(function () use ($item) {
-            if ($item->bucket !== null && $item->bucket->completes_on_purchase
-                && $item->bucket->completed_on?->toDateString() === $item->purchased_on?->toDateString()) {
-                $this->funds->reopen($item->bucket);
-            }
+            $transactionId = $item->purchased_transaction_id;
 
-            if ($item->purchase_allocation_id !== null) {
-                Allocation::forUser($item->user_id)->whereKey($item->purchase_allocation_id)->delete();
-            }
+            $this->reversePurchase($item);
+            $item->update(['purchased_transaction_id' => null]);
 
-            if ($item->purchased_transaction_id !== null) {
-                $this->transactions->forget($item->user, $item->purchased_transaction_id);
+            if ($transactionId !== null) {
+                $this->transactions->forget($item->user, $transactionId);
             }
-
-            $item->update([
-                'status' => WishlistStatus::Wanted,
-                'purchased_on' => null,
-                'purchased_transaction_id' => null,
-                'purchase_allocation_id' => null,
-            ]);
         });
+    }
+
+    /**
+     * The purchase's expense went to the Trash: the item is wanted again and its bucket gets the money back.
+     * The transaction id is kept so restoring the expense can apply the purchase again.
+     */
+    public function transactionDeleted(User $user, int $transactionId): void
+    {
+        WishlistItem::forUser($user)
+            ->where('purchased_transaction_id', $transactionId)
+            ->where('status', WishlistStatus::Purchased->value)
+            ->get()
+            ->each(fn (WishlistItem $item) => $this->reversePurchase($item));
+    }
+
+    /**
+     * The purchase's expense is back from the Trash: if the item is still wanted (not bought again in the
+     * meantime), it is purchased again with the expense's amount and date.
+     */
+    public function transactionRestored(User $user, int $transactionId, Money $amount, CarbonInterface $date): void
+    {
+        WishlistItem::forUser($user)
+            ->where('purchased_transaction_id', $transactionId)
+            ->where('status', WishlistStatus::Wanted->value)
+            ->get()
+            ->each(fn (WishlistItem $item) => $this->applyPurchase($item, $transactionId, $amount, Carbon::instance($date)));
+    }
+
+    /**
+     * The purchase's expense is gone for good: forget the link (and reverse a purchase still marked as made).
+     */
+    public function transactionPurged(User $user, int $transactionId): void
+    {
+        WishlistItem::forUser($user)
+            ->where('purchased_transaction_id', $transactionId)
+            ->get()
+            ->each(function (WishlistItem $item) {
+                if ($item->status === WishlistStatus::Purchased) {
+                    $this->reversePurchase($item);
+                }
+
+                $item->update(['purchased_transaction_id' => null]);
+            });
+    }
+
+    private function applyPurchase(WishlistItem $item, int $transactionId, Money $amount, Carbon $date): void
+    {
+        $allocationId = null;
+        if ($item->bucket !== null) {
+            $covered = $this->smaller($amount, $this->funds->available($item->bucket));
+
+            if ($covered->isPositive()) {
+                $allocationId = $this->funds
+                    ->credit($item->bucket, $covered->negate(), AllocationSource::Spend, $transactionId, $date, $item->name)
+                    ->id;
+            }
+        }
+
+        if ($item->bucket !== null && $item->bucket->completes_on_purchase && ! $item->bucket->isCompletedOn($date)) {
+            $this->funds->complete($item->bucket, $date);
+        }
+
+        $item->update([
+            'status' => WishlistStatus::Purchased,
+            'purchased_on' => $date->toDateString(),
+            'purchased_transaction_id' => $transactionId,
+            'purchase_allocation_id' => $allocationId,
+        ]);
+    }
+
+    /**
+     * Gives the bucket its money back and marks the item wanted. Keeps purchased_transaction_id.
+     */
+    private function reversePurchase(WishlistItem $item): void
+    {
+        if ($item->bucket !== null && $item->bucket->completes_on_purchase
+            && $item->bucket->completed_on?->toDateString() === $item->purchased_on?->toDateString()) {
+            $this->funds->reopen($item->bucket);
+        }
+
+        if ($item->purchase_allocation_id !== null) {
+            Allocation::forUser($item->user_id)->whereKey($item->purchase_allocation_id)->delete();
+        }
+
+        $item->update([
+            'status' => WishlistStatus::Wanted,
+            'purchased_on' => null,
+            'purchase_allocation_id' => null,
+        ]);
     }
 
     private function smaller(Money $a, Money $b): Money

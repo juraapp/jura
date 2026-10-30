@@ -25,7 +25,8 @@ interface RecordsTransactions
     public function recordRecurring(User $user, TransactionType $type, array $data, int $recurringTransactionId): void;
 
     /**
-     * Delete a transaction this user previously recorded (for example to undo a purchase).
+     * Remove for good a transaction this user previously recorded (for example to undo a purchase). It does not go
+     * to the Trash, but TransactionDeleted and TransactionPurged still fire.
      */
     public function forget(User $user, int $transactionId): void;
 }

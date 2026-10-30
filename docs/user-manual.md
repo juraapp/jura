@@ -177,6 +177,9 @@ income, planned expenses and your projected balance, per currency. Today's balan
 - Press **Skip** for something that will not happen. A skipped plan stays in the list (dimmed) with **Reopen**
   to plan it again and **Delete** to remove it.
 - **Delete** removes a plan for good. Deleting one occurrence of a repeating event never brings it back.
+- A plan marked as done cannot be reopened directly. To undo it, delete its real transaction: the plan becomes
+  open again. Restoring that transaction from the Trash marks the plan as done again, unless you have already
+  closed it with another transaction.
 
 **Changing repeating events.** Editing or deleting one occurrence asks whether it is **only this one** or **this
 and all future ones**. Earlier occurrences, and ones already done, are never touched. When you change "all future",
@@ -322,7 +325,9 @@ A place for everything you would like to get. Group things into **projects** (a 
 price. Only accounts in the item's currency (and allowed for the item and its bucket) are offered. Account lists across
 Jura show each account's currency, for example "Nu · COP". Jura records the real expense and, if the item has a bucket, spends that money from the bucket in the same step.
 If the bucket holds less than the price, it pays what it has and the rest is simply paid from your account.
-**Undo purchase** removes the expense and returns the money to the bucket.
+**Undo purchase** removes the expense for good (it does not go to the Trash) and returns the money to the bucket.
+Deleting the purchase's expense from the Transactions page does the same, except that the expense waits in the Trash:
+restoring it marks the item as purchased again, unless you have bought it again in the meantime.
 
 **Dropping.** The forward button marks an item as *Dropped* (no longer wanted) without deleting it. Tick *Show
 purchased and dropped items* to see them, and use the arrow to want one again.

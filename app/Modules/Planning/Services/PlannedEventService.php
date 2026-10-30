@@ -255,6 +255,45 @@ class PlannedEventService
     }
 
     /**
+     * The real transaction behind a realized plan went to the Trash: the plan is open again. Its
+     * realized_transaction_id is kept, so restoring the transaction can close it again.
+     */
+    public function transactionDeleted(User $user, int $transactionId): void
+    {
+        PlannedEvent::forUser($user)
+            ->where('realized_transaction_id', $transactionId)
+            ->where('status', PlannedEventStatus::Realized->value)
+            ->update(['status' => PlannedEventStatus::Planned->value]);
+    }
+
+    /**
+     * The transaction is back: a plan still open and not realized by another transaction in the meantime
+     * is realized again.
+     */
+    public function transactionRestored(User $user, int $transactionId): void
+    {
+        PlannedEvent::forUser($user)
+            ->where('realized_transaction_id', $transactionId)
+            ->where('status', PlannedEventStatus::Planned->value)
+            ->update(['status' => PlannedEventStatus::Realized->value]);
+    }
+
+    /**
+     * The transaction is gone for good: forget the link, and reopen a plan that was still marked realized.
+     */
+    public function transactionPurged(User $user, int $transactionId): void
+    {
+        PlannedEvent::forUser($user)
+            ->where('realized_transaction_id', $transactionId)
+            ->where('status', PlannedEventStatus::Realized->value)
+            ->update(['status' => PlannedEventStatus::Planned->value]);
+
+        PlannedEvent::forUser($user)
+            ->where('realized_transaction_id', $transactionId)
+            ->update(['realized_transaction_id' => null]);
+    }
+
+    /**
      * Open planned expenses in one category and currency between two dates (inclusive).
      */
     public function plannedExpenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, CarbonInterface $to): Money
