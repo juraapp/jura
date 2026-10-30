@@ -32,6 +32,9 @@ certainty), `Bucket` + `Allocation` (virtual earmarked money filled from income 
   `Shared/Validation/MoneyRules` and account/category foreign keys with `Shared/Validation/LedgerRules` (owner, not
   trashed, active, category type). Code reachable from jobs/console must scope by user explicitly (no auth there). Actual data is `Transaction`; projected
   (forecast) data must stay separate from actual data and be labelled as such.
+- Envelope model: "ready to assign" = on-budget account balances − funded bucket envelopes, per currency. It is
+  computed (`Planning\Contracts\MoneyMap`), never stored; there is no default/catch-all bucket. Planning/Support
+  stays pure (`tests/Architecture` checks it).
 - Commits are atomic Conventional Commits with no `Co-Authored-By` trailer (`.ai/rules/general.md`).
 - Local ports: if 80/3306/6379/5173 are taken by another Sail project, set `APP_PORT`, `FORWARD_DB_PORT`,
   `FORWARD_REDIS_PORT` and `VITE_PORT` in `.env` (and `APP_URL` to match).
