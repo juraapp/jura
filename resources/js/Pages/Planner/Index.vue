@@ -146,10 +146,14 @@ const order = ref([]); // [{ itemId, notBefore }]
 const result = ref(null);
 const itemById = (id) => props.items.find((item) => item.id === id);
 
-/* Only wanted items in the planner's currency can be simulated or saved; others (bought, dropped) stay visible but left out. */
-const isPlannable = (id, inCurrency = currency.value) => itemById(id)?.currency === inCurrency;
+/*
+ * Only wanted items in the planner's currency can be simulated or saved; others (bought, dropped) stay visible but left out.
+ * A saved scenario's line carries the server's `wanted` flag; rows built from the wish list have none and are wanted.
+ */
+const isPlannable = (row, inCurrency = currency.value) => row.wanted !== false && itemById(row.itemId)?.currency === inCurrency;
+const scenarioHasPlannableLines = (scenario) => scenario.lines.some((line) => isPlannable(line, scenario.currency));
 const lineName = (row) => itemById(row.itemId)?.name ?? row.name ?? t('ui.planner.item_n', { id: row.itemId });
-const plannableRows = computed(() => order.value.filter((row) => isPlannable(row.itemId)));
+const plannableRows = computed(() => order.value.filter((row) => isPlannable(row)));
 const viewLabel = (value) => props.views.find((candidate) => candidate.value === value)?.label ?? value;
 
 const useOrder = (ids) => {
@@ -234,7 +238,8 @@ const refreshComparison = async () => {
     const runs = [];
 
     for (const scenario of chosen) {
-        const lines = scenario.lines.filter((line) => isPlannable(line.itemId, scenario.currency));
+        /* A scenario with nothing left to plan shows the nothing_plannable hint in the saved-plans list instead. */
+        const lines = scenario.lines.filter((line) => isPlannable(line, scenario.currency));
         if (lines.length === 0) {
             continue;
         }
@@ -261,7 +266,7 @@ const loadScenario = (scenario) => {
     currency.value = scenario.currency;
     view.value = scenario.view;
     horizon.value = scenario.horizonMonths;
-    order.value = scenario.lines.map((line) => ({ itemId: line.itemId, name: line.name, notBefore: line.notBefore ?? '' }));
+    order.value = scenario.lines.map((line) => ({ itemId: line.itemId, name: line.name, wanted: line.wanted, notBefore: line.notBefore ?? '' }));
     runSimulation();
     document.getElementById('builder')?.scrollIntoView({ behavior: 'smooth' });
 };
@@ -402,7 +407,7 @@ const comparisonRows = computed(() => {
                             <li v-for="(row, index) in order" :key="row.itemId" class="rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                                 <div class="flex items-center gap-2">
                                     <span class="w-5 text-xs font-semibold text-gray-400">{{ index + 1 }}.</span>
-                                    <span class="min-w-0 flex-1 truncate text-sm font-medium" :class="isPlannable(row.itemId) ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through dark:text-gray-500'">{{ lineName(row) }}</span>
+                                    <span class="min-w-0 flex-1 truncate text-sm font-medium" :class="isPlannable(row) ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through dark:text-gray-500'">{{ lineName(row) }}</span>
                                     <button type="button" class="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="index === 0" :title="$t('ui.planner.buy_earlier')" :aria-label="$t('ui.planner.buy_earlier')" @click="move(index, -1)">
                                         <DynamicIcon name="chevron-down" class="h-4 w-4 rotate-180" />
                                     </button>
@@ -413,7 +418,7 @@ const comparisonRows = computed(() => {
                                         <DynamicIcon name="x-mark" class="h-4 w-4" />
                                     </button>
                                 </div>
-                                <p v-if="!isPlannable(row.itemId)" class="mt-1 pl-7 text-xs text-amber-600 dark:text-amber-400">{{ $t('ui.planner.left_out') }}</p>
+                                <p v-if="!isPlannable(row)" class="mt-1 pl-7 text-xs text-amber-600 dark:text-amber-400">{{ $t('ui.planner.left_out') }}</p>
                                 <div v-else class="mt-1.5 flex items-center gap-2 pl-7 text-xs text-gray-500 dark:text-gray-400">
                                     <label :for="`nb-${row.itemId}`">{{ $t('ui.planner.not_before') }}</label>
                                     <input :id="`nb-${row.itemId}`" v-model="row.notBefore" type="date" class="rounded-md border-gray-300 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-700" @change="runSimulation" />
@@ -451,6 +456,7 @@ const comparisonRows = computed(() => {
                                     <span class="text-xs text-gray-400">{{ $t('ui.planner.plan_meta', { count: scenario.lines.length }) }} &middot; {{ scenario.currency }} &middot; {{ viewLabel(scenario.view) }} &middot; {{ $t('ui.planner.months', { count: scenario.horizonMonths }) }}</span>
                                 </span>
                             </label>
+                            <p v-if="compareIds.has(scenario.id) && !scenarioHasPlannableLines(scenario)" class="order-last w-full pl-7 text-xs text-amber-600 dark:text-amber-400">{{ $t('ui.planner.nothing_plannable') }}</p>
                             <button type="button" class="text-xs font-medium text-primary-600 hover:underline dark:text-primary-400" @click="loadScenario(scenario)">{{ $t('ui.planner.open') }}</button>
                             <button type="button" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="deleteScenario(scenario)">
                                 <DynamicIcon name="trash" class="h-4 w-4" />
