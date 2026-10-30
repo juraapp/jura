@@ -8,11 +8,13 @@ import EmptyState from '@/Components/EmptyState.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { withCsrfHeader } from '@/csrf';
+import { useToast } from '@/composables/useToast';
 import { parse as parseImport, store as storeImport } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionImportController';
 import { index as transactionsIndex } from '@/routes/transactions';
 import { template as importTemplate } from '@/routes/transactions/import';
 
 const { t } = useI18n();
+const { push: pushToast } = useToast();
 
 const step = ref('idle');
 const dragging = ref(false);
@@ -88,8 +90,17 @@ const confirmImport = async () => {
             }),
         });
 
-        result.value = await response.json();
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data) {
+            pushToast({ type: 'error', message: data?.error ?? data?.message ?? t('ui.common.request_failed') });
+            return;
+        }
+
+        result.value = data;
         step.value = 'done';
+    } catch {
+        pushToast({ type: 'error', message: t('ui.common.request_failed') });
     } finally {
         processing.value = false;
     }
