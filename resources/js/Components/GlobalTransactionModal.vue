@@ -86,6 +86,10 @@ const resetForm = () => {
 
 watch(isOpen, async (open) => {
     if (!open) {
+        /* A request still in flight belongs to a modal the user closed: it must neither fill the form nor toast. */
+        openRequest++;
+        loading.value = false;
+
         return;
     }
 
