@@ -122,7 +122,12 @@ Rules:
 - Required columns: **date, account, category, type, amount**. Optional: description, notes, **time** (like `14:30` or `2:05 PM`).
 - Column names can be in English or Spanish; common alternatives such as "value" for amount are understood.
 - Up to **1000 rows** per file.
-- Account and category names must match ones you already have.
+- Account and category names must match ones you already have; archived accounts are not matched.
+- **Dates** are `2026-08-01` or `01/08/2026` (day/month/year). Dates that don't exist, like 31/02, are flagged
+  instead of rolling over into the next month.
+- **Amounts** are positive with at most two decimals, written with either separator (`1234.56`, `1.234,56`,
+  `1,234.56`). When a single separator is followed by three digits (`1,234` or `1.234`) Jura reads it using the
+  decimal separator chosen in **Settings → Preferences** (or your language's). Amounts like `1e3` are rejected.
 
 ## Categories
 
