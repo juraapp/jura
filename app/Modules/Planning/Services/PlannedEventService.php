@@ -25,6 +25,9 @@ class PlannedEventService
 
     public const SERIES_MAX_OCCURRENCES = 120;
 
+    /** Safety bound on how many occurrences one call walks through (a weekly series spans about 190 years). */
+    private const SERIES_MAX_STEPS = 10000;
+
     private const MATCH_WINDOW_DAYS = 5;
 
     public function __construct(
@@ -63,7 +66,8 @@ class PlannedEventService
             $series->user_id = $user->id;
             $series->save();
 
-            $this->materialize($series, $user->today()->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS));
+            $today = $user->today();
+            $this->materialize($series, $today->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS), $today);
 
             return $series;
         });
@@ -73,8 +77,10 @@ class PlannedEventService
      * Creates the missing occurrences of a series up to a date (or its end date).
      * Occurrences are computed from the series start, so deleted ones (remembered in
      * the series' excluded dates) are never recreated and month-end dates do not drift.
+     * Occurrences before $from (the owner's today) are never created: a series that
+     * started in the past begins today instead of filling the month with overdue plans.
      */
-    public function materialize(PlannedEventSeries $series, CarbonInterface $until): int
+    public function materialize(PlannedEventSeries $series, CarbonInterface $until, ?CarbonInterface $from = null): int
     {
         $limit = Carbon::instance($until)->startOfDay();
         if ($series->ends_on !== null && $series->ends_on->lt($limit)) {
@@ -82,21 +88,18 @@ class PlannedEventService
         }
 
         $lastDate = PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date');
-        $step = 0;
-        if ($lastDate !== null) {
-            $last = Carbon::parse($lastDate);
-            while ($step < self::SERIES_MAX_OCCURRENCES && $series->frequency->occurrence($series->starts_on, $step)->lte($last)) {
-                $step++;
-            }
-        }
+        $after = $lastDate !== null ? Carbon::parse($lastDate) : null;
+        $from = $from !== null ? Carbon::instance($from)->startOfDay() : null;
 
         $created = 0;
-        for (; $step < self::SERIES_MAX_OCCURRENCES; $step++) {
+        for ($step = 0; $step < self::SERIES_MAX_STEPS && $created < self::SERIES_MAX_OCCURRENCES; $step++) {
             $date = $series->frequency->occurrence($series->starts_on, $step);
             if ($date->gt($limit)) {
                 break;
             }
-            if (in_array($date->toDateString(), $series->excluded_dates ?? [], true)) {
+            if (($after !== null && $date->lte($after))
+                || ($from !== null && $date->lt($from))
+                || in_array($date->toDateString(), $series->excluded_dates ?? [], true)) {
                 continue;
             }
 
@@ -129,7 +132,8 @@ class PlannedEventService
         PlannedEventSeries::withoutGlobalScope('user')->with('user')->chunkById(100, function ($batch) use (&$created) {
             foreach ($batch as $series) {
                 if ($series->user !== null) {
-                    $created += $this->materialize($series, $series->user->today()->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS));
+                    $today = $series->user->today();
+                    $created += $this->materialize($series, $today->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS), $today);
                 }
             }
         });

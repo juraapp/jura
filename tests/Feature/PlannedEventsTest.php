@@ -137,6 +137,24 @@ class PlannedEventsTest extends TestCase
         $this->assertLessThanOrEqual(13, PlannedEvent::count());
     }
 
+    public function test_a_series_that_started_in_the_past_only_creates_occurrences_from_today(): void
+    {
+        Carbon::setTestNow('2026-10-12 09:00:00');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/planning/cash-flow', $this->payload([
+            'type' => 'expense', 'description' => 'Rent', 'amount' => 1000, 'date' => '2026-01-12', 'frequency' => 'monthly',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame(0, PlannedEvent::where('date', '<', '2026-10-12')->count());
+        $this->assertSame('2026-10-12', PlannedEvent::orderBy('date')->first()->date->toDateString());
+        $this->assertSame(13, PlannedEvent::count());
+
+        $this->artisan('planning:extend-series')->assertSuccessful();
+        $this->assertSame(0, PlannedEvent::where('date', '<', '2026-10-12')->count());
+        $this->assertSame(13, PlannedEvent::count());
+    }
+
     public function test_other_users_events_cannot_be_changed_or_reached(): void
     {
         $user = User::factory()->create();

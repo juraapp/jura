@@ -154,7 +154,8 @@ until you mark them as done.
 **Adding a planned event.** Press **Expect income** or **Plan an event**, then fill in what it is, the amount, the
 date and how sure you are. Under **More options** you can pick an account and category, add notes, or make it
 **repeat** (weekly, every two weeks, monthly or yearly), optionally until a date. Repeating events are created
-up to 12 months ahead and extended automatically.
+from today up to 12 months ahead and extended automatically. If the first date is in the past, it only sets the
+rhythm: occurrences before today are not created (record those as real transactions if they happened).
 
 **How sure are you?**
 - **Confirmed**: it will happen (a signed contract, a fixed bill).
