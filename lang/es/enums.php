@@ -81,7 +81,7 @@ return [
 
     'carry_over' => [
         'carry' => 'Dejarlo en este balde',
-        'release' => 'Devolverlo al balde por defecto',
+        'release' => 'Devolverlo a disponible para asignar',
         'overflow' => 'Moverlo a otro balde',
     ],
 
@@ -97,6 +97,7 @@ return [
         'carry' => 'Fin de ciclo',
         'spend' => 'Compra',
         'adjustment' => 'Ajuste manual',
+        'ready' => 'Disponible para asignar',
         'opening' => 'Saldo inicial',
     ],
 

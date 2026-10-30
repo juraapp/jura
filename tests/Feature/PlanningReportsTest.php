@@ -109,6 +109,8 @@ class PlanningReportsTest extends TestCase
         $fund = Bucket::factory()->savings()->for($this->user)->rule(FillRule::Fixed, 500000)->create(['name' => 'Hobby fund', 'currency' => 'COP']);
         Bucket::factory()->savings()->for($this->user)->asDefault()->create(['currency' => 'COP']);
         Allocation::factory()->for($this->user)->for($fund)->create(['amount' => 500000, 'currency' => 'COP']);
+        $other = Bucket::factory()->savings()->for($this->user)->create(['name' => 'Rainy day', 'currency' => 'COP']);
+        Allocation::factory()->for($this->user)->for($other)->create(['amount' => 500000, 'currency' => 'COP']); // nothing left to assign
         $cycling = Project::factory()->for($this->user)->create(['name' => 'Cycling']);
 
         WishlistItem::factory()->for($this->user)->create(['project_id' => $cycling->id, 'bucket_id' => $fund->id, 'price' => 1000000, 'currency' => 'COP', 'importance' => 5]);

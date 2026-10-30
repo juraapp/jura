@@ -28,7 +28,6 @@ final readonly class EngineBucket
         public ?BudgetPeriodType $cycle,
         public CarryOverPolicy $carryOver,
         public ?int $overflowBucketId,
-        public bool $isDefault,
         public int $cycleEvery = 1,
         public ?CarbonImmutable $cycleAnchor = null,
         public ?Money $receivedThisCycle = null,

@@ -208,6 +208,18 @@ class WishlistTest extends TestCase
         $this->assertSame(0.0, (float) Allocation::where('bucket_id', $bucket->id)->sum('amount'));
     }
 
+    public function test_a_purchase_paid_from_an_off_budget_account_takes_nothing_from_the_bucket(): void
+    {
+        [$item, , $category, $bucket] = $this->purchasableItem();
+        $deposit = Account::factory()->for($this->user)->offBudget()->create(['currency' => 'COP', 'initial_balance' => 5000000]);
+
+        $this->post("/planning/wishlist/{$item->id}/purchase", ['account_id' => $deposit->id, 'category_id' => $category->id])->assertRedirect();
+
+        $this->assertSame(WishlistStatus::Purchased, $item->fresh()->status);
+        $this->assertSame(0, Allocation::where('source', AllocationSource::Spend->value)->count());
+        $this->assertSame(3000000.0, (float) Allocation::where('bucket_id', $bucket->id)->sum('amount'));
+    }
+
     public function test_an_item_without_a_bucket_is_purchased_without_a_spend_allocation(): void
     {
         $account = Account::factory()->for($this->user)->create(['currency' => 'COP']);

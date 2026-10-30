@@ -87,9 +87,7 @@ class BucketManager
 
     public function delete(Bucket $bucket): void
     {
-        DB::transaction(function () use ($bucket) {
-            $this->buckets->releaseFunds($bucket);
-            $bucket->delete();
-        });
+        // Its allocations go with it, so whatever it held is ready to assign again.
+        $bucket->delete();
     }
 }

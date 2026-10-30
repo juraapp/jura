@@ -81,7 +81,7 @@ return [
 
     'carry_over' => [
         'carry' => 'Keep it in this bucket',
-        'release' => 'Return it to the default bucket',
+        'release' => 'Return it to ready to assign',
         'overflow' => 'Move it to another bucket',
     ],
 
@@ -97,6 +97,7 @@ return [
         'carry' => 'End of cycle',
         'spend' => 'Purchase',
         'adjustment' => 'Manual adjustment',
+        'ready' => 'Ready to assign',
         'opening' => 'Opening balance',
     ],
 

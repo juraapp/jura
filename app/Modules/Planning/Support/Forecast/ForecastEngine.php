@@ -11,9 +11,11 @@ use Carbon\CarbonImmutable;
 
 /**
  * Deterministic simulation of bucket funds over time. Replays future incomes
- * through the priority waterfall, applies end-of-cycle carry-over, and buys the
- * scenario's items strictly in order at the earliest date their bucket can pay.
- * Pure: no I/O.
+ * through the priority waterfall (what no bucket claims stays ready to assign),
+ * applies end-of-cycle carry-over, and buys the scenario's items strictly in
+ * order at the earliest date they can be paid: an item without a bucket from
+ * ready to assign, one with a bucket from the bucket first and the rest from
+ * ready to assign. Pure: no I/O.
  */
 final class ForecastEngine
 {
@@ -25,6 +27,9 @@ final class ForecastEngine
 
     /** @var array<int, CarbonImmutable> when each bucket first held its target (or was closed) */
     private array $reached = [];
+
+    /** Money in the accounts no bucket holds, as the simulation goes. */
+    private Money $ready;
 
     public function __construct(private readonly Waterfall $waterfall) {}
 
@@ -38,6 +43,7 @@ final class ForecastEngine
         $this->received = [];
         $this->completed = [];
         $this->reached = [];
+        $this->ready = $input->readyToAssign ?? Money::zero();
         foreach ($input->buckets as $bucket) {
             $period = $bucket->cyclePeriod();
             if ($period !== null) {
@@ -82,7 +88,7 @@ final class ForecastEngine
             $state->next++;
         }
 
-        return new EngineResult(array_values($state->results), $balances);
+        return new EngineResult(array_values($state->results), $balances, $this->ready);
     }
 
     /**
@@ -136,6 +142,8 @@ final class ForecastEngine
         }
 
         if (! $anyRule) {
+            $this->ready = $this->ready->add($income->amount);
+
             return;
         }
 
@@ -157,10 +165,7 @@ final class ForecastEngine
             }
         }
 
-        $default = $input->defaultBucket();
-        if ($result['leftover']->isPositive() && $default !== null && $default->acceptsAccount($income->accountId)) {
-            $balances[$default->id] = $balances[$default->id]->add($result['leftover']);
-        }
+        $this->ready = $this->ready->add($result['leftover']);
     }
 
     private function isCompleted(int $bucketId, CarbonImmutable $date): bool
@@ -198,7 +203,7 @@ final class ForecastEngine
 
     /**
      * A bucket marked "completes on purchase" closes when something is bought from it: what is left moves
-     * to its overflow bucket (or the default one) and it stops receiving income.
+     * to its overflow bucket (or back to ready to assign) and it stops receiving income.
      *
      * @param  array<int, Money>  $balances
      */
@@ -236,16 +241,19 @@ final class ForecastEngine
             return;
         }
 
-        $target = $bucket->carryOver === CarryOverPolicy::Overflow && $bucket->overflowBucketId !== null
-            ? $bucket->overflowBucketId
-            : $input->defaultBucket()?->id;
+        $target = $bucket->carryOver === CarryOverPolicy::Overflow ? $bucket->overflowBucketId : null;
 
-        if ($target === null || $target === $bucket->id || ! isset($balances[$target])) {
+        if ($target === $bucket->id || ($target !== null && ! isset($balances[$target]))) {
             return;
         }
 
         $balances[$bucket->id] = $balances[$bucket->id]->subtract($leftover);
-        $balances[$target] = $balances[$target]->add($leftover);
+
+        if ($target === null) {
+            $this->ready = $this->ready->add($leftover);
+        } else {
+            $balances[$target] = $balances[$target]->add($leftover);
+        }
     }
 
     /**
@@ -271,14 +279,25 @@ final class ForecastEngine
                 $earliest = $line->notBefore;
             }
 
-            $bucketId = $line->bucketId ?? $input->defaultBucket()?->id;
-
-            if ($date->lt($earliest) || $bucketId === null || ! isset($balances[$bucketId]) || $balances[$bucketId]->lessThan($line->price)) {
+            if ($date->lt($earliest)) {
                 return;
             }
 
-            $balances[$bucketId] = $balances[$bucketId]->subtract($line->price);
-            $this->completeIfDone($input, $bucketId, $balances, $date);
+            $bucketId = $line->bucketId !== null && isset($balances[$line->bucketId]) ? $line->bucketId : null;
+            $fromBucket = $this->fromBucket($line, $bucketId, $balances);
+            $fromReady = $line->price->subtract($fromBucket);
+
+            if ($fromReady->isPositive() && $this->spendableReady()->lessThan($fromReady)) {
+                return;
+            }
+
+            if ($bucketId !== null) {
+                $balances[$bucketId] = $balances[$bucketId]->subtract($fromBucket);
+            }
+            $this->ready = $this->ready->subtract($fromReady);
+            if ($bucketId !== null) {
+                $this->completeIfDone($input, $bucketId, $balances, $date);
+            }
             $state->lastPurchase = $date;
             $state->results[$state->next] = new LineResult(
                 $line->itemId, $line->name, $line->price, $date, (int) round($input->start->diffInDays($date)), Money::zero(), null,
@@ -293,14 +312,32 @@ final class ForecastEngine
      */
     private function recordUnbought(EngineInput $input, EngineLine $line, array $balances, object $state): void
     {
-        $bucketId = $line->bucketId ?? $input->defaultBucket()?->id;
-        $available = $bucketId !== null && isset($balances[$bucketId]) ? $balances[$bucketId] : Money::zero();
-        $missing = $line->price->subtract($available);
+        $bucketId = $line->bucketId !== null && isset($balances[$line->bucketId]) ? $line->bucketId : null;
+        $missing = $line->price->subtract($this->fromBucket($line, $bucketId, $balances))->subtract($this->spendableReady());
 
         $state->results[$state->next] = new LineResult(
             $line->itemId, $line->name, $line->price, null, null,
             $line->blocked !== null || $missing->isPositive() ? ($line->blocked !== null ? $line->price : $missing) : Money::zero(),
             $line->blocked, false, $line->importance,
         );
+    }
+
+    /**
+     * What the bucket pays toward a line: its positive funds, up to the price.
+     *
+     * @param  array<int, Money>  $balances
+     */
+    private function fromBucket(EngineLine $line, ?int $bucketId, array $balances): Money
+    {
+        if ($bucketId === null || ! $balances[$bucketId]->isPositive()) {
+            return Money::zero();
+        }
+
+        return $balances[$bucketId]->lessThan($line->price) ? $balances[$bucketId] : $line->price;
+    }
+
+    private function spendableReady(): Money
+    {
+        return $this->ready->isPositive() ? $this->ready : Money::zero();
     }
 }

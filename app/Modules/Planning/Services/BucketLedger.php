@@ -145,23 +145,36 @@ class BucketLedger
     }
 
     /**
-     * Closes a bucket whose goal is done: what is left in it moves to its overflow bucket (or the default one)
-     * and it stops receiving income.
+     * Closes a bucket whose goal is done: what is left in it moves to its overflow bucket (or back to ready to
+     * assign) and it stops receiving income.
      */
     public function complete(Bucket $bucket, CarbonInterface $date): void
     {
         DB::transaction(function () use ($bucket, $date) {
-            $left = $this->balance($bucket);
-            $target = $bucket->carry_over === CarryOverPolicy::Overflow && $bucket->overflow_bucket_id !== null
-                ? Bucket::forUser($bucket->user_id)->find($bucket->overflow_bucket_id)
-                : $this->defaultBucket($bucket->user_id, $bucket->currency);
+            $left = $this->available($bucket);
 
-            if ($left->isPositive() && $target !== null && ! $target->is($bucket)) {
-                $this->move($bucket, $target, $left, null, AllocationSource::Carry, $date);
+            if ($left->isPositive()) {
+                $target = $bucket->carry_over === CarryOverPolicy::Overflow && $bucket->overflow_bucket_id !== null
+                    ? Bucket::forUser($bucket->user_id)->find($bucket->overflow_bucket_id)
+                    : null;
+
+                if ($target !== null && ! $target->is($bucket)) {
+                    $this->move($bucket, $target, $left, null, AllocationSource::Carry, $date);
+                } else {
+                    $this->releaseToReady($bucket, $left, $date);
+                }
             }
 
             $bucket->update(['completed_on' => $date->toDateString()]);
         });
+    }
+
+    /**
+     * Gives money from a bucket back to ready to assign: a single negative `ready` row.
+     */
+    public function releaseToReady(Bucket $bucket, Money $amount, CarbonInterface $date, ?string $description = null): Allocation
+    {
+        return $this->credit($bucket, $amount->negate(), AllocationSource::Ready, null, $date, $description);
     }
 
     public function reopen(Bucket $bucket): void
@@ -314,18 +327,5 @@ class BucketLedger
         $bucket->save();
 
         return $bucket;
-    }
-
-    /**
-     * Before a bucket is deleted its positive funded money goes to the default bucket.
-     */
-    public function releaseFunds(Bucket $bucket): void
-    {
-        $balance = $this->balance($bucket);
-        $default = $this->defaultBucket($bucket->user_id, $bucket->currency);
-
-        if ($balance->isPositive() && $default !== null && ! $default->is($bucket)) {
-            $this->move($bucket, $default, $balance);
-        }
     }
 }

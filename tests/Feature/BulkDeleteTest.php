@@ -62,17 +62,16 @@ class BulkDeleteTest extends TestCase
         $this->assertSame(2, SavingsGoal::onlyTrashed()->count(), 'goals go to the trash');
     }
 
-    public function test_buckets_are_deleted_in_bulk_and_their_money_goes_to_the_default_bucket(): void
+    public function test_buckets_are_deleted_in_bulk_with_their_money(): void
     {
-        $default = Bucket::factory()->savings()->asDefault()->for($this->user)->create(['currency' => 'COP']);
         $one = Bucket::factory()->savings()->for($this->user)->create(['currency' => 'COP']);
         $two = Bucket::factory()->savings()->for($this->user)->create(['currency' => 'COP']);
         Allocation::factory()->for($this->user)->for($one)->create(['amount' => 300, 'currency' => 'COP']);
 
         $this->actingAs($this->user)->post('/planning/buckets/bulk-delete', ['ids' => [$one->id, $two->id]])->assertRedirect()->assertSessionHas('success');
 
-        $this->assertSame(1, Bucket::where('user_id', $this->user->id)->count());
-        $this->assertSame('300.00', number_format((float) Allocation::where('bucket_id', $default->id)->sum('amount'), 2, '.', ''));
+        $this->assertSame(0, Bucket::where('user_id', $this->user->id)->count());
+        $this->assertSame(0, Allocation::where('user_id', $this->user->id)->count(), 'what they held is ready to assign again');
     }
 
     public function test_the_ids_are_required_and_limited_on_every_bulk_endpoint(): void

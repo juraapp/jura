@@ -108,7 +108,9 @@ class BucketCycleService
     }
 
     /**
-     * How the bucket moved during one cycle: opening + filled + moved in - moved out - spent = leftover.
+     * How the bucket moved during one cycle: opening + filled + moved in - moved out - spent = leftover. Spent is
+     * the category's spending plus purchases paid from the bucket; moves to and from other buckets and ready to
+     * assign count as moved.
      *
      * @return array{opening: Money, filled: Money, moved_in: Money, moved_out: Money, spent: Money}
      */
@@ -117,14 +119,17 @@ class BucketCycleService
         $filled = Money::zero();
         $in = Money::zero();
         $out = Money::zero();
+        $spentFromBucket = Money::zero();
 
         Allocation::forUser($bucket->user_id)
             ->where('bucket_id', $bucket->id)
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
             ->get()
-            ->each(function (Allocation $allocation) use (&$filled, &$in, &$out) {
+            ->each(function (Allocation $allocation) use (&$filled, &$in, &$out, &$spentFromBucket) {
                 if (in_array($allocation->source, self::INCOME_SOURCES, true)) {
                     $filled = $filled->add($allocation->amount);
+                } elseif ($allocation->source === AllocationSource::Spend) {
+                    $spentFromBucket = $spentFromBucket->subtract($allocation->amount);
                 } elseif ($allocation->amount->isPositive()) {
                     $in = $in->add($allocation->amount);
                 } else {
@@ -132,11 +137,11 @@ class BucketCycleService
                 }
             });
 
-        $spent = Money::zero();
+        $spent = $spentFromBucket;
         if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null) {
             $since = $this->funds->fundedSince($bucket) ?? $bucket->tracking_started_on;
             $from = $start->lt($since) ? $since : $start;
-            $spent = $from->gt($end) ? Money::zero() : $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $from, $end, onBudgetOnly: true);
+            $spent = $from->gt($end) ? $spent : $spent->add($this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $from, $end, onBudgetOnly: true));
         }
 
         return [
@@ -157,14 +162,20 @@ class BucketCycleService
             return Money::zero();
         }
 
+        $date = $end->copy()->addDay();
         $target = $bucket->carry_over === CarryOverPolicy::Overflow ? $bucket->overflowBucket : null;
-        $target ??= $this->funds->ensureDefaultBucket($bucket->user, $bucket->currency);
+
+        if ($target === null) {
+            $this->funds->releaseToReady($bucket, $leftover, $date);
+
+            return $leftover;
+        }
 
         if ($target->is($bucket)) {
             return Money::zero();
         }
 
-        $this->funds->move($bucket, $target, $leftover, null, AllocationSource::Carry, $end->copy()->addDay());
+        $this->funds->move($bucket, $target, $leftover, null, AllocationSource::Carry, $date);
 
         return $leftover;
     }

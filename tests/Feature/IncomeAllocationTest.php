@@ -8,8 +8,10 @@ use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Contracts\MoneyMap;
 use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Enums\FillRule;
+use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
@@ -61,13 +63,18 @@ class IncomeAllocationTest extends TestCase
         return (float) Allocation::where('bucket_id', $bucket->id)->sum('amount');
     }
 
+    private function ready(): float
+    {
+        return app(MoneyMap::class)->readyToAssign($this->user, 'COP')->toFloat();
+    }
+
     private function bucket(string $name, int $priority, FillRule $rule, string|int|null $value = null, array $attributes = []): Bucket
     {
         return Bucket::factory()->savings()->for($this->user)->priority($priority)->rule($rule, $value)
             ->create(array_merge(['name' => $name, 'currency' => 'COP'], $attributes));
     }
 
-    public function test_income_fills_buckets_in_priority_order_and_the_rest_goes_to_the_default_bucket(): void
+    public function test_income_fills_buckets_in_priority_order_and_the_rest_stays_ready_to_assign(): void
     {
         $car = $this->bucket('Car', 10, FillRule::Percent, 20);
         $trip = $this->bucket('Trip', 20, FillRule::Fixed, 100);
@@ -77,10 +84,9 @@ class IncomeAllocationTest extends TestCase
         $this->assertSame(200.0, $this->funded($car));
         $this->assertSame(100.0, $this->funded($trip));
 
-        $default = app(BucketLedger::class)->defaultBucket($this->user, 'COP');
-        $this->assertNotNull($default);
-        $this->assertSame(700.0, $this->funded($default));
-        $this->assertSame(3, Allocation::where('source', AllocationSource::Income->value)->where('source_id', $transactionId)->count());
+        $this->assertSame(700.0, $this->ready());
+        $this->assertSame(2, Allocation::where('source', AllocationSource::Income->value)->where('source_id', $transactionId)->count());
+        $this->assertSame(2, Bucket::count(), 'no catch-all bucket is created');
     }
 
     public function test_nothing_is_allocated_when_no_bucket_has_a_fill_rule(): void
@@ -90,7 +96,7 @@ class IncomeAllocationTest extends TestCase
         $this->income(1000);
 
         $this->assertDatabaseCount('allocations', 0);
-        $this->assertNull(app(BucketLedger::class)->defaultBucket($this->user, 'COP'));
+        $this->assertSame(1000.0, $this->ready());
     }
 
     public function test_expenses_and_buckets_in_other_currencies_are_left_alone(): void
@@ -217,8 +223,7 @@ class IncomeAllocationTest extends TestCase
 
         $this->assertSame(300.0, $this->funded($trip));
         $this->assertSame(100.0, $this->funded($car));
-        $default = app(BucketLedger::class)->defaultBucket($this->user, 'COP');
-        $this->assertSame(600.0, $this->funded($default));
+        $this->assertSame(600.0, $this->ready());
         $this->assertSame(
             $event->fresh()->realized_transaction_id,
             Allocation::where('bucket_id', $trip->id)->firstOrFail()->source_id,
@@ -282,8 +287,7 @@ class IncomeAllocationTest extends TestCase
 
         $this->assertSame(300.0, $this->funded($trip));
         $this->assertSame(0.0, $this->funded($car));
-        $default = app(BucketLedger::class)->defaultBucket($this->user, 'COP');
-        $this->assertSame(1700.0, $this->funded($default));
+        $this->assertSame(1700.0, $this->ready());
     }
 
     public function test_restoring_or_moving_a_realized_income_keeps_the_plans_split(): void
@@ -327,11 +331,12 @@ class IncomeAllocationTest extends TestCase
 
         $this->delete("/finances/transactions/{$transactionId}")->assertRedirect();
 
-        $default = app(BucketLedger::class)->defaultBucket($this->user, 'COP');
         $this->assertSame(0.0, $this->funded($car));
         $this->assertSame(400.0, $this->funded($trip));
-        $this->assertSame(-400.0, $this->funded($default), 'the shortfall shows in Unallocated');
-        $this->assertSame(0.0, (float) Allocation::sum('amount'), 'earmarked money still matches the (now zero) income');
+        $this->assertSame(-400.0, $this->ready(), 'the shortfall shows as over-assigned');
+        $cover = Allocation::where('source', AllocationSource::Ready->value)->sole();
+        $this->assertSame($transactionId, $cover->source_id);
+        $this->assertSame(400.0, $cover->amount->toFloat());
     }
 
     public function test_deleting_an_income_after_its_bucket_was_completed_does_not_leave_it_negative(): void
@@ -418,5 +423,110 @@ class IncomeAllocationTest extends TestCase
 
         app(BucketLedger::class)->reopen($car->fresh());
         $this->assertNull($car->fresh()->completed_on);
+    }
+
+    public function test_income_in_an_off_budget_account_is_never_allocated(): void
+    {
+        $car = $this->bucket('Car', 10, FillRule::Percent, 100);
+        $deposit = Account::factory()->for($this->user)->offBudget()->create(['currency' => 'COP', 'initial_balance' => 0]);
+
+        $this->income(1000, $deposit);
+
+        $this->assertSame(0.0, $this->funded($car));
+        $this->assertSame(0.0, $this->ready(), 'off-budget money is not ready to assign either');
+    }
+
+    public function test_a_date_edit_after_a_move_keeps_the_split(): void
+    {
+        $car = $this->bucket('Car', 10, FillRule::Percent, 100);
+        $trip = Bucket::factory()->savings()->for($this->user)->create(['name' => 'Trip', 'currency' => 'COP']);
+        $transactionId = $this->income(500);
+        app(BucketLedger::class)->move($car, $trip, Money::of(400));
+
+        $this->editIncome($transactionId, ['amount' => 500, 'date' => '2026-10-11']);
+
+        $this->assertSame(100.0, $this->funded($car), 'a date edit does not change the split');
+        $this->assertSame(400.0, $this->funded($trip));
+        $this->assertSame(0.0, $this->ready());
+        $this->assertSame(0, Allocation::where('source', AllocationSource::Ready->value)->count());
+    }
+
+    public function test_deleting_and_restoring_an_income_after_a_move_gives_back_the_exact_state(): void
+    {
+        $car = $this->bucket('Car', 10, FillRule::Percent, 100);
+        $trip = Bucket::factory()->savings()->for($this->user)->create(['name' => 'Trip', 'currency' => 'COP']);
+        $transactionId = $this->income(500);
+        app(BucketLedger::class)->move($car, $trip, Money::of(400));
+
+        $this->delete("/finances/transactions/{$transactionId}")->assertRedirect();
+        $this->post("/settings/trash/transactions/{$transactionId}/restore")->assertRedirect();
+
+        $this->assertSame(100.0, $this->funded($car));
+        $this->assertSame(400.0, $this->funded($trip));
+        $this->assertSame(0.0, $this->ready());
+    }
+
+    public function test_a_date_edit_does_not_refill_a_spending_bucket_that_was_spent(): void
+    {
+        $groceriesCategory = Category::factory()->expense()->create(['user_id' => $this->user->id]);
+        $groceries = $this->bucket('Groceries', 10, FillRule::Fixed, 500, [
+            'kind' => 'spending', 'category_id' => $groceriesCategory->id, 'tracking_started_on' => '2026-10-01',
+        ]);
+        $transactionId = $this->income(1000, null, '2026-10-10');
+        app(RecordsTransactions::class)->record($this->user, TransactionType::Expense, [
+            'account_id' => $this->debit->id, 'category_id' => $groceriesCategory->id, 'amount' => 400, 'date' => '2026-10-11', 'description' => 'Food',
+        ]);
+        $ledger = app(BucketLedger::class);
+        $this->assertSame('100.00', $ledger->available($groceries->fresh())->toDecimalString());
+
+        $this->editIncome($transactionId, ['amount' => 1000, 'date' => '2026-10-09']);
+
+        $this->assertSame('100.00', $ledger->available($groceries->fresh())->toDecimalString());
+        $this->assertSame(500.0, $this->ready());
+    }
+
+    public function test_lowering_an_income_after_a_move_clamps_the_bucket_at_zero(): void
+    {
+        $car = $this->bucket('Car', 10, FillRule::Percent, 100);
+        $trip = Bucket::factory()->savings()->for($this->user)->create(['name' => 'Trip', 'currency' => 'COP']);
+        $transactionId = $this->income(500);
+        app(BucketLedger::class)->move($car, $trip, Money::of(400));
+
+        $this->editIncome($transactionId, ['amount' => 200]);
+
+        $this->assertSame(0.0, $this->funded($car));
+        $this->assertSame(400.0, $this->funded($trip));
+        $this->assertSame(-200.0, $this->ready(), 'the trip still holds 400 of only 200 received');
+
+        $this->editIncome($transactionId, ['amount' => 500]);
+        $this->assertSame(100.0, $this->funded($car), 'raising it back restores the original state');
+        $this->assertSame(0.0, $this->ready());
+    }
+
+    public function test_a_skipped_plan_no_longer_splits_an_income_restored_later(): void
+    {
+        [$event, $car, $trip, $transactionId] = $this->realizedPlanWithSplit();
+        $this->delete("/finances/transactions/{$transactionId}")->assertRedirect();
+        $event->refresh()->update(['status' => PlannedEventStatus::Skipped]);
+
+        $this->post("/settings/trash/transactions/{$transactionId}/restore")->assertRedirect();
+
+        $this->assertSame(50.0, $this->funded($trip), 'the rules apply again, not the 300 the plan chose');
+        $this->assertSame(900.0, $this->funded($car));
+    }
+
+    public function test_a_plans_split_respects_a_buckets_allowed_accounts(): void
+    {
+        $car = $this->bucket('Car', 10, FillRule::Percent, 90, ['allowed_account_ids' => [$this->cash->id]]);
+        $transactionId = $this->income(1000);
+        $event = PlannedEvent::factory()->for($this->user)->income()->create([
+            'amount' => 1000, 'currency' => 'COP', 'date' => '2026-10-12',
+            'allocation_overrides' => [['bucket_id' => $car->id, 'amount' => 300]],
+        ]);
+
+        $this->post("/planning/cash-flow/{$event->id}/link", ['transaction_id' => $transactionId])->assertSessionHasNoErrors();
+
+        $this->assertSame(0.0, $this->funded($car), 'income in the debit account cannot fill a cash-only bucket');
+        $this->assertSame(1000.0, $this->ready());
     }
 }

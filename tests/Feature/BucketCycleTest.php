@@ -11,6 +11,7 @@ use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Services\BucketCycleService;
+use App\Modules\Planning\Services\BucketLedger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -48,6 +49,14 @@ class BucketCycleTest extends TestCase
         return (float) Allocation::where('bucket_id', $bucket->id)->sum('amount');
     }
 
+    /**
+     * What a bucket gave back to ready to assign.
+     */
+    private function returnedToReady(Bucket $bucket): float
+    {
+        return -(float) Allocation::where('bucket_id', $bucket->id)->where('source', AllocationSource::Ready->value)->sum('amount');
+    }
+
     private function close(): int
     {
         return app(BucketCycleService::class)->closeDue();
@@ -64,28 +73,19 @@ class BucketCycleTest extends TestCase
         $this->assertSame('2026-10-31', $bucket->fresh()->cycle_closed_through->toDateString());
     }
 
-    public function test_release_returns_the_leftover_to_the_default_bucket(): void
+    public function test_release_returns_the_leftover_to_ready_to_assign(): void
     {
-        $default = Bucket::factory()->savings()->for($this->user)->asDefault()->create(['currency' => 'COP']);
         $bucket = $this->bucket(CarryOverPolicy::Release);
         $this->fund($bucket, 300);
 
         $this->close();
 
         $this->assertSame(0.0, $this->funded($bucket));
-        $this->assertSame(300.0, $this->funded($default));
-        $this->assertSame(2, Allocation::where('source', AllocationSource::Carry->value)->count());
-    }
-
-    public function test_release_creates_the_default_bucket_when_there_is_none(): void
-    {
-        $bucket = $this->bucket(CarryOverPolicy::Release);
-        $this->fund($bucket, 300);
-
-        $this->close();
-
-        $default = Bucket::where('is_default', true)->firstOrFail();
-        $this->assertSame(300.0, $this->funded($default));
+        $this->assertSame(300.0, $this->returnedToReady($bucket));
+        $row = Allocation::where('source', AllocationSource::Ready->value)->sole();
+        $this->assertNull($row->source_id);
+        $this->assertSame('2026-11-01', $row->date->toDateString());
+        $this->assertSame(1, Bucket::count(), 'no catch-all bucket is created');
     }
 
     public function test_overflow_moves_the_leftover_to_the_chosen_bucket(): void
@@ -102,7 +102,6 @@ class BucketCycleTest extends TestCase
 
     public function test_only_positive_leftovers_move_and_money_arriving_in_the_new_cycle_stays(): void
     {
-        $default = Bucket::factory()->savings()->for($this->user)->asDefault()->create(['currency' => 'COP']);
         $bucket = $this->bucket(CarryOverPolicy::Release);
         $this->fund($bucket, 300, '2026-10-10');
         $this->fund($bucket, 90, '2026-11-01'); // belongs to the new cycle
@@ -110,7 +109,7 @@ class BucketCycleTest extends TestCase
         $this->close();
 
         $this->assertSame(90.0, $this->funded($bucket));
-        $this->assertSame(300.0, $this->funded($default));
+        $this->assertSame(300.0, $this->returnedToReady($bucket));
 
         $overspent = $this->bucket(CarryOverPolicy::Release, ['category_id' => Category::factory()->expense()->create(['user_id' => $this->user->id])->id, 'kind' => 'spending', 'cap_amount' => 100]);
         $this->fund($overspent, 50);
@@ -125,7 +124,6 @@ class BucketCycleTest extends TestCase
 
     public function test_spending_in_the_category_reduces_what_is_released(): void
     {
-        $default = Bucket::factory()->savings()->for($this->user)->asDefault()->create(['currency' => 'COP']);
         $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
         $bucket = $this->bucket(CarryOverPolicy::Release, ['kind' => 'spending', 'category_id' => $category->id, 'cap_amount' => 500]);
         $this->fund($bucket, 500);
@@ -135,20 +133,19 @@ class BucketCycleTest extends TestCase
 
         $this->close();
 
-        $this->assertSame(300.0, $this->funded($default));
+        $this->assertSame(300.0, $this->returnedToReady($bucket));
         $this->assertSame(200.0, $this->funded($bucket));
     }
 
     public function test_running_twice_does_not_move_money_twice(): void
     {
-        $default = Bucket::factory()->savings()->for($this->user)->asDefault()->create(['currency' => 'COP']);
         $bucket = $this->bucket(CarryOverPolicy::Release);
         $this->fund($bucket, 300);
 
         $this->assertSame(1, $this->close());
         $this->assertSame(0, $this->close());
 
-        $this->assertSame(300.0, $this->funded($default));
+        $this->assertSame(300.0, $this->returnedToReady($bucket));
     }
 
     public function test_buckets_without_a_cycle_or_created_in_the_current_cycle_are_skipped(): void
@@ -182,5 +179,30 @@ class BucketCycleTest extends TestCase
         $this->artisan('planning:close-bucket-cycles')->assertSuccessful();
 
         $this->assertNotNull($bucket->fresh()->cycle_closed_through);
+    }
+
+    public function test_completing_a_bucket_without_an_overflow_target_returns_its_money_to_ready_to_assign(): void
+    {
+        $bucket = $this->bucket(CarryOverPolicy::Carry, ['cycle' => null]);
+        $this->fund($bucket, 250);
+
+        app(BucketLedger::class)->complete($bucket, Carbon::parse('2026-11-02'));
+
+        $this->assertSame(0.0, $this->funded($bucket));
+        $this->assertSame(250.0, $this->returnedToReady($bucket));
+        $this->assertSame('2026-11-02', $bucket->fresh()->completed_on->toDateString());
+    }
+
+    public function test_purchases_paid_from_a_bucket_count_as_spent_in_its_cycle(): void
+    {
+        $bucket = $this->bucket(CarryOverPolicy::Carry);
+        $this->fund($bucket, 500);
+        Allocation::factory()->for($this->user)->for($bucket)->create(['amount' => -120, 'currency' => 'COP', 'date' => '2026-10-15', 'source' => AllocationSource::Spend]);
+        Allocation::factory()->for($this->user)->for($bucket)->create(['amount' => -30, 'currency' => 'COP', 'date' => '2026-10-16', 'source' => AllocationSource::Ready]);
+
+        $figures = app(BucketCycleService::class)->figures($bucket, Carbon::parse('2026-10-01'), Carbon::parse('2026-10-31'));
+
+        $this->assertSame('120.00', $figures['spent']->toDecimalString());
+        $this->assertSame('30.00', $figures['moved_out']->toDecimalString());
     }
 }

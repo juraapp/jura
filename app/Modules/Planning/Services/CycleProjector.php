@@ -3,6 +3,7 @@
 namespace App\Modules\Planning\Services;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\BudgetPeriodType;
@@ -20,8 +21,9 @@ use Illuminate\Support\Carbon;
 
 /**
  * What the current cycle of each bucket is expected to look like: the provisional fill from
- * planned income still to come (never stored, never touches a balance), and what is expected
- * to overflow when the cycle ends if nothing more is spent than what is planned.
+ * planned income still to come in on-budget accounts (never stored, never touches a balance), and
+ * what is expected to overflow (or return to ready to assign) when the cycle ends if nothing more is
+ * spent than what is planned. Income no bucket claims stays ready to assign.
  */
 class CycleProjector
 {
@@ -29,6 +31,7 @@ class CycleProjector
         private readonly BucketLedger $funds,
         private readonly Waterfall $waterfall,
         private readonly PlannedEventService $planned,
+        private readonly LedgerQuery $ledger,
     ) {}
 
     /**
@@ -53,13 +56,14 @@ class CycleProjector
         $fills = array_fill_keys($buckets->pluck('id')->all(), Money::zero());
         $atWindowEnd = $balances;
 
+        $onBudget = $this->ledger->onBudgetAccountIds($user->id);
         $incomes = PlannedEvent::forUser($user)->open()
             ->where('type', TransactionType::Income->value)
             ->where('currency', $currency)
             ->where('date', '<=', $horizon->toDateString())
             ->orderBy('date')->orderBy('id')
             ->get()
-            ->filter(fn (PlannedEvent $event) => $view->includesIncome($event->certainty));
+            ->filter(fn (PlannedEvent $event) => $view->includesIncome($event->certainty) && ($event->account_id === null || in_array($event->account_id, $onBudget, true)));
 
         /** @var array<int, array<string, Money>> income received per bucket and cycle start, real or simulated */
         $received = [];
@@ -70,7 +74,6 @@ class CycleProjector
         }
 
         $anyRule = $buckets->contains(fn (Bucket $bucket) => $bucket->fill_rule !== null);
-        $default = $buckets->firstWhere('is_default', true);
 
         foreach ($incomes as $event) {
             $date = $event->date->lt($today) ? $today : Carbon::instance($event->date);
@@ -82,8 +85,9 @@ class CycleProjector
                 continue;
             }
 
-            $inputs = $buckets
-                ->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($event->account_id) && ! $bucket->isCompletedOn($date))
+            $eligible = $buckets->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($event->account_id) && ! $bucket->isCompletedOn($date));
+            $overrides = array_intersect_key($overrides, $eligible->pluck('id', 'id')->all());
+            $inputs = $eligible
                 ->map(fn (Bucket $bucket) => new WaterfallBucket(
                     $bucket->id,
                     $bucket->fill_rule,
@@ -94,10 +98,6 @@ class CycleProjector
 
             $result = $this->waterfall->distribute($event->amount, $inputs, $overrides);
             $allocations = $result['allocations'];
-
-            if ($result['leftover']->isPositive() && $default !== null && $default->acceptsAccount($event->account_id)) {
-                $allocations[$default->id] = ($allocations[$default->id] ?? Money::zero())->add($result['leftover']);
-            }
 
             foreach ($allocations as $bucketId => $amount) {
                 $balances[$bucketId] = $balances[$bucketId]->add($amount);
@@ -127,8 +127,10 @@ class CycleProjector
 
             $release = Money::zero();
             if ($bucket->cycle !== null && $bucket->carry_over !== CarryOverPolicy::Carry && $expected->isPositive()) {
-                $targetId = $bucket->carry_over === CarryOverPolicy::Overflow ? $bucket->overflow_bucket_id : $default?->id;
-                if ($targetId !== null && $targetId !== $bucket->id && isset($incoming[$targetId])) {
+                $targetId = $bucket->carry_over === CarryOverPolicy::Overflow ? $bucket->overflow_bucket_id : null;
+                if ($targetId === null) {
+                    $release = $expected; // back to ready to assign
+                } elseif ($targetId !== $bucket->id && isset($incoming[$targetId])) {
                     $release = $expected;
                     $incoming[$targetId] = $incoming[$targetId]->add($release);
                 }

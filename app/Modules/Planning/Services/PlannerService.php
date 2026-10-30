@@ -3,7 +3,9 @@
 namespace App\Modules\Planning\Services;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Enums\TransactionType;
+use App\Modules\Planning\Contracts\MoneyMap;
 use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Enums\WishlistStatus;
@@ -29,6 +31,8 @@ class PlannerService
         private readonly BucketLedger $funds,
         private readonly ForecastEngine $engine,
         private readonly ScenarioSuggester $suggester,
+        private readonly MoneyMap $moneyMap,
+        private readonly LedgerQuery $ledger,
     ) {}
 
     public function context(User $user, string $currency, ForecastView $view, int $horizonMonths): PlannerContext
@@ -56,7 +60,6 @@ class PlannerService
                 $bucket->cycle,
                 $bucket->carry_over,
                 $bucket->overflow_bucket_id,
-                $bucket->is_default,
                 (int) $bucket->cycle_every,
                 $bucket->cycle_anchor !== null ? CarbonImmutable::parse($bucket->cycle_anchor->toDateString()) : null,
                 $this->funds->receivedInCycle($bucket, $start),
@@ -67,6 +70,7 @@ class PlannerService
             );
         })->values()->all();
 
+        $onBudget = $this->ledger->onBudgetAccountIds($user->id);
         $incomes = PlannedEvent::forUser($user)
             ->open()
             ->where('type', TransactionType::Income->value)
@@ -74,13 +78,15 @@ class PlannerService
             ->where('date', '<=', $end->toDateString())
             ->orderBy('date')
             ->get()
-            ->filter(fn (PlannedEvent $event) => $view->includesIncome($event->certainty))
+            ->filter(fn (PlannedEvent $event) => $view->includesIncome($event->certainty) && ($event->account_id === null || in_array($event->account_id, $onBudget, true)))
             ->map(fn (PlannedEvent $event) => new EngineIncome(CarbonImmutable::parse($event->date->toDateString()), $event->amount, $event->account_id))
             ->values()
             ->all();
 
+        $ready = $this->moneyMap->readyToAssign($user, $currency);
+
         return new PlannerContext(
-            new EngineInput($start, $end, $engineBuckets, $incomes),
+            new EngineInput($start, $end, $engineBuckets, $incomes, $ready),
             $names,
             $balances,
             $buckets->contains(fn (Bucket $bucket) => $bucket->fill_rule !== null),
@@ -104,7 +110,6 @@ class PlannerService
         foreach ($context->input->buckets as $bucket) {
             $buckets[$bucket->id] = $bucket;
         }
-        $defaultId = $context->input->defaultBucket()?->id;
 
         $lines = [];
         foreach ($rows as $row) {
@@ -113,7 +118,7 @@ class PlannerService
                 continue;
             }
 
-            $bucket = $buckets[$item->bucket_id ?? $defaultId] ?? null;
+            $bucket = $item->bucket_id !== null ? ($buckets[$item->bucket_id] ?? null) : null;
             $blocked = null;
             if (! empty($item->allowed_account_ids) && $bucket !== null && ! empty($bucket->allowedAccountIds)
                 && array_intersect($item->allowed_account_ids, $bucket->allowedAccountIds) === []) {
@@ -185,6 +190,10 @@ class PlannerService
                 'startBalance' => $context->startBalances[$id],
                 'endBalance' => $result->endBalances[$id]->toFloat(),
             ])->values()->all(),
+            'readyToAssign' => [
+                'start' => ($context->input->readyToAssign?->toFloat() ?? 0.0),
+                'end' => $result->endReadyToAssign->toFloat(),
+            ],
             'score' => round($score, 1),
             'hasFillRules' => $context->hasFillRules,
         ];

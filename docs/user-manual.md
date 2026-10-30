@@ -113,8 +113,8 @@ every row and a **Select all** box. Selecting rows opens a bar with **Delete** a
   changed, a category only applies to transactions of the same kind, and an account only to transactions of its currency), and, once you tick the whole page, **Select
   all N that match** to act on every row your filters match, not just this page.
 - After deleting transactions a toast offers **Undo**; deleted transactions also wait in **Settings → Trash**.
-- Deleting planned events removes only the chosen occurrences of a repeating event. Deleting buckets moves their money
-  to the default bucket. Deleted goals go to **Deleted goals** where they can be restored.
+- Deleting planned events removes only the chosen occurrences of a repeating event. Deleting buckets makes their money
+  ready to assign again. Deleted goals go to **Deleted goals** where they can be restored.
 
 ## Importing from CSV
 
@@ -235,16 +235,19 @@ income arrives:
   Purchase fund is full. It takes effect from the following cycle, never mid-cycle.
 
 Buckets are offered each income in **priority order** (P0 first, then P1, and so on), so the important ones are filled before
-the rest. A bucket with a target stops filling once the target is reached. Whatever no bucket claims goes to the
-**default bucket** (called *Unallocated* until you pick your own). Filling happens by itself, but **only once at least
-one bucket has a fill rule**; with no rules, nothing is allocated. If you change an income's amount, date or account,
+the rest. A bucket with a target stops filling once the target is reached. Whatever no bucket claims stays **ready to
+assign**. Filling happens by itself, but **only once at least one bucket has a fill rule**; with no rules, nothing is
+allocated and the whole income is ready to assign. Income in an account that does not count in your budget never fills
+a bucket. If you change an income's amount, date or account,
 its fills are redone; changing only its description, notes, category or payment method leaves the buckets alone.
 Deleting an income removes its fills. A bucket only gives back what it still has: if part of that income was
-already moved to another bucket, spent or carried away, the bucket stops at zero and the difference is taken from
-the default bucket instead, which can then show a negative amount (money you had earmarked but no longer have).
+already moved to another bucket, spent or carried away, the bucket stops at zero and the difference comes out of ready
+to assign instead, which can then go negative (**over-assigned**: money you had earmarked but no longer have). Restoring
+the income from the Trash, or changing only its date, puts everything back exactly as it was.
 
 **Deciding for one income.** In **Cash flow**, when you plan an income, *More options* lets you type exactly how much
-goes to each bucket for that income only. The rest goes to the default bucket. The same split is used when you link
+goes to each bucket for that income only. The rest stays ready to assign. A bucket that only fills from other
+accounts, or that is completed, is skipped. The same split is used when you link
 the plan to an income you already recorded, and again whenever that income's fills are redone (an edit, a bulk
 change or a restore from the Trash).
 
@@ -259,7 +262,7 @@ change or a restore from the Trash).
   **Reset to zero** empties the bucket. Removing an entry asks for confirmation first: it is deleted for good, and
   removing a move between buckets also removes the matching entry in the other bucket. Entries created by income or
   by closing a cycle cannot be removed.
-- Deleting a bucket returns its money to the default bucket.
+- Deleting a bucket makes its money ready to assign again (or, if it was overspent, lowers ready to assign).
 
 **Cycles.** A spending bucket works in cycles: set **Cycle: repeats every N days / weeks / months / years**, and
 optionally a **starting date** (for example the 15th, to follow your payday; empty means calendar months). A short
@@ -287,8 +290,8 @@ for every finished cycle. The bucket's overall target is unchanged: money carrie
 **A different limit for one cycle.** On the history page, **Limit for this cycle only** changes the limit for the
 current cycle (for example a holiday month). Clear it to go back to the usual limit.
 
-**End of the cycle (advanced).** Choose what happens to what is left: **keep it** in the bucket, **return it** to the
-default bucket, or **move it** to another bucket (the overflow bucket).
+**End of the cycle (advanced).** Choose what happens to what is left: **keep it** in the bucket, **return it to ready
+to assign**, or **move it** to another bucket (the overflow bucket).
 
 **Only from certain accounts (advanced).** Tick accounts to make a bucket fill only from income that lands there, for
 example a "Physical money" stash. Income in other accounts skips it. Only accounts in the bucket's currency are listed.
@@ -297,7 +300,7 @@ example a "Physical money" stash. Income in other accounts skips it. Only accoun
 **planned**, with what would remain **after plans**.
 
 **Completing a bucket.** When a goal is done, a savings bucket can be **completed**: what is left in it moves to
-its "Move leftover to" bucket (or the default bucket) and it stops receiving income, so income flows on to the next
+its "Move leftover to" bucket (or back to ready to assign) and it stops receiving income, so income flows on to the next
 buckets. There are two ways:
 - **Automatically**: in the bucket form (*Filling and advanced options*) tick *Close this bucket when a wish-list item
   paid from it is bought*, and set *Leftover at the end of the cycle* to *Move it to another bucket* and choose where. Buying the item from the
@@ -387,12 +390,14 @@ shows it struck through and leaves it out of the calculation.
 
 **How the planner counts money (advanced).**
 - It starts from what each bucket has available today, then adds planned income as it would really be split: by
-  priority, with each bucket's rule, target and allowed accounts. Money that no bucket claims goes to the default bucket.
-- An item is paid from its bucket, or from the default bucket if it has none. Items sharing a bucket share its money.
+  priority, with each bucket's rule, target and allowed accounts. Money that no bucket claims stays ready to assign,
+  and the planner starts from what is ready to assign today. Income planned into an off-budget account is left out.
+- An item with a bucket is paid from that bucket first and, if the bucket is short, from what is ready to assign. An
+  item without a bucket is paid from ready to assign. Items sharing a bucket share its money.
 - An item that can only be bought with certain accounts, while its bucket only receives income from other accounts,
   shows as **Blocked**.
 - If none of your buckets has a fill rule, the planner warns you: income does not reach any bucket, so only money
-  already in buckets is used.
+  already in buckets and ready to assign is used.
 - Planned expenses are not taken out of bucket money in this version, and spending in a category is not predicted.
 
 ## Savings goals
