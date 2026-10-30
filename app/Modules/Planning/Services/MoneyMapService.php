@@ -46,7 +46,6 @@ class MoneyMapService implements MoneyMap
 
         $buckets = Bucket::forUser($user)
             ->when($currency !== null, fn ($query) => $query->where('currency', $currency))
-            ->where('is_default', false)
             ->get()
             ->filter(fn (Bucket $bucket) => $this->funds->isFunded($bucket))
             ->map(fn (Bucket $bucket) => ['currency' => $bucket->currency, 'envelope' => $this->funds->envelope($bucket)]);

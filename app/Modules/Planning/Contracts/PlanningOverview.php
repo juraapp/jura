@@ -13,7 +13,7 @@ interface PlanningOverview
     /**
      * Buckets with their funded balance, per currency.
      *
-     * @return array<string, list<array{id: int, name: string, kind: string, isDefault: bool, balance: float, available: float, cap: float|null}>>
+     * @return array<string, list<array{id: int, name: string, kind: string, balance: float, available: float, cap: float|null}>>
      */
     public function bucketsByCurrency(User $user): array;
 

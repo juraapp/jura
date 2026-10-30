@@ -282,21 +282,6 @@ class BucketsTest extends TestCase
         $this->assertSame('1000.00', app(MoneyMap::class)->readyToAssign($user, 'COP')->toDecimalString());
     }
 
-    public function test_only_one_bucket_per_currency_can_be_the_default(): void
-    {
-        $user = User::factory()->create();
-        $first = Bucket::factory()->savings()->for($user)->create(['currency' => 'COP', 'is_default' => true]);
-        $usd = Bucket::factory()->savings()->for($user)->create(['currency' => 'USD', 'is_default' => true]);
-
-        $this->actingAs($user)->post('/planning/buckets', [
-            'kind' => 'savings', 'name' => 'New default', 'currency' => 'COP', 'is_default' => true,
-        ])->assertRedirect();
-
-        $this->assertFalse($first->fresh()->is_default);
-        $this->assertTrue($usd->fresh()->is_default);
-        $this->assertTrue(Bucket::where('name', 'New default')->firstOrFail()->is_default);
-    }
-
     public function test_the_old_budgets_url_redirects_to_buckets(): void
     {
         $user = User::factory()->create();

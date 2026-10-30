@@ -12,8 +12,8 @@ use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Creates, updates and deletes buckets, keeping the invariants: one default
- * bucket per currency, and one spending bucket per category, currency and cycle.
+ * Creates, updates and deletes buckets, keeping the invariant of one spending
+ * bucket per category, currency and cycle.
  */
 class BucketManager
 {
@@ -51,7 +51,6 @@ class BucketManager
                 'carry_over' => $carryOver,
                 'overflow_bucket_id' => $carryOver === CarryOverPolicy::Overflow ? ($data['overflow_bucket_id'] ?? null) : null,
                 'allowed_account_ids' => ! empty($data['allowed_account_ids']) ? array_map('intval', $data['allowed_account_ids']) : null,
-                'is_default' => (bool) ($data['is_default'] ?? false),
             ];
 
             if ($bucket === null && $kind === BucketKind::Spending) {
@@ -72,13 +71,6 @@ class BucketManager
 
             if (array_key_exists('opening_balance', $data)) {
                 $this->buckets->setOpeningBalance($bucket, Money::of($data['opening_balance'] ?? 0));
-            }
-
-            if ($bucket->is_default) {
-                Bucket::forUser($user)
-                    ->where('currency', $bucket->currency)
-                    ->whereKeyNot($bucket->id)
-                    ->update(['is_default' => false]);
             }
 
             return $bucket;

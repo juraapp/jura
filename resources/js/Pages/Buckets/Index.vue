@@ -99,7 +99,6 @@ const blank = () => ({
     carry_over: 'carry',
     overflow_bucket_id: '',
     allowed_account_ids: [],
-    is_default: false,
 });
 
 const form = useForm(blank());
@@ -156,7 +155,6 @@ const openEditModal = (bucket) => {
     form.carry_over = bucket.carryOver;
     form.overflow_bucket_id = bucket.overflowBucketId ?? '';
     form.allowed_account_ids = [...bucket.allowedAccountIds];
-    form.is_default = bucket.isDefault;
     showModal.value = true;
 };
 
@@ -346,7 +344,6 @@ const deleteBucket = () => {
                                     <span>{{ bucket.kindLabel }}</span>
                                     <span v-if="bucket.cycleLabel">&middot; {{ bucket.cycleLabel }}</span>
                                     <span class="rounded-full bg-gray-100 px-1.5 py-0.5 font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-300" :title="$t('ui.buckets.priority_hint')">P{{ bucket.priority }}</span>
-                                    <span v-if="bucket.isDefault" class="rounded-full bg-primary-50 px-1.5 py-0.5 font-medium text-primary-700 dark:bg-primary-500/10 dark:text-primary-400" :title="$t('ui.buckets.default_hint')">{{ $t('ui.buckets.default') }}</span>
                                 </p>
                             </div>
                         </div>
@@ -431,7 +428,7 @@ const deleteBucket = () => {
                             <DynamicIcon name="check-circle" class="h-3.5 w-3.5" /> {{ $t('ui.buckets.completed_on', { date: formatDate(bucket.completedOn) }) }}
                             <button type="button" class="font-medium underline" @click="router.post(reopen.url(bucket.id), {}, { preserveScroll: true })">{{ $t('ui.buckets.reopen') }}</button>
                         </li>
-                        <li v-else-if="bucket.kind === 'savings' && !bucket.isDefault">
+                        <li v-else-if="bucket.kind === 'savings'">
                             <button type="button" class="font-medium text-primary-600 hover:underline dark:text-primary-400" @click="router.post(complete.url(bucket.id), {}, { preserveScroll: true })">{{ $t('ui.buckets.mark_completed') }}</button>
                         </li>
                         <li v-if="bucket.cycle">
@@ -525,7 +522,7 @@ const deleteBucket = () => {
                     <InputError class="mt-1" :message="form.errors.cycle_anchor" />
                 </div>
 
-                <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700" :open="Boolean(form.fill_rule) || form.is_default">
+                <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700" :open="Boolean(form.fill_rule)">
                     <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200">{{ $t('ui.buckets.advanced') }}</summary>
                     <div class="mt-3 space-y-4">
                         <div>
@@ -605,11 +602,6 @@ const deleteBucket = () => {
                             </label>
                             <InputError class="mt-1" :message="form.errors['allowed_account_ids.0']" />
                         </fieldset>
-
-                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                            <input v-model="form.is_default" type="checkbox" class="rounded border-gray-300 text-primary-600" />
-                            {{ $t('ui.buckets.is_default') }}
-                        </label>
                     </div>
                 </details>
             </form>

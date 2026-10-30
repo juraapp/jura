@@ -38,7 +38,6 @@ class PlannerTest extends TestCase
 
         $this->bikeFund = Bucket::factory()->savings()->for($this->user)->priority(10)->rule(FillRule::Fixed, 500000)
             ->create(['name' => 'Bike fund', 'currency' => 'COP']);
-        Bucket::factory()->savings()->for($this->user)->asDefault()->create(['name' => 'Unallocated', 'currency' => 'COP']);
 
         $this->bike = WishlistItem::factory()->for($this->user)->create([
             'name' => 'Road bike', 'price' => 1000000, 'currency' => 'COP', 'importance' => 5, 'bucket_id' => $this->bikeFund->id,

@@ -105,7 +105,6 @@ trait BucketRules
                     : null,
             ],
             'opening_balance' => ['nullable', ...MoneyRules::nonNegative()],
-            'is_default' => ['nullable', 'boolean'],
         ];
     }
 }

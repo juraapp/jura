@@ -146,7 +146,7 @@ class IncomeAllocator
      */
     private function coverShortfall(User $user, ?Bucket $bucket, Money $limit, int $transactionId): void
     {
-        if ($bucket === null || $bucket->is_default || ! $limit->isPositive()) {
+        if ($bucket === null || ! $limit->isPositive()) {
             return;
         }
 

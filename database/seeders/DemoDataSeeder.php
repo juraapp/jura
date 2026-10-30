@@ -114,11 +114,9 @@ class DemoDataSeeder extends Seeder
         Bucket::factory()->for($user)->priority(30)->create([
             'name' => 'Groceries', 'category_id' => $groceries->id, 'currency' => 'COP', 'cap_amount' => 600000, 'cycle' => 'monthly',
         ]);
-        $default = $funds->ensureDefaultBucket($user, 'COP');
 
         $funds->credit($car, Money::of(2400000), AllocationSource::Adjustment, null, Carbon::today()->subDays(30), 'Starting balance');
         $funds->credit($trip, Money::of(600000), AllocationSource::Adjustment, null, Carbon::today()->subDays(30), 'Starting balance');
-        $funds->credit($default, Money::of(310000), AllocationSource::Adjustment, null, Carbon::today()->subDays(30), 'Starting balance');
     }
 
     private function seedWishlist(User $user): void

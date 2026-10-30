@@ -31,7 +31,6 @@ class BucketFactory extends Factory
             'cycle' => BudgetPeriodType::Monthly,
             'cap_amount' => fake()->randomFloat(2, 50000, 2000000),
             'carry_over' => CarryOverPolicy::Carry,
-            'is_default' => false,
             'tracking_started_on' => Carbon::today()->toDateString(),
         ];
     }
@@ -59,10 +58,5 @@ class BucketFactory extends Factory
     public function priority(int $priority): static
     {
         return $this->state(fn () => ['priority' => $priority]);
-    }
-
-    public function asDefault(): static
-    {
-        return $this->state(fn () => ['is_default' => true]);
     }
 }
