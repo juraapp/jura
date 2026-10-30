@@ -11,9 +11,12 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { useTransactionModal } from '@/composables/useTransactionModal';
 import { useToast } from '@/composables/useToast';
 import { useToday } from '@/composables/useToday';
+import { useFormat } from '@/composables/useFormat';
 import { store, update, formOptions, editData } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
+import { spendOptions } from '@/actions/App/Modules/Planning/Http/Controllers/BucketController';
 
 const todayDate = useToday();
+const format = useFormat();
 
 const { t } = useI18n();
 
@@ -29,6 +32,8 @@ let openRequest = 0;
 const expenseCategories = ref([]);
 const incomeCategories = ref([]);
 let optionsLoaded = false;
+/** Buckets still taking money, fetched on every open since their funds change all the time. */
+const buckets = ref([]);
 
 const form = useForm({
     account_id: '',
@@ -41,6 +46,7 @@ const form = useForm({
     description: '',
     notes: '',
     payment_method: '',
+    bucket_id: '',
 });
 
 const tabs = computed(() => [
@@ -62,6 +68,31 @@ const fetchJson = async (url) => {
 
     return response.json();
 };
+
+const selectedAccount = computed(() => accounts.value.find((account) => account.id === Number(form.account_id)) ?? null);
+/** Buckets an expense in the chosen account can be paid from: same currency, no tracked category, account on budget. */
+const spendableBuckets = computed(() => {
+    const account = selectedAccount.value;
+    if (activeTab.value !== 'expense' || !account || account.on_budget === false) {
+        return [];
+    }
+
+    return buckets.value.filter((bucket) => bucket.categoryId === null && bucket.currency === account.currency);
+});
+/** A funded spending bucket that already counts the chosen category. */
+const trackingBucket = computed(() => {
+    if (activeTab.value !== 'expense' || !form.category_id || !selectedAccount.value) {
+        return null;
+    }
+
+    return buckets.value.find((bucket) => bucket.funded && bucket.categoryId === Number(form.category_id) && bucket.currency === selectedAccount.value.currency) ?? null;
+});
+
+watch(spendableBuckets, (choices) => {
+    if (form.bucket_id && !choices.some((bucket) => bucket.id === Number(form.bucket_id))) {
+        form.bucket_id = '';
+    }
+});
 
 const categoriesForTab = computed(() => (activeTab.value === 'income' ? incomeCategories.value : expenseCategories.value));
 
@@ -101,6 +132,11 @@ watch(isOpen, async (open) => {
 
     try {
         await loadOptions();
+        const bucketData = await fetchJson(spendOptions.url());
+        if (request !== openRequest) {
+            return;
+        }
+        buckets.value = bucketData.buckets;
 
         if (!editingTransaction.value) {
             return;
@@ -126,6 +162,7 @@ watch(isOpen, async (open) => {
             form.account_id = data.account_id;
             form.category_id = data.category_id;
             form.payment_method = data.payment_method ?? '';
+            form.bucket_id = data.bucket_id ?? '';
         }
     } catch {
         if (request === openRequest) {
@@ -168,6 +205,7 @@ const submit = () => {
             description: data.description,
             notes: data.notes,
             payment_method: data.payment_method || null,
+            ...(activeTab.value === 'expense' ? { bucket_id: data.bucket_id || null } : {}),
         }));
 
     if (editingTransaction.value) {
@@ -298,6 +336,22 @@ const submit = () => {
                     <option value="other">{{ $t('ui.transaction_modal.other') }}</option>
                 </select>
             </div>
+
+            <div v-if="spendableBuckets.length || form.errors.bucket_id">
+                <InputLabel for="bucket_id" :value="$t('ui.transaction_modal.pay_from_bucket')" />
+                <select
+                    id="bucket_id"
+                    v-model="form.bucket_id"
+                    class="mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                >
+                    <option value="">{{ $t('ui.transaction_modal.no_bucket') }}</option>
+                    <option v-for="bucket in spendableBuckets" :key="bucket.id" :value="bucket.id">{{ bucket.name }} · {{ format.money(bucket.available, bucket.currency) }}</option>
+                </select>
+                <p v-if="trackingBucket && !form.bucket_id" class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.transaction_modal.counted_in_bucket', { name: trackingBucket.name }) }}</p>
+                <p v-else-if="trackingBucket" class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.transaction_modal.paid_instead', { name: trackingBucket.name }) }}</p>
+                <InputError class="mt-1" :message="form.errors.bucket_id" />
+            </div>
+            <p v-else-if="trackingBucket" class="text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.transaction_modal.counted_in_bucket', { name: trackingBucket.name }) }}</p>
 
             <div>
                 <InputLabel for="description" :value="$t('ui.transaction_modal.description')" />

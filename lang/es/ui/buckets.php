@@ -124,4 +124,6 @@ return [
     'move_in_from_ready' => 'Meter en este balde, desde disponible para asignar',
     'over_assign_title' => '¿Asignar más de lo disponible?',
     'over_assign_confirm' => 'Asignar de todos modos',
+    'overspent' => 'Sobregastado',
+    'overspent_hint' => 'Se gastó de este balde más de lo que tenía. Mueve dinero a él para cubrir la diferencia.',
 ];

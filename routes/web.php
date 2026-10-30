@@ -76,6 +76,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::redirect('planning/budgets', '/planning/buckets');
     Route::get('planning/buckets', [BucketController::class, 'index'])->name('buckets.index');
     Route::post('planning/buckets', [BucketController::class, 'store'])->name('buckets.store');
+    Route::get('planning/buckets/spend-options', [BucketController::class, 'spendOptions'])->name('buckets.spend-options');
     Route::patch('planning/buckets/{bucket}', [BucketController::class, 'update'])->name('buckets.update');
     Route::delete('planning/buckets/{bucket}', [BucketController::class, 'destroy'])->name('buckets.destroy');
     Route::post('planning/buckets/bulk-delete', [BucketController::class, 'bulkDestroy'])->name('buckets.bulk-delete');

@@ -184,7 +184,7 @@ class TransactionController extends Controller
     public function formOptions(): JsonResponse
     {
         return response()->json([
-            'accounts' => Account::where('is_active', true)->orderBy('name')->get(['id', 'name', 'currency']),
+            'accounts' => Account::where('is_active', true)->orderBy('name')->get(['id', 'name', 'currency', 'on_budget']),
             'expenseCategories' => Category::where('type', CategoryType::Expense)->orderBy('name')->get(['id', 'name']),
             'incomeCategories' => Category::where('type', CategoryType::Income)->orderBy('name')->get(['id', 'name']),
         ]);
@@ -228,6 +228,7 @@ class TransactionController extends Controller
             'description' => $transaction->description,
             'notes' => $transaction->notes,
             'payment_method' => $transaction->payment_method?->value,
+            'bucket_id' => $transaction->bucket_id,
         ]);
     }
 
@@ -239,7 +240,7 @@ class TransactionController extends Controller
      */
     private function editAccounts(array $accountIds): Collection
     {
-        return Account::whereIn('id', array_filter($accountIds))->get(['id', 'name', 'currency', 'is_active']);
+        return Account::whereIn('id', array_filter($accountIds))->get(['id', 'name', 'currency', 'is_active', 'on_budget']);
     }
 
     public function store(StoreTransactionRequest $request, TransactionService $service): RedirectResponse

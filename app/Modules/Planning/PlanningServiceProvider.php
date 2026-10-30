@@ -2,6 +2,8 @@
 
 namespace App\Modules\Planning;
 
+use App\Modules\Ledger\Events\ExpenseRecorded;
+use App\Modules\Ledger\Events\ExpenseRemoved;
 use App\Modules\Ledger\Events\IncomeRecorded;
 use App\Modules\Ledger\Events\IncomeRemoved;
 use App\Modules\Ledger\Events\TransactionDeleted;
@@ -17,6 +19,7 @@ use App\Modules\Planning\Listeners\AllocateIncome;
 use App\Modules\Planning\Listeners\ReleaseIncomeAllocations;
 use App\Modules\Planning\Listeners\RelinkRestoredRecords;
 use App\Modules\Planning\Listeners\ReverseLinkedRecords;
+use App\Modules\Planning\Listeners\SyncExpenseSpend;
 use App\Modules\Planning\Listeners\UnlinkPurgedRecords;
 use App\Modules\Planning\Services\BucketService;
 use App\Modules\Planning\Services\CashFlowProjector;
@@ -41,6 +44,8 @@ class PlanningServiceProvider extends ServiceProvider
     {
         Event::listen(IncomeRecorded::class, AllocateIncome::class);
         Event::listen(IncomeRemoved::class, ReleaseIncomeAllocations::class);
+        Event::listen(ExpenseRecorded::class, [SyncExpenseSpend::class, 'handleRecorded']);
+        Event::listen(ExpenseRemoved::class, [SyncExpenseSpend::class, 'handleRemoved']);
         Event::listen(TransactionDeleted::class, ReverseLinkedRecords::class);
         Event::listen(TransactionRestored::class, RelinkRestoredRecords::class);
         Event::listen(TransactionPurged::class, UnlinkPurgedRecords::class);

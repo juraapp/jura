@@ -25,4 +25,8 @@ return [
     'description' => 'Descripción',
     'notes' => 'Notas',
     'save' => 'Guardar',
+    'pay_from_bucket' => 'Pagar desde un balde (opcional)',
+    'no_bucket' => 'Ningún balde',
+    'counted_in_bucket' => 'Se cuenta en {name} por su categoría.',
+    'paid_instead' => 'Se paga desde el balde elegido, así que no cuenta también en {name}.',
 ];

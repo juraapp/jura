@@ -50,6 +50,8 @@ class BucketController extends Controller
         $projections = $buckets->pluck('currency')->unique()->mapWithKeys(fn (string $currency) => [$currency => $projector->project(Auth::user(), $currency)]);
 
         $cards = $buckets->map(function (Bucket $bucket) use ($limits, $funds, $planned, $accountNames, $recent, $projections) {
+            $available = $funds->available($bucket);
+            $funded = $funds->isFunded($bucket);
             $card = [
                 'id' => $bucket->id,
                 'name' => $bucket->name,
@@ -85,8 +87,10 @@ class BucketController extends Controller
                     ->map(fn (int $id) => ['id' => $id, 'name' => $accountNames->get($id, '?')])->values(),
                 'balance' => $funds->balance($bucket)->toFloat(),
                 'openingBalance' => $funds->openingBalance($bucket)->toFloat(),
-                'available' => $funds->available($bucket)->toFloat(),
+                'available' => $available->toFloat(),
                 'hasFunding' => $funds->hasFunding($bucket),
+                'funded' => $funded,
+                'overspent' => $funded && $available->isNegative(),
                 'tracksLimit' => $bucket->tracksLimit(),
                 'recentAllocations' => $recent->get($bucket->id, collect())->values(),
                 'cycleView' => $this->cycleView($bucket, $projections->get($bucket->currency, [])[$bucket->id] ?? null),
@@ -121,6 +125,27 @@ class BucketController extends Controller
             'cycles' => $this->options(BudgetPeriodType::cases()),
             'fillRules' => $this->options(FillRule::cases()),
             'carryOvers' => $this->options(CarryOverPolicy::cases()),
+        ]);
+    }
+
+    /**
+     * Buckets still taking money, for pickers outside this page (the transaction modal): an expense can be paid
+     * from one without a category, and one with a category already counts that category's spending.
+     */
+    public function spendOptions(BucketLedger $funds): JsonResponse
+    {
+        $this->authorize('viewAny', Bucket::class);
+
+        return response()->json([
+            'buckets' => Bucket::whereNull('completed_on')->inPriorityOrder()->get()
+                ->map(fn (Bucket $bucket) => [
+                    'id' => $bucket->id,
+                    'name' => $bucket->name,
+                    'currency' => $bucket->currency,
+                    'categoryId' => $bucket->category_id,
+                    'available' => $funds->available($bucket)->toFloat(),
+                    'funded' => $funds->isFunded($bucket),
+                ])->values(),
         ]);
     }
 

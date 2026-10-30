@@ -368,6 +368,7 @@ const deleteBucket = () => {
                                     <span>{{ bucket.kindLabel }}</span>
                                     <span v-if="bucket.cycleLabel">&middot; {{ bucket.cycleLabel }}</span>
                                     <span class="rounded-full bg-gray-100 px-1.5 py-0.5 font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-300" :title="$t('ui.buckets.priority_hint')">P{{ bucket.priority }}</span>
+                                    <span v-if="bucket.overspent" class="rounded-full bg-red-50 px-1.5 py-0.5 font-medium text-red-700 dark:bg-red-500/10 dark:text-red-400" :title="$t('ui.buckets.overspent_hint')">{{ $t('ui.buckets.overspent') }}</span>
                                 </p>
                             </div>
                         </div>

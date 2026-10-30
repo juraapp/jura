@@ -25,7 +25,7 @@ class EloquentLedgerQuery implements LedgerQuery
                 ->where('accounts.currency', $currency)
                 ->where('transactions.date', '>=', $from->toDateString())
                 ->when($to !== null, fn ($query) => $query->where('transactions.date', '<=', $to->toDateString()))
-                ->when($onBudgetOnly, fn ($query) => $query->where('accounts.on_budget', true))
+                ->when($onBudgetOnly, fn ($query) => $query->where('accounts.on_budget', true)->whereNull('transactions.bucket_id'))
                 ->sum('transactions.amount')
         );
     }

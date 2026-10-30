@@ -7,6 +7,7 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Validation\LedgerRules;
 use App\Modules\Shared\Validation\MoneyRules;
+use App\Modules\Shared\Validation\PlanningRules;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -54,6 +55,17 @@ class StoreTransactionRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],
+            'bucket_id' => [
+                'nullable',
+                'prohibited_unless:type,expense',
+                'integer',
+                PlanningRules::spendableBucket($this->user()->id, Account::whereKey((int) $this->input('account_id'))->value('currency')),
+                function (string $attribute, mixed $value, Closure $fail) {
+                    if (Account::whereKey((int) $this->input('account_id'))->value('on_budget') === false) {
+                        $fail(__('transactions.bucket_off_budget'));
+                    }
+                },
+            ],
         ];
     }
 }
