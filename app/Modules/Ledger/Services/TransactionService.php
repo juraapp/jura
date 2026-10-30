@@ -7,6 +7,9 @@ use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Ledger\Events\IncomeRecorded;
 use App\Modules\Ledger\Events\IncomeRemoved;
+use App\Modules\Ledger\Events\TransactionDeleted;
+use App\Modules\Ledger\Events\TransactionPurged;
+use App\Modules\Ledger\Events\TransactionRestored;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
@@ -43,12 +46,18 @@ class TransactionService implements RecordsTransactions
         };
     }
 
+    /**
+     * Removes a transaction for good (a system undo, so it does not land in the Trash).
+     */
     public function forget(User $user, int $transactionId): void
     {
         $transaction = Transaction::forUser($user)->find($transactionId);
 
         if ($transaction !== null) {
-            $this->delete($transaction);
+            DB::transaction(function () use ($transaction) {
+                $this->delete($transaction);
+                $this->forceDelete($transaction);
+            });
         }
     }
 
@@ -176,10 +185,12 @@ class TransactionService implements RecordsTransactions
                 if ($sibling) {
                     $affectedAccounts->push($sibling->account);
                     $sibling->delete();
+                    $this->announceLeg(TransactionDeleted::class, $sibling);
                 }
             }
 
             $transaction->delete();
+            $this->announceLeg(TransactionDeleted::class, $transaction);
 
             if ($transaction->type === TransactionType::Income) {
                 IncomeRemoved::dispatch($transaction->user, $transaction->id);
@@ -236,6 +247,7 @@ class TransactionService implements RecordsTransactions
         DB::transaction(function () use ($transaction) {
             $legs = $this->trashedLegs($transaction);
             $legs->each->restore();
+            $legs->each(fn (Transaction $leg) => $this->announceLeg(TransactionRestored::class, $leg));
 
             $this->announce($transaction->user, $legs->map->account);
 
@@ -249,7 +261,10 @@ class TransactionService implements RecordsTransactions
      */
     public function forceDelete(Transaction $transaction): void
     {
-        DB::transaction(fn () => $this->trashedLegs($transaction)->each->forceDelete());
+        DB::transaction(fn () => $this->trashedLegs($transaction)->each(function (Transaction $leg) {
+            $this->announceLeg(TransactionPurged::class, $leg);
+            $leg->forceDelete();
+        }));
     }
 
     /**
@@ -304,6 +319,14 @@ class TransactionService implements RecordsTransactions
             $transaction->account->currency,
             $transaction->date,
         );
+    }
+
+    /**
+     * @param  class-string<TransactionDeleted|TransactionRestored|TransactionPurged>  $event
+     */
+    private function announceLeg(string $event, Transaction $leg): void
+    {
+        $event::dispatch($leg->user, $leg->id, $leg->type, $leg->account_id, $leg->amount, $leg->date);
     }
 
     /**

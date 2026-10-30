@@ -36,7 +36,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
 |---|---|
 | `Shared` | `Money`, `AsMoney`, `BelongsToUser`, base `Controller`, `HandleInertiaRequests` |
 | `Identity` | `User`, auth, profile, preferences |
-| `Ledger` | `Account`, `Category`, `Transaction`, balances, CSV import, `TransactionsMutated`. Source of truth for **actual** data. |
+| `Ledger` | `Account`, `Category`, `Transaction`, balances, CSV import, the `TransactionsMutated`, `Income*` and `Transaction{Deleted,Restored,Purged}` events. Source of truth for **actual** data. |
 | `Planning` | `PlannedEvent`, `Bucket`, `Allocation`, `SavingsGoal`, `RecurringTransaction` (and, next, wish list and scenarios). Owns **projected** and **earmarked** (virtual) money. |
 | `Reporting` | dashboard, reports, insights, PDF/CSV export (read-side) |
 | `Notifications` | alert notifications, their listeners and scheduled commands, the notification inbox (read-side) |
