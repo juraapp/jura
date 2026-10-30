@@ -89,6 +89,19 @@ class DeletedLedgerRecordsTest extends TestCase
         $this->assertSame('25.00', $transaction->fresh()->amount->toDecimalString());
     }
 
+    public function test_a_transaction_whose_category_was_deleted_can_still_be_edited_but_not_moved_to_another_trashed_one(): void
+    {
+        $transaction = Transaction::factory()->for($this->user)->for($this->account)->create(['category_id' => $this->category->id, 'type' => 'expense']);
+        $otherTrashed = Category::factory()->expense()->create(['user_id' => $this->user->id]);
+        Category::whereKey([$this->category->id, $otherTrashed->id])->get()->each->delete();
+
+        $this->patch("/finances/transactions/{$transaction->id}", $this->expense(['amount' => 25]))->assertSessionHasNoErrors();
+        $this->assertSame('25.00', $transaction->fresh()->amount->toDecimalString());
+
+        $this->patch("/finances/transactions/{$transaction->id}", $this->expense(['category_id' => $otherTrashed->id]))
+            ->assertSessionHasErrors('category_id');
+    }
+
     public function test_a_recurring_template_cannot_be_moved_to_a_trashed_account(): void
     {
         $trashed = Account::factory()->for($this->user)->create();
