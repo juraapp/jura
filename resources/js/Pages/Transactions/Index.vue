@@ -172,7 +172,7 @@ const bulkEdit = () => {
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openTransactionModal(null, 'expense')">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.transactions.new') }}
                     </PrimaryButton>
                 </template>

@@ -139,7 +139,7 @@ const formatDate = (date) => format.date(date);
                     {{ $t('ui.savings_goals.title') }}
                 </h2>
                 <PrimaryButton type="button" @click="openCreateModal">
-                    <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                    <DynamicIcon name="plus" class="h-4 w-4" />
                     {{ $t('ui.savings_goals.new') }}
                 </PrimaryButton>
             </div>
@@ -154,7 +154,7 @@ const formatDate = (date) => format.date(date);
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.savings_goals.create_first') }}
                     </PrimaryButton>
                 </template>

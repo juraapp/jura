@@ -235,7 +235,7 @@ const deleteBucket = () => {
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.buckets.title') }}</h2>
                 <PrimaryButton type="button" @click="openCreateModal">
-                    <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                    <DynamicIcon name="plus" class="h-4 w-4" />
                     {{ $t('ui.buckets.new') }}
                 </PrimaryButton>
             </div>
@@ -254,7 +254,7 @@ const deleteBucket = () => {
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.buckets.create_first') }}
                     </PrimaryButton>
                 </template>

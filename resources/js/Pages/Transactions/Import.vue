@@ -247,7 +247,7 @@ const doneDescription = computed(() => {
                 <template #action>
                     <div class="flex items-center gap-3">
                         <PrimaryButton type="button" @click="startOver">
-                            <DynamicIcon name="arrow-up-tray" class="mr-1.5 h-4 w-4" />
+                            <DynamicIcon name="arrow-up-tray" class="h-4 w-4" />
                             {{ $t('ui.import.another') }}
                         </PrimaryButton>
                         <Link :href="transactionsIndex.url()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">

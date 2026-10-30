@@ -229,11 +229,11 @@ const deleteEvent = () => {
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.cash_flow.title') }}</h2>
                 <div class="flex items-center gap-2">
                     <SecondaryButton type="button" @click="openCreateModal('income')">
-                        <DynamicIcon name="arrow-up-circle" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="arrow-up-circle" class="h-4 w-4" />
                         {{ $t('ui.cash_flow.expect_income') }}
                     </SecondaryButton>
                     <PrimaryButton type="button" @click="openCreateModal('expense')">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.cash_flow.plan_event') }}
                     </PrimaryButton>
                 </div>
@@ -307,7 +307,7 @@ const deleteEvent = () => {
                 >
                     <template #action>
                         <PrimaryButton type="button" @click="openCreateModal('income')">
-                            <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                            <DynamicIcon name="plus" class="h-4 w-4" />
                             {{ $t('ui.cash_flow.add_first') }}
                         </PrimaryButton>
                     </template>
