@@ -29,6 +29,9 @@ class TransactionsTest extends TestCase
             ->component('Transactions/Index')
             ->where('typeFilter', 'all')
             ->has('transactions.data', 3)
+            ->has('accounts', 1)
+            ->where('accounts.0.id', $account->id)
+            ->where('accounts.0.currency', $account->currency)
         );
     }
 
