@@ -19,7 +19,7 @@ class RealizePlannedEventRequest extends FormRequest
 
         return [
             'account_id' => ['required', 'integer', LedgerRules::account($userId, activeOnly: true)],
-            'category_id' => ['required', 'integer', LedgerRules::category($userId)],
+            'category_id' => ['required', 'integer', LedgerRules::category($userId, $this->route('plannedEvent')->type->value)],
             'amount' => ['nullable', ...MoneyRules::positive()],
             'date' => ['nullable', 'date'],
             'description' => ['nullable', 'string', 'max:255'],

@@ -29,7 +29,7 @@ class UpdateTransactionRequest extends FormRequest
 
         return [
             'account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true, keepId: $this->route('transaction')->account_id)],
-            'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id)],
+            'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id, $this->route('transaction')->type->value)],
             'amount' => ['required', ...MoneyRules::positive()],
             'date' => ['required', 'date'],
             'time' => ['nullable', 'date_format:H:i'],
