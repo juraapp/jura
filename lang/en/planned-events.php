@@ -13,4 +13,5 @@ return [
     'already_closed' => 'This planned event is already closed.',
     'account_required' => 'Choose an account to record this transaction.',
     'currency_mismatch' => 'This plan is in :currency. Choose an account or transaction in the same currency.',
+    'auto_post_requires' => 'Recording it automatically needs an active account and a category.',
 ];

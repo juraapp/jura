@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'type', 'description', 'amount', 'currency', 'account_id', 'category_id',
     'certainty', 'frequency', 'starts_on', 'ends_on', 'excluded_dates',
+    'auto_post', 'is_active', 'notes', 'allocation_overrides',
 ])]
 class PlannedEventSeries extends Model
 {
@@ -35,6 +36,9 @@ class PlannedEventSeries extends Model
             'starts_on' => 'date',
             'ends_on' => 'date',
             'excluded_dates' => 'array',
+            'auto_post' => 'boolean',
+            'is_active' => 'boolean',
+            'allocation_overrides' => 'array',
         ];
     }
 

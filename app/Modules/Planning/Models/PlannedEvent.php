@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'series_id', 'type', 'description', 'amount', 'currency', 'date', 'account_id',
     'category_id', 'certainty', 'status', 'realized_transaction_id', 'allocation_overrides', 'notes',
+    'auto_post', 'post_error',
 ])]
 class PlannedEvent extends Model
 {
@@ -34,6 +35,7 @@ class PlannedEvent extends Model
             'certainty' => Certainty::class,
             'status' => PlannedEventStatus::class,
             'allocation_overrides' => 'array',
+            'auto_post' => 'boolean',
         ];
     }
 

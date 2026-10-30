@@ -40,10 +40,8 @@ class PlannedEventService
      */
     public function createEvent(User $user, array $data): PlannedEvent
     {
-        $event = new PlannedEvent($this->attributes($user, $data) + [
+        $event = new PlannedEvent($this->attributes($user, $data) + $this->extras($data) + [
             'date' => $data['date'],
-            'notes' => $data['notes'] ?? null,
-            'allocation_overrides' => $this->overrides($data),
         ]);
         $event->user_id = $user->id;
         $event->save();
@@ -57,7 +55,7 @@ class PlannedEventService
     public function createSeries(User $user, array $data): PlannedEventSeries
     {
         return DB::transaction(function () use ($user, $data) {
-            $series = new PlannedEventSeries($this->attributes($user, $data) + [
+            $series = new PlannedEventSeries($this->attributes($user, $data) + $this->extras($data) + [
                 'frequency' => $data['frequency'],
                 'starts_on' => $data['date'],
                 'ends_on' => $data['ends_on'] ?? null,
@@ -81,6 +79,10 @@ class PlannedEventService
      */
     public function materialize(PlannedEventSeries $series, CarbonInterface $until, ?CarbonInterface $from = null): int
     {
+        if ($series->is_active === false) {
+            return 0;
+        }
+
         $lastDate = PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date');
 
         $dates = Recurrence::occurrences(
@@ -105,6 +107,9 @@ class PlannedEventService
                 'account_id' => $series->account_id,
                 'category_id' => $series->category_id,
                 'certainty' => $series->certainty,
+                'notes' => $series->notes,
+                'allocation_overrides' => $series->allocation_overrides,
+                'auto_post' => (bool) $series->auto_post,
             ]);
             $event->user_id = $series->user_id;
             $event->save();
@@ -114,13 +119,13 @@ class PlannedEventService
     }
 
     /**
-     * Tops up every open-ended series to the standard horizon, counted from each owner's today (daily command).
+     * Tops up every active series to the standard horizon, counted from each owner's today (daily command).
      */
     public function extendAllSeries(): int
     {
         $created = 0;
 
-        PlannedEventSeries::withoutGlobalScope('user')->with('user')->chunkById(100, function ($batch) use (&$created) {
+        PlannedEventSeries::withoutGlobalScope('user')->where('is_active', true)->with('user')->chunkById(100, function ($batch) use (&$created) {
             foreach ($batch as $series) {
                 if ($series->user !== null) {
                     $today = $series->user->today();
@@ -142,6 +147,8 @@ class PlannedEventService
         $attributes = $this->attributes($user, $data);
 
         if ($scope === 'future' && $event->series !== null) {
+            $attributes += $this->extras($data);
+
             DB::transaction(function () use ($event, $attributes) {
                 $event->series->update($attributes);
 
@@ -161,10 +168,8 @@ class PlannedEventService
             ? ['realized_transaction_id' => null]
             : [];
 
-        $event->update($attributes + $unlink + [
+        $event->update($attributes + $unlink + $this->extras($data) + [
             'date' => $data['date'],
-            'notes' => $data['notes'] ?? null,
-            'allocation_overrides' => $this->overrides($data),
         ]);
     }
 
@@ -354,6 +359,22 @@ class PlannedEventService
         }
 
         return $matches;
+    }
+
+    /**
+     * The fields a plan and a repeating plan share beyond what it is: notes, an income's bucket split and
+     * whether it records itself on its date.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{notes: string|null, allocation_overrides: list<array{bucket_id: int, amount: string}>|null, auto_post: bool}
+     */
+    private function extras(array $data): array
+    {
+        return [
+            'notes' => $data['notes'] ?? null,
+            'allocation_overrides' => $this->overrides($data),
+            'auto_post' => (bool) ($data['auto_post'] ?? false),
+        ];
     }
 
     /**
