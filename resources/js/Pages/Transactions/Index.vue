@@ -171,7 +171,7 @@ const bulkEdit = () => {
                 :description="$t('ui.transactions.empty_hint')"
             >
                 <template #action>
-                    <PrimaryButton type="button" @click="openTransactionModal(null, 'expense')">
+                    <PrimaryButton type="button" @click="openTransactionModal(null, typeFilter === 'all' ? 'expense' : typeFilter)">
                         <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.transactions.new') }}
                     </PrimaryButton>
