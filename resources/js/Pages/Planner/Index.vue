@@ -336,13 +336,13 @@ const comparisonRows = computed(() => {
                                 <div class="flex items-center gap-2">
                                     <span class="w-5 text-xs font-semibold text-gray-400">{{ index + 1 }}.</span>
                                     <span class="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">{{ itemById(row.itemId)?.name }}</span>
-                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="index === 0" :title="$t('ui.planner.buy_earlier')" @click="move(index, -1)">
+                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="index === 0" :title="$t('ui.planner.buy_earlier')" :aria-label="$t('ui.planner.buy_earlier')" @click="move(index, -1)">
                                         <DynamicIcon name="chevron-down" class="h-4 w-4 rotate-180" />
                                     </button>
-                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="index === order.length - 1" :title="$t('ui.planner.buy_later')" @click="move(index, 1)">
+                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="index === order.length - 1" :title="$t('ui.planner.buy_later')" :aria-label="$t('ui.planner.buy_later')" @click="move(index, 1)">
                                         <DynamicIcon name="chevron-down" class="h-4 w-4" />
                                     </button>
-                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.planner.remove')" @click="removeLine(index)">
+                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.planner.remove')" :aria-label="$t('ui.planner.remove')" @click="removeLine(index)">
                                         <DynamicIcon name="x-mark" class="h-4 w-4" />
                                     </button>
                                 </div>
@@ -383,7 +383,7 @@ const comparisonRows = computed(() => {
                                 </span>
                             </label>
                             <button type="button" class="text-xs font-medium text-primary-600 hover:underline dark:text-primary-400" @click="loadScenario(scenario)">{{ $t('ui.planner.open') }}</button>
-                            <button type="button" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="deleteScenario(scenario)">
+                            <button type="button" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="deleteScenario(scenario)">
                                 <DynamicIcon name="trash" class="h-4 w-4" />
                             </button>
                         </li>

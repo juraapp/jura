@@ -11,4 +11,6 @@ return [
     'transfer' => 'Transfer',
     'this_transaction' => 'this transaction',
     'delete_title' => 'Delete {label} permanently?',
+    'type_income' => 'Income',
+    'type_expense' => 'Expense',
 ];

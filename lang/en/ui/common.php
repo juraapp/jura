@@ -15,4 +15,7 @@ return [
     'under_construction' => 'This feature is under construction',
     'under_construction_hint' => "We're building it in a later phase of the roadmap.",
     'request_failed' => 'Something went wrong. Please try again.',
+    'edit' => 'Edit',
+    'previous' => 'Previous',
+    'next' => 'Next',
 ];

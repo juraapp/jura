@@ -341,16 +341,16 @@ const deleteBucket = () => {
                             </div>
                         </div>
                         <div class="flex shrink-0 items-center gap-0.5">
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.move_money')" @click="openMove(bucket)">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.move_money')" :aria-label="$t('ui.buckets.move_money')" @click="openMove(bucket)">
                                 <DynamicIcon name="arrows-right-left" class="h-4 w-4" />
                             </button>
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.add_remove')" @click="openAdjust(bucket)">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.add_remove')" :aria-label="$t('ui.buckets.add_remove')" @click="openAdjust(bucket)">
                                 <DynamicIcon name="banknotes" class="h-4 w-4" />
                             </button>
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.edit_tip')" @click="openEditModal(bucket)">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.edit_tip')" :aria-label="$t('ui.buckets.edit_tip')" @click="openEditModal(bucket)">
                                 <DynamicIcon name="pencil" class="h-4 w-4" />
                             </button>
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="confirmingDelete = bucket">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="confirmingDelete = bucket">
                                 <DynamicIcon name="trash" class="h-4 w-4" />
                             </button>
                         </div>

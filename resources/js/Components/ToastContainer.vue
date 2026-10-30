@@ -70,6 +70,8 @@ watch(
 
                 <button
                     type="button"
+                    :title="$t('ui.common.close')"
+                    :aria-label="$t('ui.common.close')"
                     class="ms-auto shrink-0 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
                     @click="remove(toast.id)"
                 >

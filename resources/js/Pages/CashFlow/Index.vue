@@ -359,24 +359,24 @@ const deleteEvent = () => {
                                     </p>
 
                                     <div v-if="event.status === 'planned'" class="flex items-center gap-1">
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" :title="$t('ui.cash_flow.mark_done')" @click="openRealize(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" :title="$t('ui.cash_flow.mark_done')" :aria-label="$t('ui.cash_flow.mark_done')" @click="openRealize(event)">
                                             <DynamicIcon name="check-circle" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.skip')" @click="skipEvent(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.skip')" :aria-label="$t('ui.cash_flow.skip')" @click="skipEvent(event)">
                                             <DynamicIcon name="forward" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.edit')" @click="openEditModal(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.edit')" :aria-label="$t('ui.cash_flow.edit')" @click="openEditModal(event)">
                                             <DynamicIcon name="pencil" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="askDelete(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="askDelete(event)">
                                             <DynamicIcon name="trash" class="h-4 w-4" />
                                         </button>
                                     </div>
                                     <div v-else-if="event.status === 'skipped'" class="flex items-center gap-1">
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.reopen')" @click="reopenEvent(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.reopen')" :aria-label="$t('ui.cash_flow.reopen')" @click="reopenEvent(event)">
                                             <DynamicIcon name="arrow-path" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="askDelete(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="askDelete(event)">
                                             <DynamicIcon name="trash" class="h-4 w-4" />
                                         </button>
                                     </div>

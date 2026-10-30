@@ -190,6 +190,8 @@ const formatDate = (date) => format.date(date);
                         <div class="flex items-center gap-1">
                             <button
                                 type="button"
+                                :title="$t('ui.common.edit')"
+                                :aria-label="$t('ui.common.edit')"
                                 class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
                                 @click="openEditModal(goal)"
                             >
@@ -197,6 +199,8 @@ const formatDate = (date) => format.date(date);
                             </button>
                             <button
                                 type="button"
+                                :title="$t('ui.common.delete')"
+                                :aria-label="$t('ui.common.delete')"
                                 class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
                                 @click="confirmDelete(goal)"
                             >
@@ -250,10 +254,10 @@ const formatDate = (date) => format.date(date);
                     <li v-for="goal in trashedGoals" :key="goal.id" class="flex items-center gap-3 px-4 py-3">
                         <p class="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">{{ goal.name }}</p>
                         <Money :amount="goal.targetAmount" :currency="goal.currency" class="text-sm text-gray-500" />
-                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.common.restore')" @click="router.post(restore.url(goal.id), {}, { preserveScroll: true })">
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.common.restore')" :aria-label="$t('ui.common.restore')" @click="router.post(restore.url(goal.id), {}, { preserveScroll: true })">
                             <DynamicIcon name="arrow-path" class="h-4 w-4" />
                         </button>
-                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete_permanently')" @click="confirmingPurgeGoal = goal">
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete_permanently')" :aria-label="$t('ui.common.delete_permanently')" @click="confirmingPurgeGoal = goal">
                             <DynamicIcon name="trash" class="h-4 w-4" />
                         </button>
                     </li>

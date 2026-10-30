@@ -33,11 +33,11 @@ const pdfUrl = computed(() => annualPdf.url({ query: { year: props.year } }));
                     {{ $t('ui.reports.annual_title') }}
                 </h2>
                 <div class="flex items-center gap-2">
-                    <button type="button" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="previousYear">
+                    <button type="button" :title="$t('ui.common.previous')" :aria-label="$t('ui.common.previous')" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="previousYear">
                         <DynamicIcon name="chevron-right" class="h-4 w-4 -scale-x-100" />
                     </button>
                     <span class="min-w-[4rem] text-center text-sm font-medium text-gray-700 dark:text-gray-300">{{ year }}</span>
-                    <button type="button" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="nextYear">
+                    <button type="button" :title="$t('ui.common.next')" :aria-label="$t('ui.common.next')" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="nextYear">
                         <DynamicIcon name="chevron-right" class="h-4 w-4" />
                     </button>
                     <PrimaryButton as="a" :href="pdfUrl" target="_blank" class="ms-2">
