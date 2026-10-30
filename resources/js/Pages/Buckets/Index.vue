@@ -117,6 +117,13 @@ const fillValueLabel = computed(() => {
 const canStepUp = computed(() => needsValue.value);
 const stepUpChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === form.currency && bucket.id !== editingBucket.value?.id && bucket.cap && bucket.kind === 'savings'));
 const overflowChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === form.currency && bucket.id !== editingBucket.value?.id));
+const accountChoices = computed(() => props.accounts.filter((account) => account.currency === form.currency));
+
+/* An account in another currency would stay ticked but invisible, and could never pay from this bucket. */
+watch(() => form.currency, () => {
+    form.allowed_account_ids = form.allowed_account_ids
+        .filter((id) => accountChoices.value.some((account) => account.id === id));
+});
 
 const openCreateModal = () => {
     editingBucket.value = null;
@@ -586,10 +593,10 @@ const deleteBucket = () => {
                             <InputError class="mt-1" :message="form.errors.overflow_bucket_id" />
                         </div>
 
-                        <fieldset v-if="accounts.length">
+                        <fieldset v-if="accountChoices.length">
                             <legend class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('ui.buckets.only_accounts') }}</legend>
                             <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.buckets.only_accounts_hint') }}</p>
-                            <label v-for="account in accounts" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
+                            <label v-for="account in accountChoices" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
                                 <input v-model="form.allowed_account_ids" type="checkbox" :value="account.id" class="rounded border-gray-300 text-primary-600" />
                                 {{ account.name }} · {{ account.currency }}
                             </label>
