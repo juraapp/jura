@@ -5,6 +5,7 @@ namespace App\Modules\Ledger\Http\Requests\Accounts;
 use App\Modules\Ledger\Enums\AccountType;
 use App\Modules\Ledger\Enums\YieldCompounding;
 use App\Modules\Ledger\Models\Account;
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +25,7 @@ class StoreAccountRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::enum(AccountType::class)],
             'institution' => ['nullable', 'string', 'max:255'],
-            'initial_balance' => ['required', 'numeric'],
+            'initial_balance' => ['required', ...MoneyRules::signed()],
             'currency' => ['required', 'string', 'size:3'],
             'yield_rate' => ['nullable', 'numeric', 'min:0', 'max:1000'],
             'yield_compounding' => ['nullable', Rule::enum(YieldCompounding::class)],

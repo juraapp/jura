@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Http\Requests\SavingsGoals;
 
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreSavingsGoalContributionRequest extends FormRequest
@@ -14,7 +15,7 @@ class StoreSavingsGoalContributionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', ...MoneyRules::positive()],
             'date' => ['required', 'date'],
         ];
     }

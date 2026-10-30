@@ -4,6 +4,7 @@ namespace App\Modules\Ledger\Http\Requests\Transactions;
 
 use App\Modules\Ledger\Enums\PaymentMethod;
 use App\Modules\Shared\Validation\LedgerRules;
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,7 +19,7 @@ class UpdateTransactionRequest extends FormRequest
     {
         if ($this->route('transaction')->type->isTransfer()) {
             return [
-                'amount' => ['required', 'numeric', 'gt:0'],
+                'amount' => ['required', ...MoneyRules::positive()],
                 'date' => ['required', 'date'],
                 'time' => ['nullable', 'date_format:H:i'],
                 'description' => ['nullable', 'string', 'max:255'],
@@ -29,7 +30,7 @@ class UpdateTransactionRequest extends FormRequest
         return [
             'account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true, keepId: $this->route('transaction')->account_id)],
             'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id)],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', ...MoneyRules::positive()],
             'date' => ['required', 'date'],
             'time' => ['nullable', 'date_format:H:i'],
             'description' => ['nullable', 'string', 'max:255'],

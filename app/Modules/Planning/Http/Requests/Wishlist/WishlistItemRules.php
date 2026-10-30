@@ -4,6 +4,7 @@ namespace App\Modules\Planning\Http\Requests\Wishlist;
 
 use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Shared\Validation\LedgerRules;
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Validation\Rule;
 
 /**
@@ -21,7 +22,7 @@ trait WishlistItemRules
 
         return [
             'name' => ['required', 'string', 'max:150'],
-            'price' => ['required', 'numeric', 'gt:0'],
+            'price' => ['required', ...MoneyRules::positive()],
             'currency' => ['nullable', 'string', 'size:3'],
             'importance' => ['nullable', 'integer', 'between:1,5'],
             'project_id' => ['nullable', 'integer', Rule::exists('projects', 'id')->where('user_id', $userId)],

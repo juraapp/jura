@@ -21,9 +21,39 @@ final class Money implements Stringable
         $this->amount = bcadd($amount, '0', self::SCALE);
     }
 
+    /**
+     * Builds an amount from a plain decimal. More than two decimals round half away from zero
+     * (10.995 -> 11.00); floats are written out in full first, so 1.0E-5 never reaches bcmath.
+     * Arithmetic (multiply/divide) still truncates, so split parts never add up to more than the whole.
+     *
+     * @throws InvalidArgumentException when the value is not a plain decimal number (e.g. "1e3")
+     */
     public static function of(string|int|float $amount): self
     {
-        return new self((string) $amount);
+        return new self(self::roundToCents($amount));
+    }
+
+    private static function roundToCents(string|int|float $amount): string
+    {
+        if (is_float($amount)) {
+            if (! is_finite($amount)) {
+                throw new InvalidArgumentException('An amount must be a finite number.');
+            }
+
+            $amount = number_format($amount, 10, '.', '');
+        }
+
+        $amount = trim((string) $amount);
+
+        if (preg_match('/^([+-]?)(\d*)(?:\.(\d*))?$/', $amount, $parts) !== 1 || ($parts[2] === '' && ($parts[3] ?? '') === '')) {
+            throw new InvalidArgumentException("Not a plain decimal amount: {$amount}");
+        }
+
+        if (strlen($parts[3] ?? '') <= self::SCALE) {
+            return $amount;
+        }
+
+        return bcadd($amount, $parts[1] === '-' ? '-0.005' : '0.005', self::SCALE);
     }
 
     public static function zero(): self

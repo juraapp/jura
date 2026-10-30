@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Http\Requests\Buckets;
 
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CycleLimitRequest extends FormRequest
@@ -18,6 +19,6 @@ class CycleLimitRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['cap_amount' => ['nullable', 'numeric', 'gt:0']];
+        return ['cap_amount' => ['nullable', ...MoneyRules::positive()]];
     }
 }

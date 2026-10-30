@@ -5,6 +5,7 @@ namespace App\Modules\Ledger\Http\Requests\Transactions;
 use App\Modules\Ledger\Enums\PaymentMethod;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Shared\Validation\LedgerRules;
+use App\Modules\Shared\Validation\MoneyRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +23,7 @@ class StoreTransactionRequest extends FormRequest
                 'type' => ['required', 'in:transfer'],
                 'from_account_id' => ['required', 'integer', 'different:to_account_id', LedgerRules::account($this->user()->id, activeOnly: true)],
                 'to_account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true)],
-                'amount' => ['required', 'numeric', 'gt:0'],
+                'amount' => ['required', ...MoneyRules::positive()],
                 'date' => ['required', 'date'],
                 'time' => ['nullable', 'date_format:H:i'],
                 'description' => ['nullable', 'string', 'max:255'],
@@ -34,7 +35,7 @@ class StoreTransactionRequest extends FormRequest
             'type' => ['required', 'in:income,expense'],
             'account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true)],
             'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id)],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', ...MoneyRules::positive()],
             'date' => ['required', 'date'],
             'time' => ['nullable', 'date_format:H:i'],
             'description' => ['nullable', 'string', 'max:255'],
