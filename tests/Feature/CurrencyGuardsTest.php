@@ -11,7 +11,6 @@ use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
-use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Models\WishlistItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -89,7 +88,6 @@ class CurrencyGuardsTest extends TestCase
     public static function accountReferences(): array
     {
         return [
-            'recurring template' => [fn (User $user, Account $account, Category $category) => RecurringTransaction::factory()->for($user)->for($account)->for($category)->create()],
             'planned event' => [fn (User $user, Account $account) => PlannedEvent::factory()->for($user)->create(['account_id' => $account->id, 'currency' => 'COP'])],
             'planned series' => [fn (User $user, Account $account) => PlannedEventSeries::factory()->for($user)->create(['account_id' => $account->id, 'currency' => 'COP'])],
             'bucket allowed accounts' => [fn (User $user, Account $account) => Bucket::factory()->savings()->for($user)->create(['currency' => 'COP', 'allowed_account_ids' => [$account->id]])],

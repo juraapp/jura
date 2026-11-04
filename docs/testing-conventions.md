@@ -53,7 +53,7 @@ public function test_user_cannot_update_another_users_bucket(): void
 
 ## Soft deletes
 
-`Account`, `Category`, `SavingsGoal`, and `Transaction` use `SoftDeletes`; `Bucket`, `Allocation` and `RecurringTransaction` don't. Use the right assertion:
+`Account`, `Category`, `SavingsGoal`, and `Transaction` use `SoftDeletes`; `Bucket`, `Allocation`, `PlannedEvent` and `PlannedEventSeries` don't. Use the right assertion:
 
 ```php
 $this->assertSoftDeleted('accounts', ['id' => $account->id]);   // soft-delete models
@@ -64,19 +64,20 @@ $this->assertDatabaseMissing('budgets', ['id' => $budget->id]); // hard-delete m
 
 ## Factories and cross-model foreign keys
 
-Every domain model has a factory in `database/factories/`. The one sharp edge: **`Account` (like most models) is itself `BelongsToUser`-scoped**, so a `RecurringTransaction`/`Transaction`/`Bucket` factory's default `account_id => Account::factory()` creates an account owned by a *fresh, unrelated* user unless you explicitly tie it to the same user:
+Every domain model has a factory in `database/factories/`. The one sharp edge: **`Account` (like most models) is itself `BelongsToUser`-scoped**, so a `Transaction`/`Bucket` factory's default `account_id => Account::factory()` (or a plan whose `account_id` you set to some other user's account) creates an account owned by a *fresh, unrelated* user unless you explicitly tie it to the same user:
 
 ```php
 // Wrong — $account belongs to some other random factory-created user.
-$recurring = RecurringTransaction::factory()->for($user)->create();
+$transaction = Transaction::factory()->for($user)->create();
 
 // Right — account_id and user_id agree.
 $account = Account::factory()->for($user)->create();
 $category = Category::factory()->expense()->create(['user_id' => $user->id]);
-$recurring = RecurringTransaction::factory()->for($user)->for($account)->for($category)->create();
+$transaction = Transaction::factory()->for($user)->for($account)->for($category)->create();
+$series = PlannedEventSeries::factory()->for($user)->create(['account_id' => $account->id, 'category_id' => $category->id]);
 ```
 
-Getting this wrong doesn't fail at factory-creation time — it fails later, non-obviously, when a controller eager-loads the relation (`->with('account')`) and the `BelongsToUser` scope silently returns `null` for a row that "exists" but isn't visible to the acting user, producing a 500 ("Attempt to read property on null") instead of a validation error. This exact bug was caught writing `RecurringTransactionsTest` and is also why `account_id`/`category_id` Form Request validation is scoped to the current user (see `domain-model.md`) — the same class of bug is reachable from real user input, not just sloppy test setup.
+Getting this wrong doesn't fail at factory-creation time — it fails later, non-obviously, when a controller eager-loads the relation (`->with('account')`) and the `BelongsToUser` scope silently returns `null` for a row that "exists" but isn't visible to the acting user, producing a 500 ("Attempt to read property on null") instead of a validation error. This exact bug was caught writing the (since removed) recurring transactions tests and is also why `account_id`/`category_id` Form Request validation is scoped to the current user (see `domain-model.md`) — the same class of bug is reachable from real user input, not just sloppy test setup.
 
 `CategoryFactory::create()` defaults to `user_id: null` (a system category, visible to everyone) — pass `['user_id' => $user->id]` explicitly whenever a test needs a category that's *not* visible to some other user, or the "another user's private category" half of a cross-tenant test will silently pass for the wrong reason (the category is a system one, not actually owned by anyone).
 
@@ -102,7 +103,7 @@ Don't try to precompute `X-Inertia-Version` — it's not stable when resolved ou
 
 ## What's covered, what isn't
 
-Every domain module from the Inertia migration has feature test coverage (`tests/Feature/{Accounts,Categories,Budgets,SavingsGoals,RecurringTransactions,Transactions,TransactionImport,Reports,Preferences,Dashboard,Notifications,TransactionImportTemplate}Test.php`) — index rendering, create/update/delete happy paths, validation failures, and cross-tenant authorization. Auth flows (`tests/Feature/Auth/*`) and profile management (`ProfileTest.php`) are Breeze's own generated PHPUnit tests, adapted for the Inertia+Vue scaffold rather than rewritten from scratch.
+Every domain module from the Inertia migration has feature test coverage (`tests/Feature/{Accounts,Categories,Budgets,SavingsGoals,PlannedEvents,PlannedSeries,AutoPost,Transactions,TransactionImport,Reports,Preferences,Dashboard,Notifications,TransactionImportTemplate}Test.php`) — index rendering, create/update/delete happy paths, validation failures, and cross-tenant authorization. Auth flows (`tests/Feature/Auth/*`) and profile management (`ProfileTest.php`) are Breeze's own generated PHPUnit tests, adapted for the Inertia+Vue scaffold rather than rewritten from scratch.
 
 Not covered: the CSV/PDF *content* of report downloads beyond status code + `Content-Type` (real Dompdf/CSV rendering is exercised, but byte-for-byte output isn't asserted), and Vue-side interaction tests (no component-level JS test runner is set up — `GlobalTransactionModal`'s open/edit/submit flow is verified only through the backend endpoints it calls).
 

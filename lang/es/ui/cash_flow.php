@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'Flujo de caja',
+    'title' => 'Próximos y flujo de caja',
     'expect_income' => 'Esperar ingreso',
     'plan_event' => 'Planificar un evento',
     'hint_conservative' => 'Solo cuenta el ingreso confirmado. Los gastos siempre cuentan.',

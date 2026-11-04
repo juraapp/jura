@@ -72,18 +72,6 @@ class TransactionService implements RecordsTransactions
         }
     }
 
-    public function recordRecurring(User $user, TransactionType $type, array $data, int $recurringTransactionId): void
-    {
-        $transaction = $type === TransactionType::Income
-            ? $this->createIncome($user, $data)
-            : $this->createExpense($user, $data);
-
-        $transaction->update([
-            'is_recurring_generated' => true,
-            'recurring_transaction_id' => $recurringTransactionId,
-        ]);
-    }
-
     /**
      * @return array{0: Transaction, 1: Transaction} [salida, entrada]
      */

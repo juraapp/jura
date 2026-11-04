@@ -245,4 +245,9 @@ class PlannedSeriesTest extends TestCase
                 ->missing('accounts')
             );
     }
+
+    public function test_the_old_recurring_page_redirects_to_repeating_plans(): void
+    {
+        $this->actingAs($this->user)->get('/planning/recurring')->assertStatus(301)->assertRedirect('/planning/cash-flow?section=repeating');
+    }
 }

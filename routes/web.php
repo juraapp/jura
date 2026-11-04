@@ -14,7 +14,6 @@ use App\Modules\Planning\Http\Controllers\PlannedEventController;
 use App\Modules\Planning\Http\Controllers\PlannedSeriesController;
 use App\Modules\Planning\Http\Controllers\PlannerController;
 use App\Modules\Planning\Http\Controllers\ProjectController;
-use App\Modules\Planning\Http\Controllers\RecurringTransactionController;
 use App\Modules\Planning\Http\Controllers\SavingsGoalController;
 use App\Modules\Planning\Http\Controllers\WishlistItemController;
 use App\Modules\Reporting\Http\Controllers\DashboardController;
@@ -115,17 +114,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/cash-flow/{plannedEvent}/skip', [PlannedEventController::class, 'skip'])->name('planned-events.skip');
     Route::post('planning/cash-flow/{plannedEvent}/reopen', [PlannedEventController::class, 'reopen'])->name('planned-events.reopen');
     Route::post('planning/cash-flow/{plannedEvent}/link', [PlannedEventController::class, 'link'])->name('planned-events.link');
+    Route::permanentRedirect('planning/recurring', '/planning/cash-flow?section=repeating');
     Route::get('planning/series/{plannedEventSeries}/edit-data', [PlannedSeriesController::class, 'editData'])->name('planned-series.edit-data');
     Route::patch('planning/series/{plannedEventSeries}', [PlannedSeriesController::class, 'update'])->name('planned-series.update');
     Route::post('planning/series/{plannedEventSeries}/pause', [PlannedSeriesController::class, 'pause'])->name('planned-series.pause');
     Route::post('planning/series/{plannedEventSeries}/resume', [PlannedSeriesController::class, 'resume'])->name('planned-series.resume');
     Route::delete('planning/series/{plannedEventSeries}', [PlannedSeriesController::class, 'destroy'])->name('planned-series.destroy');
-    Route::get('planning/recurring', [RecurringTransactionController::class, 'index'])->name('recurring-transactions.index');
-    Route::post('planning/recurring', [RecurringTransactionController::class, 'store'])->name('recurring-transactions.store');
-    Route::patch('planning/recurring/{recurringTransaction}', [RecurringTransactionController::class, 'update'])->name('recurring-transactions.update');
-    Route::post('planning/recurring/bulk-delete', [RecurringTransactionController::class, 'bulkDestroy'])->name('recurring-transactions.bulk-delete');
-    Route::patch('planning/recurring/{recurringTransaction}/toggle', [RecurringTransactionController::class, 'toggleActive'])->name('recurring-transactions.toggle');
-    Route::delete('planning/recurring/{recurringTransaction}', [RecurringTransactionController::class, 'destroy'])->name('recurring-transactions.destroy');
 
     Route::get('reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
     Route::get('reports/monthly/pdf', MonthlyReportPdfController::class)->name('reports.monthly.pdf');

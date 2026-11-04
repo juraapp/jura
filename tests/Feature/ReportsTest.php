@@ -6,6 +6,8 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\PlannedEventSeries;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -33,6 +35,29 @@ class ReportsTest extends TestCase
             ->where('month', now()->month)
             ->has('currencies')
         );
+    }
+
+    public function test_fixed_expenses_are_auto_posted_ones_and_ones_confirmed_from_a_repeating_plan(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $make = fn (float $amount, bool $auto = false) => Transaction::factory()->for($user)->for($account)->for($category)->create([
+            'type' => 'expense', 'date' => '2026-10-10', 'amount' => $amount, 'is_recurring_generated' => $auto,
+        ]);
+        $make(100, auto: true);
+        $confirmed = $make(20);
+        $oneOff = $make(7);
+        $make(3);
+        $series = PlannedEventSeries::factory()->for($user)->create(['type' => 'expense']);
+        PlannedEvent::factory()->for($user)->create(['series_id' => $series->id, 'status' => 'realized', 'realized_transaction_id' => $confirmed->id]);
+        PlannedEvent::factory()->for($user)->create(['status' => 'realized', 'realized_transaction_id' => $oneOff->id]);
+
+        $this->actingAs($user)->get('/reports/monthly?year=2026&month=10')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('currencies.0.fixedExpense', 120)
+                ->where('currencies.0.variableExpense', 10)
+            );
     }
 
     public function test_monthly_report_accepts_year_and_month_query_params(): void

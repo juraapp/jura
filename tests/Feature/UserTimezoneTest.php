@@ -11,10 +11,9 @@ use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
-use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Models\WishlistItem;
 use App\Modules\Planning\Services\CashFlowProjector;
-use App\Modules\Planning\Services\RecurringTransactionService;
+use App\Modules\Planning\Services\SeriesPoster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -95,18 +94,20 @@ class UserTimezoneTest extends TestCase
         $this->assertSame('2026-10', $projection->first()['months'][0]['month']);
     }
 
-    public function test_a_recurring_template_is_generated_only_once_its_date_has_come_for_its_owner(): void
+    public function test_an_auto_posting_plan_is_recorded_only_once_its_date_has_come_for_its_owner(): void
     {
         $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
-        $template = RecurringTransaction::factory()->for($this->user)->for($this->account)->for($category)
-            ->create(['next_due_date' => '2026-10-13', 'type' => 'expense']);
+        $plan = PlannedEvent::factory()->for($this->user)->create([
+            'type' => 'expense', 'date' => '2026-10-13', 'currency' => 'COP', 'account_id' => $this->account->id,
+            'category_id' => $category->id, 'auto_post' => true,
+        ]);
 
-        $this->assertSame(0, app(RecurringTransactionService::class)->generateDue());
+        $this->assertSame(0, app(SeriesPoster::class)->postDue());
 
         Carbon::setTestNow('2026-10-13 05:30:00');
-        $this->assertSame(1, app(RecurringTransactionService::class)->generateDue());
+        $this->assertSame(1, app(SeriesPoster::class)->postDue());
         $this->assertSame('2026-10-13', Transaction::firstOrFail()->date->toDateString());
-        $this->assertNotSame('2026-10-13', $template->fresh()->next_due_date->toDateString());
+        $this->assertSame('realized', $plan->fresh()->status->value);
     }
 
     public function test_a_bucket_cycle_closes_after_it_has_ended_in_the_owners_timezone(): void

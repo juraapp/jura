@@ -9,10 +9,8 @@ use App\Modules\Notifications\Notifications\BudgetThresholdReached;
 use App\Modules\Notifications\Notifications\LowAccountBalance;
 use App\Modules\Notifications\Notifications\PlannedPostingBlocked;
 use App\Modules\Notifications\Notifications\UpcomingPlannedPayment;
-use App\Modules\Notifications\Notifications\UpcomingRecurringPayment;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
-use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Services\SeriesPoster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
@@ -98,22 +96,6 @@ class NotificationsTest extends TestCase
 
         $this->assertDatabaseHas('notifications', ['type' => LowAccountBalance::class]);
         $this->assertDatabaseMissing('notifications', ['type' => 'App\\Notifications\\LowAccountBalance']);
-    }
-
-    public function test_upcoming_payment_reminders_skip_templates_whose_category_was_deleted(): void
-    {
-        Carbon::setTestNow('2026-10-12 12:00:00');
-        $user = User::factory()->create();
-        $account = Account::factory()->for($user)->create();
-        $trashed = Category::factory()->expense()->create(['user_id' => $user->id]);
-        $kept = Category::factory()->expense()->create(['user_id' => $user->id]);
-        RecurringTransaction::factory()->for($user)->for($account)->for($trashed)->create(['description' => null, 'next_due_date' => '2026-10-13']);
-        RecurringTransaction::factory()->for($user)->for($account)->for($kept)->create(['description' => null, 'next_due_date' => '2026-10-13']);
-        $trashed->delete();
-
-        $this->artisan('app:notify-upcoming-recurring-payments')->assertSuccessful();
-
-        $this->assertSame(1, $user->notifications()->where('type', UpcomingRecurringPayment::class)->count());
     }
 
     public function test_a_budget_alert_for_a_bucket_whose_category_was_deleted_uses_the_bucket_name(): void

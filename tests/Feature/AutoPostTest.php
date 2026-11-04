@@ -174,8 +174,6 @@ class AutoPostTest extends TestCase
                 return $this->real->recordTransfer($user, $data, $autoPosted);
             }
 
-            public function recordRecurring(User $user, TransactionType $type, array $data, int $recurringTransactionId): void {}
-
             public function forget(User $user, int $transactionId): void {}
         });
         $this->app->forgetInstance(PlannedEventService::class);

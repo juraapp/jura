@@ -7,7 +7,6 @@ use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
-use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Planning\Models\WishlistItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,20 +44,17 @@ class BulkDeleteTest extends TestCase
         $this->assertDatabaseMissing('planned_events', ['id' => $occurrences[1]->id]);
     }
 
-    public function test_wishlist_items_recurring_transactions_and_goals_are_deleted_in_bulk(): void
+    public function test_wishlist_items_and_goals_are_deleted_in_bulk(): void
     {
         $items = WishlistItem::factory()->for($this->user)->count(2)->create();
-        $recurring = RecurringTransaction::factory()->for($this->user)->count(2)->create();
         $goals = SavingsGoal::factory()->for($this->user)->count(2)->create();
         $foreignItem = WishlistItem::factory()->create();
 
         $this->actingAs($this->user)->post('/planning/wishlist/bulk-delete', ['ids' => [...$items->pluck('id'), $foreignItem->id]])->assertRedirect()->assertSessionHas('success');
-        $this->actingAs($this->user)->post('/planning/recurring/bulk-delete', ['ids' => $recurring->pluck('id')->all()])->assertRedirect();
         $this->actingAs($this->user)->post('/planning/goals/bulk-delete', ['ids' => $goals->pluck('id')->all()])->assertRedirect();
 
         $this->assertSame(0, WishlistItem::where('user_id', $this->user->id)->count());
         $this->assertNotNull(WishlistItem::withoutGlobalScopes()->find($foreignItem->id));
-        $this->assertSame(0, RecurringTransaction::where('user_id', $this->user->id)->count());
         $this->assertSame(2, SavingsGoal::onlyTrashed()->count(), 'goals go to the trash');
     }
 

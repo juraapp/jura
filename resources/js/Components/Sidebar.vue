@@ -15,7 +15,6 @@ import { index as expensesIndex } from '@/routes/expenses';
 import { index as incomesIndex } from '@/routes/incomes';
 import { edit as preferencesEdit } from '@/routes/preferences';
 import { index as trashIndex } from '@/routes/trash';
-import { index as recurringTransactionsIndex } from '@/routes/recurring-transactions';
 import { annual as reportsAnnual, buckets as reportsBuckets, custom as reportsCustom, forecast as reportsForecast, monthly as reportsMonthly, projects as reportsProjects } from '@/routes/reports';
 import { index as savingsGoalsIndex } from '@/routes/savings-goals';
 import { importMethod as transactionsImport, index as transactionsIndex } from '@/routes/transactions';
@@ -56,7 +55,6 @@ const sections = [
             { label: 'ui.shell.nav.wish_list', route: wishlistIndex, icon: 'flag' },
             { label: 'ui.shell.nav.planner', route: plannerIndex, icon: 'scale' },
             { label: 'ui.shell.nav.savings_goals', route: savingsGoalsIndex, icon: 'flag' },
-            { label: 'ui.shell.nav.recurring_transactions', route: recurringTransactionsIndex, icon: 'arrow-path' },
         ],
     },
     {

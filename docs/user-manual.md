@@ -13,17 +13,16 @@ for everyday use. Sections marked **Advanced** are optional extras.
 4. [Transactions](#transactions)
 5. [Importing from CSV](#importing-from-csv)
 6. [Categories](#categories)
-7. [Cash flow (planned income and expenses)](#cash-flow-planned-income-and-expenses)
+7. [Upcoming & cash flow (planned income and expenses)](#upcoming--cash-flow-planned-income-and-expenses)
 8. [Buckets (budgets and savings)](#buckets-budgets-and-savings)
 9. [Wish list and projects](#wish-list-and-projects)
 10. [Planner](#planner)
 11. [Savings goals](#savings-goals)
-12. [Recurring transactions](#recurring-transactions)
-13. [Reports](#reports)
-14. [Notifications](#notifications)
-15. [Preferences, profile and appearance](#preferences-profile-and-appearance)
-16. [Common questions](#common-questions)
-17. [Limits of this version](#limits-of-this-version)
+12. [Reports](#reports)
+13. [Notifications](#notifications)
+14. [Preferences, profile and appearance](#preferences-profile-and-appearance)
+15. [Common questions](#common-questions)
+16. [Limits of this version](#limits-of-this-version)
 
 ---
 
@@ -73,8 +72,8 @@ An account is any place that holds money: a bank account, digital wallet, cash, 
   investment account): the account is then marked **Off budget** and its balance stays out of *ready to assign*
   (see *Buckets*). Turning it off or on, or archiving the account, moves ready to assign by the account's balance.
 - **Deleting an account:** if it has no transactions it is removed. If it has transactions (including ones you
-  deleted that are still in the Trash) it is **archived**: kept in your history so your reports stay correct, but it
-  can no longer receive new transactions, transfers, recurring transactions or purchases. Existing transactions on
+  deleted that are still in the Trash) or an active repeating plan uses it, it is **archived**: kept in your history so your reports stay correct, but it
+  can no longer receive new transactions, transfers, automatically recorded plans or purchases. Existing transactions on
   it can still be edited.
 
 ## Transactions
@@ -91,7 +90,7 @@ There are three kinds:
 
 To add one, use the add button (it is available from any page). The same form records money that **Already
 happened** (a real transaction, the default) or money that is **Planned** (it doesn't touch your balance; see
-[Cash flow](#cash-flow-planned-income-and-expenses)). For a real one, choose the account, category, amount, date and
+[Cash flow](#upcoming--cash-flow-planned-income-and-expenses)). For a real one, choose the account, category, amount, date and
 an optional **time** (it defaults to now and can be cleared), an optional description, notes and payment method (cash, debit card, credit card, bank transfer or other).
 If you pick a date after today, the form points it out and offers **Plan it instead** or **It already happened,
 save it**. For a plan, the form asks how sure you are, whether it **repeats**, whether to **record it automatically
@@ -113,7 +112,7 @@ form lists it as *current*).
 - **Filter** the list by type to see only incomes, expenses or transfers.
 - **One currency per transaction.** A transfer must be between two accounts of the same currency, and a transaction
   can only move to another account of its currency (bulk *Change account* skips the ones that don't match). An
-  account's currency can no longer change once it has transactions or a recurring transaction, plan, bucket or
+  account's currency can no longer change once it has transactions or a plan, repeating plan, bucket or
   wish-list item uses it, and a bucket's once it holds money.
 - Editing or deleting one side of a transfer updates the other side too. Each transfer appears twice in the full list:
   the row says **Transfer out → (destination)** on the source account and **Transfer in ← (source)** on the destination.
@@ -122,7 +121,7 @@ form lists it as *current*).
 
 ## Selecting many rows at once
 
-Long lists (transactions, planned events, wish list, recurring expenses, savings goals, buckets) have a checkbox on
+Long lists (transactions, planned events, wish list, savings goals, buckets) have a checkbox on
 every row and a **Select all** box. Selecting rows opens a bar with **Delete** and **Clear**.
 
 - On **Transactions** the bar also offers **Change category / account** for the selected rows (transfers are never
@@ -163,17 +162,17 @@ categories** shared by everyone, and you can add your own.
 - A category is either **Income** or **Expense**.
 - System categories, and categories that already have transactions, **cannot be edited or deleted**, so your
   history never changes meaning. Create a new category instead.
-- A category used by a recurring transaction, a bucket, an open planned event or a repeating plan can't be deleted
+- A category used by a bucket, an open planned event or a repeating plan can't be deleted
   (or removed from the Trash) either; change or delete those first.
 - Your own categories have a checkbox, plus edit and delete buttons. Tick several (or **Select all**) to delete them
   together; those that already have transactions or are used by plans are kept, and deleted ones go to the **Trash**.
 
-## Cash flow (planned income and expenses)
+## Upcoming & cash flow (planned income and expenses)
 
-Menu: **Planning → Cash flow**.
+Menu: **Planning → Upcoming & cash flow**.
 
-Use this page to write down money you expect to receive or spend in the future, however irregular, and see what
-your balance could look like. Planned events are **estimates**: they never change your real balances or reports
+Use this page to write down money you expect to receive or spend in the future, however irregular or regular
+(rent, salary, subscriptions), and see what your balance could look like. Planned events are **estimates**: they never change your real balances or reports
 until you mark them as done.
 
 **Adding a planned event.** Press **Add** (or the add button on any page and choose **Planned**), then fill in what it
@@ -279,7 +278,7 @@ already moved to another bucket, spent or carried away, the bucket stops at zero
 to assign instead, which can then go negative (**over-assigned**: money you had earmarked but no longer have). Restoring
 the income from the Trash, or changing only its date, puts everything back exactly as it was.
 
-**Deciding for one income.** In **Cash flow**, when you plan an income, *More options* lets you type exactly how much
+**Deciding for one income.** In **Upcoming & cash flow**, when you plan an income, *Where does this income go?* lets you type exactly how much
 goes to each bucket for that income only. The rest stays ready to assign. A bucket that only fills from other
 accounts, or that is completed, is skipped. The same split is used when you link
 the plan to an income you already recorded, and again whenever that income's fills are redone (an edit, a bulk
@@ -334,7 +333,7 @@ to assign**, or **move it** to another bucket (the overflow bucket).
 **Only from certain accounts (advanced).** Tick accounts to make a bucket fill only from income that lands there, for
 example a "Physical money" stash. Income in other accounts skips it. Only accounts in the bucket's currency are listed.
 
-**Planned spending.** Expenses you plan in **Cash flow** for a spending bucket's category show on its card as
+**Planned spending.** Expenses you plan in **Upcoming & cash flow** for a spending bucket's category show on its card as
 **planned**, with what would remain **after plans**.
 
 **Completing a bucket.** When a goal is done, a savings bucket can be **completed**: what is left in it moves to
@@ -358,13 +357,13 @@ that, and want leisure money, a general savings pot, a 10,000,000 car fund and a
 | Restoration | Savings | **P3**, no cycle, fill: share of what is left 100% |
 
 Then add a **Renault 21** to the wish list at 10,000,000 using the *Purchase fund* bucket, and plan your incomes in
-**Cash flow**. What you will see:
+**Upcoming & cash flow**. What you will see:
 - Each month, Leisure and General savings take 150,000 once, however many payments arrive. What remains is split 17/21
   to the Purchase fund and the rest to Restoration. When the Purchase fund is full, the remainder goes to Restoration.
 - In the **Planner**, *Suggest the best order* gives the month you can buy the car. When you really buy it from the
   wish list, the Purchase fund closes, anything above 10,000,000 moves to Restoration, and General savings steps up to
   300,000 from the next month.
-- In **Cash flow**, an account with an interest rate (see *Accounts*) adds a projected *Interest* column, so the
+- In **Upcoming & cash flow**, an account with an interest rate (see *Accounts*) adds a projected *Interest* column, so the
   forecast includes what your bank "boxes" earn.
 
 ## Wish list and projects
@@ -450,21 +449,6 @@ A goal is something you are saving toward, with a target amount and an optional 
 - A deleted goal appears under **Deleted goals** at the bottom, where you can restore it or delete it permanently.
 - If a goal is falling behind its target date you get a notification.
 
-## Recurring transactions
-
-Menu: **Planning → Recurring transactions**.
-
-For income or expenses that repeat (rent, salary, subscriptions). Pick the account, category, amount, how often
-(weekly, biweekly, monthly or yearly), the next due date and an optional end date.
-
-- Jura **creates the real transaction for you** when it falls due: shortly after midnight on the due date in your
-  time zone (it checks every hour).
-- A recurring transaction whose account is archived or deleted, or whose category is deleted, is not created (and no
-  reminder is sent) until you fix it: un-archive the account or pick another account or category.
-- Use the **on/off switch** to pause one without deleting it. It turns itself off after its end date.
-- You get a reminder **3 days before** a payment is due.
-- Transactions created this way are marked as generated from a recurring item.
-
 ## Reports
 
 Menu: **Reports**.
@@ -478,7 +462,8 @@ Menu: **Reports**.
 | **Buckets** | how your buckets are funded, money moving in and out, and where they are heading | none |
 | **Projects** | each project's wanted, bought and funded totals and when it could be completed | none |
 
-Monthly, Annual and Custom show **real, recorded** data. Totals are kept separate per currency.
+Monthly, Annual and Custom show **real, recorded** data. Totals are kept separate per currency. The monthly report splits expenses
+into **fixed** (recorded automatically, or confirmed from a repeating plan) and **variable** (everything else).
 
 **Forecast.** A solid line shows your real net worth for the last six months. Dashed lines continue from "Today" for
 the next six months, one for each way of trusting your planned income (Conservative, Expected, Optimistic). The table
@@ -498,7 +483,6 @@ The bell in the top bar collects alerts. Mark one or all as read from there.
 
 - **Budget threshold / exceeded**: you have used most of, or gone over, a spending bucket's limit.
 - **Goal behind schedule**: a savings goal is falling behind its target date.
-- **Upcoming payment**: a recurring item is due within 3 days.
 - **Upcoming planned payment**: a planned expense is due within 3 days (counted in your time zone). It says whether
   it will be **recorded automatically** or whether you need to **confirm it** once it is paid. Plans on an archived
   account are left out.
@@ -513,7 +497,7 @@ You are notified once per crossing; an unread alert is not repeated.
 - **Settings → Preferences**: default **currency**, **language** (English or Spanish) and **time zone**. These
   control how amounts, dates and text appear everywhere. Changing the language applies right after you save, with no reload.
   The time zone decides what "today" is: new transactions and plans default to today's date where you live, plans
-  become overdue, recurring transactions are posted and bucket cycles close when the day changes there, and the
+  become overdue, plans that record themselves are recorded and bucket cycles close when the day changes there, and the
   dashboard and reports open on your current month.
   Below them, **How dates, times and numbers look** lets you pick the date style (2026-03-09, 03/09/2026,
   09/03/2026 or 9 Mar 2026), 12- or 24-hour time, the decimal and thousands separators, the number of decimals, and
@@ -554,6 +538,12 @@ bucket (*Move money → Ready to assign*) or record the income that is missing.
 
 **A bucket says Overspent.** More was paid from it than it held. Move money into it, from another bucket or from ready
 to assign.
+
+**Where did Recurring transactions go?** They became repeating plans on **Planning → Upcoming & cash flow**, under
+**Repeating plans**. Each one kept its account, category, amount and rhythm and records itself on its date
+(**Record it automatically on the date** is on). If one was behind, the missed dates were recorded on their own dates.
+A paused or ended one is listed as **Paused**. Transactions it created before are still marked as recorded
+automatically, and the old menu link takes you to the new list.
 
 **Where did my "Unallocated" bucket go?** It was replaced by ready to assign, which is calculated instead of stored.
 What it held is now simply ready to assign, and buckets that sent leftovers to it now return them to ready to assign.

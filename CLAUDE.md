@@ -1,7 +1,7 @@
 # Jura
 
-Personal finance app: accounts, transactions, budgets, recurring transactions, savings goals, reports, and
-(in progress) project budgeting with income forecasting. Single-user-per-account data, scoped by the
+Personal finance app: accounts, transactions, budgets, planned and repeating money (plans can record themselves
+on their date), savings goals, reports, and project budgeting with income forecasting. Single-user-per-account data, scoped by the
 `BelongsToUser` global scope.
 
 ## Stack (not Livewire/Volt)
@@ -17,7 +17,7 @@ auto-discovered. See `docs/architecture.md`.
 
 ## Project budgeting domain (Planning module)
 Actual data is `Ledger`'s `Transaction`; projected data never touches balances. Concepts: `PlannedEvent` (future income/expense with
-certainty), `Bucket` + `Allocation` (virtual earmarked money filled from income by a priority waterfall), `Project`/`WishlistItem`,
+certainty; `PlannedEventSeries` repeats it and can auto-post it as a real transaction, replacing recurring transactions; `PlannedOccurrences` is the one source of open planned money for every projection), `Bucket` + `Allocation` (virtual earmarked money filled from income by a priority waterfall), `Project`/`WishlistItem`,
 `BucketCycle` (stored history of each bucket cycle), and the planner (`ForecastEngine`, `ScenarioSuggester`, `CyclePeriod`: pure, unit-tested logic in `Planning/Support`). Display formats come from the user's preferences: use `useFormat()` (Vue) / `$user->formatter()` (PHP), never `toLocale*`/`number_format` by hand. "Today" is the user's date in their timezone: `$user->today()` / `User::todayFor($id)` (PHP) and `useToday()` (Vue), never `today()`/`now()` or `toISOString()` for a user's date. Keep pure logic framework-free. UI text is translated: Vue uses `$t('ui.<area>.<key>')` with keys in `lang/{en,es}/ui/<area>.php` (see `docs/i18n-conventions.md`).
 
 ## Where to read first

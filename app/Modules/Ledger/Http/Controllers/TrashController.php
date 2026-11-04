@@ -85,7 +85,7 @@ class TrashController extends Controller
         $account = Account::onlyTrashed()->findOrFail($id);
         $this->authorize('delete', $account);
 
-        if ($account->transactions()->withTrashed()->exists() || $account->recurringTransactions()->exists()) {
+        if ($account->transactions()->withTrashed()->exists()) {
             return back()->with('error', __('trash.still_used'));
         }
 

@@ -29,7 +29,6 @@ class TransactionFactory extends Factory
             'notes' => null,
             'payment_method' => null,
             'is_recurring_generated' => false,
-            'recurring_transaction_id' => null,
             'transfer_group_id' => null,
         ];
     }
