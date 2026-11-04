@@ -28,6 +28,8 @@ class PlannedEventService
 
     private const MATCH_WINDOW_DAYS = 5;
 
+    private const MATCH_WINDOW_MAX_DAYS = 10;
+
     public function __construct(
         private readonly LedgerQuery $ledger,
         private readonly RecordsTransactions $transactions,
@@ -492,9 +494,10 @@ class PlannedEventService
             }
 
             $from = $event->date->copy()->subDays(self::MATCH_WINDOW_DAYS);
+            // Up to today for an overdue plan, but never more than MATCH_WINDOW_MAX_DAYS after its date.
             $to = $event->date->copy()->addDays(self::MATCH_WINDOW_DAYS);
             if ($to->lt($today)) {
-                $to = $today->copy();
+                $to = $today->copy()->min($event->date->copy()->addDays(self::MATCH_WINDOW_MAX_DAYS));
             }
 
             $matches[$event->id] = $this->ledger
