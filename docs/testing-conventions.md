@@ -112,5 +112,5 @@ Not covered: the CSV/PDF *content* of report downloads beyond status code + `Con
 
 ## Pure planning logic
 
-`Waterfall`, `Recurrence` (the dates of a repeating plan), `ForecastEngine` and `ScenarioSuggester` (under `app/Modules/Planning/Support`) have no framework or database dependencies, so they are tested with plain PHPUnit `TestCase`s in `tests/Unit` using hand-built DTOs. Keep new forecast rules there with a failing unit test first; reserve feature tests for the wiring (`PlannerTest`, `IncomeAllocationTest`). In a PHPUnit test class never name a helper `run()`: `TestCase::run()` is final.
+`Waterfall`, `Recurrence` (the dates of a repeating plan), `ProjectedItem`, `ForecastEngine` and `ScenarioSuggester` (under `app/Modules/Planning/Support`) have no framework or database dependencies, so they are tested with plain PHPUnit `TestCase`s in `tests/Unit` using hand-built DTOs. Keep new forecast rules there with a failing unit test first; reserve feature tests for the wiring (`PlannerTest`, `IncomeAllocationTest`, and `ProjectionConsistencyTest`, which checks that the cash flow, the planner and `PlannedOccurrences` agree). In a PHPUnit test class never name a helper `run()`: `TestCase::run()` is final.
 

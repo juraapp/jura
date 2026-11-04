@@ -89,6 +89,16 @@ class CycleProjectionTest extends TestCase
         $this->assertSame('600.00', $projection[$this->savings->id]['projectedClose']->toDecimalString());
     }
 
+    public function test_an_overdue_planned_grocery_expense_counts_as_spent_today(): void
+    {
+        Carbon::setTestNow('2026-11-10 08:00:00');
+        PlannedEvent::factory()->for($this->user)->create([
+            'type' => 'expense', 'amount' => 400, 'currency' => 'COP', 'date' => '2026-10-28', 'category_id' => $this->groceryCategory->id, 'certainty' => 'confirmed',
+        ]);
+
+        $this->assertSame('100.00', $this->projection()[$this->groceries->id]['projectedRelease']->toDecimalString());
+    }
+
     public function test_income_that_is_only_expected_is_ignored_by_the_conservative_view(): void
     {
         PlannedEvent::query()->update(['certainty' => 'speculative']);

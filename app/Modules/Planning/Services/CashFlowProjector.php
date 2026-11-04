@@ -4,19 +4,17 @@ namespace App\Modules\Planning\Services;
 
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\Balances;
-use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Contracts\CashFlowForecast;
 use App\Modules\Planning\Enums\ForecastView;
-use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Support\ProjectedItem;
 use App\Modules\Planning\Support\YieldSimulator;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * Projects account balances month by month from open planned events. Purely
+ * Projects account balances month by month from open planned money (PlannedOccurrences). Purely
  * projected data: nothing here reads or writes real transactions, except the
  * opening balance, which comes from the ledger's current net worth.
  */
@@ -25,6 +23,7 @@ class CashFlowProjector implements CashFlowForecast
     public function __construct(
         private readonly Balances $balances,
         private readonly YieldSimulator $yield,
+        private readonly PlannedOccurrences $occurrences,
     ) {}
 
     /**
@@ -37,27 +36,24 @@ class CashFlowProjector implements CashFlowForecast
 
     public function window(User $user, ForecastView $view, CarbonInterface $from, CarbonInterface $to): array
     {
-        $from = Carbon::instance($from)->startOfDay();
-        $to = Carbon::instance($to)->endOfDay();
+        $from = CarbonImmutable::instance($from)->startOfDay();
+        $to = CarbonImmutable::instance($to)->startOfDay();
 
         $totals = [];
-        PlannedEvent::forUser($user)->open()->where('date', '<=', $to->toDateString())->get()
-            ->each(function (PlannedEvent $event) use (&$totals, $from, $to, $view) {
-                $date = $event->date->lt($from) ? $from : $event->date;
-                if ($date->gt($to)) {
-                    return;
-                }
+        foreach ($this->occurrences->open($user, $to) as $item) {
+            $date = $item->date->lt($from) ? $from : $item->date;
+            if ($date->gt($to)) {
+                continue;
+            }
 
-                $totals[$event->currency] ??= ['income' => Money::zero(), 'expense' => Money::zero()];
+            $totals[$item->currency] ??= ['income' => Money::zero(), 'expense' => Money::zero()];
 
-                if ($event->type === TransactionType::Income) {
-                    if ($view->includesIncome($event->certainty)) {
-                        $totals[$event->currency]['income'] = $totals[$event->currency]['income']->add($event->amount);
-                    }
-                } else {
-                    $totals[$event->currency]['expense'] = $totals[$event->currency]['expense']->add($event->amount);
-                }
-            });
+            if ($item->isIncome() && $view->includesIncome($item->certainty)) {
+                $totals[$item->currency]['income'] = $totals[$item->currency]['income']->add($item->amount);
+            } elseif ($item->isExpense()) {
+                $totals[$item->currency]['expense'] = $totals[$item->currency]['expense']->add($item->amount);
+            }
+        }
 
         ksort($totals);
 
@@ -66,49 +62,41 @@ class CashFlowProjector implements CashFlowForecast
 
     public function project(User $user, ForecastView $view, int $months = 6, ?CarbonInterface $today = null): Collection
     {
-        $today = Carbon::instance($today ?? $user->today())->startOfDay();
-        $firstMonth = $today->copy()->startOfMonth();
-        $horizonEnd = $firstMonth->copy()->addMonthsNoOverflow($months)->subDay()->endOfDay();
+        $today = CarbonImmutable::instance($today ?? $user->today())->startOfDay();
+        $firstMonth = $today->startOfMonth();
+        $horizonEnd = $firstMonth->addMonthsNoOverflow($months)->subDay();
 
-        $events = PlannedEvent::forUser($user)
-            ->open()
-            ->where('date', '<=', $horizonEnd->toDateString())
-            ->get();
+        $items = $this->occurrences->open($user, $horizonEnd);
 
         $opening = $this->balances->netWorthByCurrency($user);
-        $interest = $this->interestByMonth($user, $view, $events, $today, $horizonEnd);
-        $currencies = $opening->keys()->merge($events->pluck('currency'))->unique()->sort()->values();
+        $interest = $this->interestByMonth($user, $view, $items, $today, $horizonEnd);
+        $currencies = $opening->keys()->merge($items->pluck('currency'))->unique()->sort()->values();
 
-        return $currencies->mapWithKeys(function (string $currency) use ($events, $opening, $view, $months, $firstMonth, $today, $interest) {
+        return $currencies->mapWithKeys(function (string $currency) use ($items, $opening, $view, $months, $firstMonth, $today, $interest) {
             $running = $opening->get($currency, Money::zero());
-            $currencyEvents = $events->where('currency', $currency);
+            $byMonth = [];
+            foreach ($items->where('currency', $currency) as $item) {
+                $month = $item->effectiveDate($today)->format('Y-m');
+                $byMonth[$month] ??= ['income' => Money::zero(), 'expense' => Money::zero()];
+
+                if ($item->isIncome() && $view->includesIncome($item->certainty)) {
+                    $byMonth[$month]['income'] = $byMonth[$month]['income']->add($item->amount);
+                } elseif ($item->isExpense()) {
+                    $byMonth[$month]['expense'] = $byMonth[$month]['expense']->add($item->amount);
+                }
+            }
 
             $series = [];
             for ($i = 0; $i < $months; $i++) {
-                $monthStart = $firstMonth->copy()->addMonthsNoOverflow($i);
-                $income = Money::zero();
-                $expense = Money::zero();
-
-                foreach ($currencyEvents as $event) {
-                    if ($this->bucketMonth($event, $today)->ne($monthStart)) {
-                        continue;
-                    }
-
-                    if ($event->type === TransactionType::Income) {
-                        if ($view->includesIncome($event->certainty)) {
-                            $income = $income->add($event->amount);
-                        }
-                    } else {
-                        $expense = $expense->add($event->amount);
-                    }
-                }
-
-                $earned = $interest[$currency][$monthStart->format('Y-m')] ?? Money::zero();
+                $month = $firstMonth->addMonthsNoOverflow($i)->format('Y-m');
+                $income = $byMonth[$month]['income'] ?? Money::zero();
+                $expense = $byMonth[$month]['expense'] ?? Money::zero();
+                $earned = $interest[$currency][$month] ?? Money::zero();
                 $net = $income->subtract($expense)->add($earned);
                 $running = $running->add($net);
 
                 $series[] = [
-                    'month' => $monthStart->format('Y-m'),
+                    'month' => $month,
                     'income' => $income,
                     'expense' => $expense,
                     'interest' => $earned,
@@ -126,39 +114,28 @@ class CashFlowProjector implements CashFlowForecast
     }
 
     /**
-     * Overdue events that are still open are treated as happening this month.
-     */
-    private function bucketMonth(PlannedEvent $event, Carbon $today): Carbon
-    {
-        $date = $event->date->lt($today) ? $today : $event->date;
-
-        return $date->copy()->startOfMonth();
-    }
-
-    /**
      * Interest the yield-bearing accounts are projected to earn, by currency and month, with the
-     * open planned events that hit each account moving its balance on their dates.
+     * open planned money that hits each account moving its balance on its date.
      *
-     * @param  Collection<int, PlannedEvent>  $events
+     * @param  Collection<int, ProjectedItem>  $items
      * @return array<string, array<string, Money>>
      */
-    private function interestByMonth(User $user, ForecastView $view, Collection $events, Carbon $today, Carbon $horizonEnd): array
+    private function interestByMonth(User $user, ForecastView $view, Collection $items, CarbonImmutable $today, CarbonImmutable $horizonEnd): array
     {
         $totals = [];
 
         foreach ($this->balances->yieldBearing($user) as $account) {
             $flows = [];
-            foreach ($events->where('account_id', $account['id']) as $event) {
-                $isIncome = $event->type === TransactionType::Income;
-                if ($isIncome && ! $view->includesIncome($event->certainty)) {
+            foreach ($items->where('accountId', $account['id']) as $item) {
+                if (($item->isIncome() && ! $view->includesIncome($item->certainty)) || (! $item->isIncome() && ! $item->isExpense())) {
                     continue;
                 }
 
-                $date = ($event->date->lt($today) ? $today : $event->date)->toDateString();
-                $flows[$date] = ($flows[$date] ?? Money::zero())->add($isIncome ? $event->amount : $event->amount->negate());
+                $date = $item->effectiveDate($today)->toDateString();
+                $flows[$date] = ($flows[$date] ?? Money::zero())->add($item->isIncome() ? $item->amount : $item->amount->negate());
             }
 
-            $months = $this->yield->run($account['balance'], $account['rate'], $account['compounding'], CarbonImmutable::instance($today), CarbonImmutable::instance($horizonEnd), $flows);
+            $months = $this->yield->run($account['balance'], $account['rate'], $account['compounding'], $today, $horizonEnd->endOfDay(), $flows);
 
             foreach ($months as $month => $row) {
                 $totals[$account['currency']][$month] = ($totals[$account['currency']][$month] ?? Money::zero())->add($row['interest']);

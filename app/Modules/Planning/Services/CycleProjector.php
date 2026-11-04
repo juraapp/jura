@@ -11,11 +11,12 @@ use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Models\Bucket;
-use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Support\CyclePeriod;
+use App\Modules\Planning\Support\ProjectedItem;
 use App\Modules\Planning\Support\Waterfall;
 use App\Modules\Planning\Support\WaterfallBucket;
 use App\Modules\Shared\Support\Money;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
@@ -30,7 +31,7 @@ class CycleProjector
     public function __construct(
         private readonly BucketLedger $funds,
         private readonly Waterfall $waterfall,
-        private readonly PlannedEventService $planned,
+        private readonly PlannedOccurrences $occurrences,
         private readonly LedgerQuery $ledger,
     ) {}
 
@@ -57,13 +58,9 @@ class CycleProjector
         $atWindowEnd = $balances;
 
         $onBudget = $this->ledger->onBudgetAccountIds($user->id);
-        $incomes = PlannedEvent::forUser($user)->open()
-            ->where('type', TransactionType::Income->value)
-            ->where('currency', $currency)
-            ->where('date', '<=', $horizon->toDateString())
-            ->orderBy('date')->orderBy('id')
-            ->get()
-            ->filter(fn (PlannedEvent $event) => $view->includesIncome($event->certainty) && ($event->account_id === null || in_array($event->account_id, $onBudget, true)));
+        $incomes = $this->occurrences->open($user, $horizon, $currency, TransactionType::Income)
+            ->filter(fn (ProjectedItem $item) => $view->includesIncome($item->certainty) && ($item->accountId === null || in_array($item->accountId, $onBudget, true)))
+            ->sortBy(fn (ProjectedItem $item) => $item->effectiveDate(CarbonImmutable::instance($today))->format('Y-m-d'));
 
         /** @var array<int, array<string, Money>> income received per bucket and cycle start, real or simulated */
         $received = [];
@@ -76,8 +73,8 @@ class CycleProjector
         $anyRule = $buckets->contains(fn (Bucket $bucket) => $bucket->fill_rule !== null);
 
         foreach ($incomes as $event) {
-            $date = $event->date->lt($today) ? $today : Carbon::instance($event->date);
-            $overrides = collect($event->allocation_overrides ?? [])
+            $date = Carbon::instance($event->effectiveDate(CarbonImmutable::instance($today)));
+            $overrides = collect($event->allocationOverrides ?? [])
                 ->mapWithKeys(fn (array $row) => [(int) $row['bucket_id'] => Money::of($row['amount'])])
                 ->all();
 
@@ -85,7 +82,7 @@ class CycleProjector
                 continue;
             }
 
-            $eligible = $buckets->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($event->account_id) && ! $bucket->isCompletedOn($date));
+            $eligible = $buckets->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($event->accountId) && ! $bucket->isCompletedOn($date));
             $overrides = array_intersect_key($overrides, $eligible->pluck('id', 'id')->all());
             $inputs = $eligible
                 ->map(fn (Bucket $bucket) => new WaterfallBucket(
@@ -122,7 +119,7 @@ class CycleProjector
             $expected = $atWindowEnd[$bucket->id];
 
             if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null) {
-                $expected = $expected->subtract($this->planned->plannedExpenseTotal($bucket->user_id, $bucket->category_id, $currency, $today, $end));
+                $expected = $expected->subtract($this->occurrences->expenseTotal($bucket->user_id, $bucket->category_id, $currency, $today, $end));
             }
 
             $release = Money::zero();
