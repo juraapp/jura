@@ -19,6 +19,22 @@ class Allocation extends Model
 {
     use BelongsToUser, HasFactory;
 
+    /**
+     * A bucket counts as funded from its earliest allocation on. Saving one dated before the stored date moves
+     * it earlier; nothing moves it later (see BucketLedger::fundedSince).
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (Allocation $allocation) {
+            $date = $allocation->date->toDateString();
+
+            Bucket::forUser($allocation->user_id)
+                ->whereKey($allocation->bucket_id)
+                ->where(fn ($query) => $query->whereNull('funded_since')->orWhere('funded_since', '>', $date))
+                ->update(['funded_since' => $date]);
+        });
+    }
+
     protected function casts(): array
     {
         return [

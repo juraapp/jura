@@ -313,7 +313,12 @@ change or a restore from the Trash).
 - **Move money** (the arrows icon) transfers funds from one bucket to another of the same currency, or back to
   **Ready to assign**. Choose *Into this bucket, from ready to assign* to put unassigned money in the bucket instead.
 - **Assign from ready to assign** (in the bucket form) is the money a bucket starts with, taken from ready to assign.
-  Change it or clear it at any time; it only affects buckets, never your real accounts.
+  It counts from the day you first set it, so for a spending bucket only the category's spending from that day on
+  comes out of it: assigning 400 takes exactly 400 from ready to assign, even if you already spent in that category
+  earlier this month. Change it or clear it at any time; it only affects buckets, never your real accounts.
+- **When a spending bucket starts counting its category.** From the first day money went into it. Removing that first
+  entry later does not change that day, so spending already counted stays counted. If you remove every entry from a
+  bucket whose category had no spending since, it goes back to being a limit only.
 - **More than is ready.** Putting more money in a bucket than is ready to assign (by the starting amount, an addition
   or a move from ready to assign) asks you to confirm first, because your buckets would then hold more than your
   accounts. If you confirm, the money map shows the difference as **over-assigned** until you fix it.

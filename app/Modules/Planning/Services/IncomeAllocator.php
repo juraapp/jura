@@ -134,8 +134,13 @@ class IncomeAllocator
             Allocation::forUser($user)->whereKey($rows->modelKeys())->delete();
 
             foreach ($rows->groupBy('bucket_id') as $bucketId => $bucketRows) {
+                $bucket = Bucket::forUser($user)->find($bucketId);
                 $released = $bucketRows->reduce(fn (Money $sum, Allocation $row) => $sum->add($row->amount), Money::zero());
-                $this->coverShortfall($user, Bucket::forUser($user)->find($bucketId), $released, $transactionId);
+                $this->coverShortfall($user, $bucket, $released, $transactionId);
+
+                if ($bucket !== null) {
+                    $this->funds->forgetFundingIfUnused($bucket);
+                }
             }
         });
     }
