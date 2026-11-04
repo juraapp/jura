@@ -57,7 +57,7 @@ class UpdateTransactionRequest extends FormRequest
                 'nullable',
                 Rule::prohibitedIf($transaction->type !== TransactionType::Expense),
                 'integer',
-                PlanningRules::spendableBucket($this->user()->id, $transaction->account->currency),
+                PlanningRules::spendableBucket($this->user()->id, $transaction->account->currency, $transaction->bucket_id),
                 function (string $attribute, mixed $value, Closure $fail) {
                     if (Account::whereKey((int) $this->input('account_id'))->value('on_budget') === false) {
                         $fail(__('transactions.bucket_off_budget'));
