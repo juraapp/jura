@@ -14,4 +14,8 @@ return [
     'account_required' => 'Elige una cuenta para registrar esta transacción.',
     'currency_mismatch' => 'Este plan está en :currency. Elige una cuenta o transacción en la misma moneda.',
     'auto_post_requires' => 'Para registrarlo automáticamente necesita una cuenta activa y una categoría.',
+    'series_updated' => 'Plan repetido actualizado desde hoy.',
+    'series_paused' => 'Plan repetido en pausa.',
+    'series_resumed' => 'Plan repetido reanudado desde hoy.',
+    'series_deleted' => 'Plan repetido eliminado. Las fechas registradas y omitidas siguen en tu historial.',
 ];
