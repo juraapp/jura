@@ -72,6 +72,25 @@ Because the scope silently turns off without an authenticated user, any code rea
 - **`InsightService`** (Reporting) — turns `ReportService`'s numbers into short, translated sentences ("You spent 12% more than last month"). Every phrase is a parametrized `__()` call over real aggregates, never freeform text.
 - **`TransactionImportService`** (Ledger) — parses/validates/imports a CSV of income/expense rows. Dates are parsed strictly (`checkdate`, no roll-over); amounts accept either separator, resolving a lone `d,ddd`/`d.ddd` with the user's `UserFormat::decimalSeparator()`, and reject exponents, more than two decimals and values beyond `decimal(15,2)`. The confirm endpoint validates row shape and the 1000-row limit again. Never writes a `Transaction` directly; hands validated rows to `TransactionService` so import-created transactions go through the exact same path as manually-created ones.
 
+## Planned money
+
+One form (`MoneyMovementForm`) records money that **already happened** (a `Transaction`) or is **planned** (a
+`PlannedEvent`, optionally one occurrence of a `PlannedEventSeries`). A plan never touches a balance; it ends in one of:
+
+- **confirmed** (`realize`): a real transaction is recorded from it, by the user (one click when it has an account and
+  a category) or by `SeriesPoster` when `auto_post` is set and its date is the owner's today;
+- **matched** (`link`): tied to a transaction the user already recorded;
+- **skipped**: it will not happen (can be reopened);
+- deleted.
+
+A plan whose date has passed while still open, or that could not auto-post (`post_error`), is in the **needs review**
+inbox (`UpcomingPlans::needsReview`, shown on the cash flow page, the dashboard and as the sidebar badge) and counts as
+happening today in every projection (`ProjectedItem::effectiveDate`). Every projection reads open plans through
+`PlannedOccurrences`, which adds the not-yet-stored dates of active series, so any horizon sees the same money. A series
+is a rule: edited from today on, paused or resumed, never back-posting; stored history (realized and skipped
+occurrences) is never rewritten. The transactions list shows the next 30 days and the overdue plans above it, labelled
+as projected; real and projected totals are never mixed.
+
 ## Money map (ready to assign)
 
 Envelope budgeting, per currency, **computed and never stored**:
