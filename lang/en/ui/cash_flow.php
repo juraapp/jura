@@ -26,7 +26,7 @@ return [
     'add_first' => 'Add my first planned event',
     'select_all' => 'Select all',
     'noun' => 'planned events',
-    'bulk_note' => 'Deleting an occurrence of a repeating event removes only that one; the rest of the series stays.',
+    'bulk_note' => 'Deleting an occurrence of a repeating event removes only that one; the rest of the series stays. Plans already done are kept.',
     'select_one' => 'Select {name}',
     'overdue' => 'Overdue',
     'repeats_tip' => 'Repeats',

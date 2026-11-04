@@ -26,7 +26,7 @@ return [
     'add_first' => 'Agregar mi primer evento planeado',
     'select_all' => 'Seleccionar todo',
     'noun' => 'eventos planeados',
-    'bulk_note' => 'Eliminar una ocurrencia de un evento repetitivo quita solo esa; el resto de la serie se conserva.',
+    'bulk_note' => 'Eliminar una ocurrencia de un evento repetitivo quita solo esa; el resto de la serie se conserva. Los planes ya hechos se conservan.',
     'select_one' => 'Seleccionar {name}',
     'overdue' => 'Vencido',
     'repeats_tip' => 'Se repite',

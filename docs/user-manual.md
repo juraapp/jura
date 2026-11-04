@@ -211,7 +211,8 @@ income, planned expenses and your projected balance, per currency. Today's balan
   it** button. Nothing is ever linked without your confirmation.
 - Press **Skip** for something that will not happen. A skipped plan stays in the list (dimmed) with **Reopen**
   to plan it again and **Delete** to remove it.
-- **Delete** removes a plan for good. Deleting one occurrence of a repeating event never brings it back.
+- **Delete** removes a plan for good. Deleting one occurrence of a repeating event never brings it back. Deleting several
+  at once leaves plans already marked as done alone.
 - A plan marked as done cannot be reopened directly. To undo it, delete its real transaction: the plan becomes
   open again. Restoring that transaction from the Trash marks the plan as done again, unless you have already
   closed it with another transaction.
