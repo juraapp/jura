@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning;
 
+use App\Modules\Ledger\Events\AccountBudgetChanged;
 use App\Modules\Ledger\Events\ExpenseRecorded;
 use App\Modules\Ledger\Events\ExpenseRemoved;
 use App\Modules\Ledger\Events\IncomeRecorded;
@@ -20,6 +21,7 @@ use App\Modules\Planning\Listeners\AllocateIncome;
 use App\Modules\Planning\Listeners\ReleaseIncomeAllocations;
 use App\Modules\Planning\Listeners\RelinkRestoredRecords;
 use App\Modules\Planning\Listeners\ReverseLinkedRecords;
+use App\Modules\Planning\Listeners\SyncAccountBudget;
 use App\Modules\Planning\Listeners\SyncExpenseSpend;
 use App\Modules\Planning\Listeners\UnlinkPurgedRecords;
 use App\Modules\Planning\Services\BucketService;
@@ -54,6 +56,7 @@ class PlanningServiceProvider extends ServiceProvider
         Event::listen(TransactionDeleted::class, ReverseLinkedRecords::class);
         Event::listen(TransactionRestored::class, RelinkRestoredRecords::class);
         Event::listen(TransactionPurged::class, UnlinkPurgedRecords::class);
+        Event::listen(AccountBudgetChanged::class, SyncAccountBudget::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([ExtendPlannedEventSeries::class, CloseBucketCycles::class]);

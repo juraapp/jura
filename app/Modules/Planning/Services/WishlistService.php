@@ -122,21 +122,46 @@ class WishlistService
     }
 
     /**
+     * The account that paid for some purchases left the budget (their bucket gets the money back, the items stay
+     * purchased) or came back (the bucket pays again what it has, up to the price).
+     *
+     * @param  array<int, Money>  $amounts  transaction id => amount, the account's expenses paid from a bucket
+     */
+    public function accountBudgetChanged(User $user, array $amounts, bool $inBudget): void
+    {
+        if ($amounts === []) {
+            return;
+        }
+
+        WishlistItem::forUser($user)
+            ->whereIn('purchased_transaction_id', array_keys($amounts))
+            ->where('status', WishlistStatus::Purchased->value)
+            ->get()
+            ->each(function (WishlistItem $item) use ($amounts, $inBudget) {
+                if (! $inBudget) {
+                    $this->removePurchaseSpend($item);
+                    $item->update(['purchase_allocation_id' => null]);
+
+                    return;
+                }
+
+                if ($item->purchase_allocation_id === null && $item->bucket !== null) {
+                    $item->update(['purchase_allocation_id' => $this->spendFromBucket(
+                        $item, $item->purchased_transaction_id, $amounts[$item->purchased_transaction_id], $item->purchased_on,
+                    )]);
+                }
+            });
+    }
+
+    /**
      * Records the purchase: the bucket pays what it has, up to the price (the rest comes out of ready to assign).
      * An off-budget account's money is not budgeted, so a purchase paid from one takes nothing from the bucket.
      */
     private function applyPurchase(WishlistItem $item, int $transactionId, Money $amount, Carbon $date, int $accountId): void
     {
-        $allocationId = null;
-        if ($item->bucket !== null && $this->ledger->isOnBudget($item->user_id, $accountId)) {
-            $covered = $this->smaller($amount, $this->funds->available($item->bucket));
-
-            if ($covered->isPositive()) {
-                $allocationId = $this->funds
-                    ->credit($item->bucket, $covered->negate(), AllocationSource::Spend, $transactionId, $date, $item->name)
-                    ->id;
-            }
-        }
+        $allocationId = $item->bucket !== null && $this->ledger->isOnBudget($item->user_id, $accountId)
+            ? $this->spendFromBucket($item, $transactionId, $amount, $date)
+            : null;
 
         $completion = null;
         if ($item->bucket !== null && $item->bucket->completes_on_purchase && ! $item->bucket->isCompletedOn($date)) {
@@ -163,13 +188,7 @@ class WishlistService
             $this->takeBackLeftover($item);
         }
 
-        if ($item->purchase_allocation_id !== null) {
-            Allocation::forUser($item->user_id)->whereKey($item->purchase_allocation_id)->delete();
-
-            if ($item->bucket !== null) {
-                $this->funds->forgetFundingIfUnused($item->bucket);
-            }
-        }
+        $this->removePurchaseSpend($item);
 
         $item->update([
             'status' => WishlistStatus::Wanted,
@@ -206,6 +225,31 @@ class WishlistService
             Allocation::forUser($item->user_id)->whereKey($rows->modelKeys())->delete();
         } elseif ($back->isPositive()) {
             $this->funds->move($target, $item->bucket, $back, null, AllocationSource::Carry, $item->purchased_on);
+        }
+    }
+
+    /**
+     * The bucket pays what it has, up to the amount; returns the spend row's id (null when it had nothing).
+     */
+    private function spendFromBucket(WishlistItem $item, int $transactionId, Money $amount, CarbonInterface $date): ?int
+    {
+        $covered = $this->smaller($amount, $this->funds->available($item->bucket));
+
+        return $covered->isPositive()
+            ? $this->funds->credit($item->bucket, $covered->negate(), AllocationSource::Spend, $transactionId, $date, $item->name)->id
+            : null;
+    }
+
+    private function removePurchaseSpend(WishlistItem $item): void
+    {
+        if ($item->purchase_allocation_id === null) {
+            return;
+        }
+
+        Allocation::forUser($item->user_id)->whereKey($item->purchase_allocation_id)->delete();
+
+        if ($item->bucket !== null) {
+            $this->funds->forgetFundingIfUnused($item->bucket);
         }
     }
 

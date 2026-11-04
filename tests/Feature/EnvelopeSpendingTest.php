@@ -178,4 +178,60 @@ class EnvelopeSpendingTest extends TestCase
         $this->assertSame('1050.00', $this->envelope($fund));
         $this->assertSame('950.00', $this->ready());
     }
+
+    /**
+     * @return array{trip: string, groceries: string, ready: string}
+     */
+    private function figures(Bucket $trip, Bucket $groceries): array
+    {
+        return ['trip' => $this->envelope($trip), 'groceries' => $this->envelope($groceries), 'ready' => $this->ready()];
+    }
+
+    public function test_an_account_leaving_the_budget_stops_touching_every_envelope_and_coming_back_restores_it(): void
+    {
+        $card = Account::factory()->for($this->user)->create(['currency' => 'COP', 'initial_balance' => 0]);
+        $trip = $this->savings('Trip');
+        $groceries = $this->groceries();
+        $this->fund($trip, 300);
+        $this->fund($groceries, 300);
+        $this->post('/finances/transactions', ['type' => 'expense', 'account_id' => $card->id, 'category_id' => $this->food->id, 'amount' => 100, 'date' => '2026-10-12', 'bucket_id' => $trip->id])->assertSessionHasNoErrors();
+        $this->post('/finances/transactions', ['type' => 'expense', 'account_id' => $card->id, 'category_id' => $this->food->id, 'amount' => 50, 'date' => '2026-10-12'])->assertSessionHasNoErrors();
+        // In accounts 1000 - 150 = 850; trip 200, groceries 250; ready 850 - 450 = 400.
+        $inBudget = ['trip' => '200.00', 'groceries' => '250.00', 'ready' => '400.00'];
+        // Without the card: in accounts 1000; trip 300, groceries 300; ready 1000 - 600 = 400.
+        $outOfBudget = ['trip' => '300.00', 'groceries' => '300.00', 'ready' => '400.00'];
+        $this->assertSame($inBudget, $this->figures($trip, $groceries));
+
+        $card->update(['on_budget' => false]);
+        $this->assertSame($outOfBudget, $this->figures($trip, $groceries));
+
+        $card->update(['on_budget' => true]);
+        $this->assertSame($inBudget, $this->figures($trip, $groceries));
+
+        $this->delete("/accounts/{$card->id}")->assertSessionHas('warning');
+        $this->assertFalse($card->fresh()->is_active);
+        $this->assertSame($outOfBudget, $this->figures($trip, $groceries));
+
+        $card->fresh()->update(['is_active' => true]);
+        $this->assertSame($inBudget, $this->figures($trip, $groceries));
+    }
+
+    public function test_a_purchase_paid_by_an_account_that_leaves_the_budget_gives_its_bucket_the_money_back(): void
+    {
+        $card = Account::factory()->for($this->user)->create(['currency' => 'COP', 'initial_balance' => 0]);
+        $bike = $this->savings('Bike');
+        $this->fund($bike, 200);
+        $item = WishlistItem::factory()->for($this->user)->create(['currency' => 'COP', 'price' => 80, 'bucket_id' => $bike->id]);
+        $this->buy($item, $card);
+        // In accounts 920; bike 120; ready 800.
+        $this->assertSame(['120.00', '800.00'], [$this->envelope($bike), $this->ready()]);
+
+        $card->update(['on_budget' => false]);
+        // In accounts 1000; bike 200; ready 800. The item stays bought.
+        $this->assertSame(['200.00', '800.00'], [$this->envelope($bike), $this->ready()]);
+        $this->assertSame('purchased', $item->fresh()->status->value);
+
+        $card->update(['on_budget' => true]);
+        $this->assertSame(['120.00', '800.00'], [$this->envelope($bike), $this->ready()]);
+    }
 }
