@@ -2,8 +2,6 @@
 
 namespace App\Modules\Planning\Http\Controllers;
 
-use App\Modules\Ledger\Contracts\LedgerQuery;
-use App\Modules\Ledger\Enums\CategoryType;
 use App\Modules\Planning\Enums\Certainty;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Enums\PlannedEventStatus;
@@ -14,6 +12,7 @@ use App\Modules\Planning\Http\Requests\PlannedEvents\StorePlannedEventRequest;
 use App\Modules\Planning\Http\Requests\PlannedEvents\UpdatePlannedEventRequest;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\PlannedEventSeries;
 use App\Modules\Planning\Services\CashFlowProjector;
 use App\Modules\Planning\Services\PlannedEventPresenter;
 use App\Modules\Planning\Services\PlannedEventService;
@@ -29,7 +28,7 @@ use Inertia\Response;
 
 class PlannedEventController extends Controller
 {
-    public function index(Request $request, CashFlowProjector $projector, PlannedEventService $service, LedgerQuery $ledger, PlannedEventPresenter $presenter): Response
+    public function index(Request $request, CashFlowProjector $projector, PlannedEventService $service, PlannedEventPresenter $presenter): Response
     {
         $this->authorize('viewAny', PlannedEvent::class);
 
@@ -63,18 +62,22 @@ class PlannedEventController extends Controller
             ])->values(),
         ])->values();
 
+        $today = $request->user()->today();
+        $series = PlannedEventSeries::with(['account', 'category'])
+            ->orderByDesc('is_active')
+            ->orderBy('description')
+            ->get()
+            ->map(fn (PlannedEventSeries $rule) => $presenter->series($rule, $service->nextDate($rule, $today)))
+            ->values();
+
         return Inertia::render('CashFlow/Index', [
             'events' => $events->map(fn (PlannedEvent $event) => $presenter->event($event, $matches[$event->id] ?? null))->values(),
+            'series' => $series,
             'projection' => $projection,
             'view' => $view->value,
             'views' => collect(ForecastView::cases())->map(fn (ForecastView $case) => ['value' => $case->value, 'label' => $case->label()]),
             'months' => $months,
-            'accounts' => $ledger->activeAccountOptions($request->user()->id),
-            'expenseCategories' => $ledger->categoryOptions($request->user()->id, CategoryType::Expense, ['id', 'name', 'icon', 'color']),
-            'incomeCategories' => $ledger->categoryOptions($request->user()->id, CategoryType::Income, ['id', 'name', 'icon', 'color']),
-            'frequencies' => collect(RecurringFrequency::cases())->map(fn (RecurringFrequency $case) => ['value' => $case->value, 'label' => $case->label()]),
-            'buckets' => Bucket::inPriorityOrder()->get(['id', 'name', 'currency']),
-            'certainties' => collect(Certainty::cases())->map(fn (Certainty $case) => ['value' => $case->value, 'label' => $case->label()]),
+            'section' => in_array($request->query('section'), ['repeating', 'review'], true) ? $request->query('section') : null,
         ]);
     }
 

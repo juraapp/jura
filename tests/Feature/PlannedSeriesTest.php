@@ -12,6 +12,7 @@ use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class PlannedSeriesTest extends TestCase
@@ -223,5 +224,25 @@ class PlannedSeriesTest extends TestCase
             ->assertJsonPath('isActive', true);
 
         $this->actingAs(User::factory()->create())->getJson("/planning/series/{$series->id}/edit-data")->assertNotFound();
+    }
+
+    public function test_the_cash_flow_page_lists_repeating_plans_with_their_next_date(): void
+    {
+        $series = $this->series(['auto_post' => true]);
+        $paused = PlannedEventSeries::factory()->for($this->user)->create(['description' => 'Zoo', 'is_active' => false]);
+        PlannedEventSeries::factory()->create();
+
+        $this->actingAs($this->user)->get('/planning/cash-flow?section=repeating')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('CashFlow/Index')
+                ->where('section', 'repeating')
+                ->has('series', 2)
+                ->where('series.0.id', $series->id)
+                ->where('series.0.nextDate', '2026-12-05')
+                ->where('series.0.autoPost', true)
+                ->where('series.1.id', $paused->id)
+                ->where('series.1.isActive', false)
+                ->missing('accounts')
+            );
     }
 }

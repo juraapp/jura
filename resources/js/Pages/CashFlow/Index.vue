@@ -1,18 +1,14 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, ref, watch } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Modal from '@/Components/Modal.vue';
-import ModalForm from '@/Components/ModalForm.vue';
 import Money from '@/Components/Money.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import InputError from '@/Components/InputError.vue';
-import TextInput from '@/Components/TextInput.vue';
-import SelectInput from '@/Components/SelectInput.vue';
+import SeriesList from '@/Components/SeriesList.vue';
 import SegmentedControl from '@/Components/SegmentedControl.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -21,15 +17,14 @@ import { useDarkMode } from '@/composables/useDarkMode';
 import { CHART_PALETTE, formatCompact, formatMoney } from '@/chartPalette';
 import {
     index as plannedEventsIndex,
-    store,
-    update,
     destroy,
-    realize,
     skip,
     reopen,
+    realize,
     link,
     bulkDestroy,
 } from '@/actions/App/Modules/Planning/Http/Controllers/PlannedEventController';
+import { useTransactionModal } from '@/composables/useTransactionModal';
 import { useFormat } from '@/composables/useFormat';
 import BulkCheckbox from '@/Components/BulkCheckbox.vue';
 import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
@@ -45,12 +40,16 @@ const props = defineProps({
     view: { type: String, required: true },
     views: { type: Array, required: true },
     months: { type: Number, required: true },
-    accounts: { type: Array, required: true },
-    expenseCategories: { type: Array, required: true },
-    incomeCategories: { type: Array, required: true },
-    frequencies: { type: Array, required: true },
-    certainties: { type: Array, required: true },
-    buckets: { type: Array, required: true },
+    series: { type: Array, required: true },
+    section: { type: String, default: null },
+});
+
+const { openPlanned, openConfirm } = useTransactionModal();
+
+onMounted(() => {
+    if (props.section) {
+        document.getElementById(props.section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 });
 
 const bulk = useBulkSelection(() => props.events);
@@ -115,91 +114,15 @@ const chartSeries = (currency) => [
     { name: t('ui.cash_flow.s_balance'), type: 'line', data: currency.months.map((m) => m.closing) },
 ];
 
-/* ---- create / edit ---- */
-const showModal = ref(false);
-const editingEvent = ref(null);
+/* A plan with an account and a category is confirmed in one click; otherwise the form asks for what is missing. */
+const confirmEvent = (event) => {
+    if (event.account && event.category) {
+        router.post(realize.url(event.id), {}, { preserveScroll: true });
 
-const form = useForm({
-    type: 'expense',
-    description: '',
-    amount: '',
-    date: today,
-    certainty: 'expected',
-    account_id: '',
-    category_id: '',
-    notes: '',
-    frequency: '',
-    ends_on: '',
-    scope: 'this',
-    allocation_overrides: [],
-});
+        return;
+    }
 
-// Per-bucket amounts for an income, edited as { [bucketId]: amount } and sent as a list.
-const overrideAmounts = ref({});
-form.transform((data) => ({
-    ...data,
-    allocation_overrides: data.type === 'income'
-        ? Object.entries(overrideAmounts.value).filter(([, amount]) => Number(amount) > 0).map(([id, amount]) => ({ bucket_id: Number(id), amount }))
-        : [],
-}));
-
-const categoriesForType = computed(() => (form.type === 'income' ? props.incomeCategories : props.expenseCategories));
-
-const openCreateModal = (type = 'expense') => {
-    editingEvent.value = null;
-    form.reset();
-    form.clearErrors();
-    form.type = type;
-    form.date = todayDate();
-    overrideAmounts.value = {};
-    showModal.value = true;
-};
-
-const openEditModal = (event) => {
-    editingEvent.value = event;
-    form.clearErrors();
-    form.type = event.type;
-    form.description = event.description;
-    form.amount = String(event.amount);
-    form.date = event.date;
-    form.certainty = event.certainty;
-    form.account_id = event.account?.id ?? '';
-    form.category_id = event.category?.id ?? '';
-    form.notes = event.notes ?? '';
-    form.frequency = '';
-    form.ends_on = '';
-    form.scope = 'this';
-    overrideAmounts.value = Object.fromEntries((event.allocationOverrides ?? []).map((row) => [row.bucket_id, String(row.amount)]));
-    showModal.value = true;
-};
-
-const closeModal = () => {
-    showModal.value = false;
-};
-
-const submit = () => {
-    const action = editingEvent.value ? update(editingEvent.value.id) : store();
-    form.submit(action, { preserveScroll: true, onSuccess: () => closeModal() });
-};
-
-/* ---- realize ---- */
-const realizing = ref(null);
-const realizeForm = useForm({ account_id: '', category_id: '', amount: '', date: today, description: '' });
-
-const openRealize = (event) => {
-    realizing.value = event;
-    realizeForm.clearErrors();
-    realizeForm.account_id = event.account?.id ?? (props.accounts.length === 1 ? props.accounts[0].id : '');
-    realizeForm.category_id = event.category?.id ?? '';
-    realizeForm.amount = String(event.amount);
-    realizeForm.date = todayDate();
-    realizeForm.description = event.description;
-};
-
-const realizeCategories = computed(() => (realizing.value?.type === 'income' ? props.incomeCategories : props.expenseCategories));
-
-const submitRealize = () => {
-    realizeForm.submit(realize(realizing.value.id), { preserveScroll: true, onSuccess: () => (realizing.value = null) });
+    openConfirm(event);
 };
 
 /* ---- skip / link / delete ---- */
@@ -229,16 +152,10 @@ const deleteEvent = () => {
         <template #header>
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.cash_flow.title') }}</h2>
-                <div class="flex items-center gap-2">
-                    <SecondaryButton type="button" @click="openCreateModal('income')">
-                        <DynamicIcon name="arrow-up-circle" class="h-4 w-4" />
-                        {{ $t('ui.cash_flow.expect_income') }}
-                    </SecondaryButton>
-                    <PrimaryButton type="button" @click="openCreateModal('expense')">
-                        <DynamicIcon name="plus" class="h-4 w-4" />
-                        {{ $t('ui.cash_flow.plan_event') }}
-                    </PrimaryButton>
-                </div>
+                <PrimaryButton type="button" @click="openPlanned(null, { type: 'expense' })">
+                    <DynamicIcon name="plus" class="h-4 w-4" />
+                    {{ $t('ui.cash_flow.add') }}
+                </PrimaryButton>
             </div>
         </template>
 
@@ -298,6 +215,11 @@ const deleteEvent = () => {
                 </div>
             </section>
 
+            <section id="repeating" class="scroll-mt-20">
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.cash_flow.repeating_title') }}</h3>
+                <SeriesList :series="series" />
+            </section>
+
             <section>
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('ui.cash_flow.planned_events') }}</h3>
 
@@ -308,7 +230,7 @@ const deleteEvent = () => {
                     :description="$t('ui.cash_flow.empty_hint')"
                 >
                     <template #action>
-                        <PrimaryButton type="button" @click="openCreateModal('income')">
+                        <PrimaryButton type="button" @click="openPlanned(null, { type: 'income' })">
                             <DynamicIcon name="plus" class="h-4 w-4" />
                             {{ $t('ui.cash_flow.add_first') }}
                         </PrimaryButton>
@@ -350,7 +272,9 @@ const deleteEvent = () => {
                                             <span class="rounded-full px-2 py-0.5 font-medium" :class="certaintyClass(event.certainty)">{{ event.certaintyLabel }}</span>
                                             <span v-if="event.status !== 'planned'" class="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ event.statusLabel }}</span>
                                             <span v-if="event.account">{{ event.account.name }}</span>
+                                            <span v-if="event.autoPost && event.status === 'planned'" class="rounded-full bg-primary-50 px-2 py-0.5 font-medium text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">{{ $t('ui.cash_flow.auto') }}</span>
                                         </p>
+                                        <p v-if="event.postError && event.status === 'planned'" class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $t(`ui.cash_flow.post_error.${event.postError}`) }}</p>
                                     </div>
 
                                     <p
@@ -361,13 +285,13 @@ const deleteEvent = () => {
                                     </p>
 
                                     <div v-if="event.status === 'planned'" class="flex items-center gap-1">
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" :title="$t('ui.cash_flow.mark_done')" :aria-label="$t('ui.cash_flow.mark_done')" @click="openRealize(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" :title="$t('ui.cash_flow.mark_done')" :aria-label="$t('ui.cash_flow.mark_done')" @click="confirmEvent(event)">
                                             <DynamicIcon name="check-circle" class="h-4 w-4" />
                                         </button>
                                         <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.skip')" :aria-label="$t('ui.cash_flow.skip')" @click="skipEvent(event)">
                                             <DynamicIcon name="forward" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.edit')" :aria-label="$t('ui.cash_flow.edit')" @click="openEditModal(event)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.cash_flow.edit')" :aria-label="$t('ui.cash_flow.edit')" @click="openPlanned(event)">
                                             <DynamicIcon name="pencil" class="h-4 w-4" />
                                         </button>
                                         <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="askDelete(event)">
@@ -403,170 +327,6 @@ const deleteEvent = () => {
                 </div>
             </section>
         </div>
-
-        <ModalForm :show="showModal" :title="editingEvent ? $t('ui.cash_flow.edit_event') : $t('ui.cash_flow.new_event')" @close="closeModal">
-            <form id="planned-event-form" class="space-y-4" @submit.prevent="submit">
-                <div class="flex gap-2">
-                    <button
-                        v-for="option in [{ value: 'expense', label: t('ui.cash_flow.expense') }, { value: 'income', label: t('ui.cash_flow.income_one') }]"
-                        :key="option.value"
-                        type="button"
-                        class="flex-1 rounded-lg border px-3 py-2 text-sm font-medium"
-                        :class="form.type === option.value
-                            ? 'border-primary-600 bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-400'
-                            : 'border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300'"
-                        @click="form.type = option.value; form.category_id = ''"
-                    >
-                        {{ option.label }}
-                    </button>
-                </div>
-
-                <div>
-                    <InputLabel for="description" :value="$t('ui.cash_flow.what')" />
-                    <TextInput id="description" v-model="form.description" type="text" class="mt-1 block w-full" :placeholder="$t('ui.cash_flow.what_placeholder')" />
-                    <InputError class="mt-1" :message="form.errors.description" />
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <InputLabel for="amount" :value="$t('ui.cash_flow.amount')" />
-                        <TextInput id="amount" v-model="form.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
-                        <InputError class="mt-1" :message="form.errors.amount" />
-                    </div>
-                    <div>
-                        <InputLabel for="date" :value="$t('ui.cash_flow.date')" />
-                        <TextInput id="date" v-model="form.date" type="date" class="mt-1 block w-full" :disabled="editingEvent && editingEvent.seriesId && form.scope === 'future'" />
-                        <InputError class="mt-1" :message="form.errors.date" />
-                    </div>
-                </div>
-
-                <div>
-                    <InputLabel for="certainty" :value="$t('ui.cash_flow.how_sure')" />
-                    <SelectInput id="certainty" v-model="form.certainty">
-                        <option v-for="certainty in certainties" :key="certainty.value" :value="certainty.value">{{ certainty.label }}</option>
-                    </SelectInput>
-                    <InputError class="mt-1" :message="form.errors.certainty" />
-                </div>
-
-                <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700">
-                    <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200">{{ $t('ui.cash_flow.more') }}</summary>
-                    <div class="mt-3 space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <InputLabel for="account_id" :value="$t('ui.cash_flow.account_opt')" />
-                                <SelectInput id="account_id" v-model="form.account_id">
-                                    <option value="">{{ $t('ui.cash_flow.any_account') }}</option>
-                                    <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
-                                </SelectInput>
-                                <InputError class="mt-1" :message="form.errors.account_id" />
-                            </div>
-                            <div>
-                                <InputLabel for="category_id" :value="$t('ui.cash_flow.category_opt')" />
-                                <SelectInput id="category_id" v-model="form.category_id">
-                                    <option value="">{{ $t('ui.cash_flow.none_yet') }}</option>
-                                    <option v-for="category in categoriesForType" :key="category.id" :value="category.id">{{ category.name }}</option>
-                                </SelectInput>
-                                <InputError class="mt-1" :message="form.errors.category_id" />
-                            </div>
-                        </div>
-
-                        <div v-if="!editingEvent" class="grid grid-cols-2 gap-4">
-                            <div>
-                                <InputLabel for="frequency" :value="$t('ui.cash_flow.repeats_label')" />
-                                <SelectInput id="frequency" v-model="form.frequency">
-                                    <option value="">{{ $t('ui.cash_flow.no_repeat') }}</option>
-                                    <option v-for="frequency in frequencies" :key="frequency.value" :value="frequency.value">{{ frequency.label }}</option>
-                                </SelectInput>
-                            </div>
-                            <div>
-                                <InputLabel for="ends_on" :value="$t('ui.cash_flow.until')" />
-                                <TextInput id="ends_on" v-model="form.ends_on" type="date" class="mt-1 block w-full" :disabled="!form.frequency" />
-                                <InputError class="mt-1" :message="form.errors.ends_on" />
-                            </div>
-                        </div>
-
-                        <div v-if="form.type === 'income' && buckets.length && !(editingEvent && editingEvent.seriesId)">
-                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('ui.cash_flow.where_income') }}</p>
-                            <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
-                                {{ $t('ui.cash_flow.where_income_hint') }}
-                            </p>
-                            <div v-for="bucket in buckets" :key="bucket.id" class="mb-1.5 flex items-center justify-between gap-3">
-                                <span class="text-sm text-gray-700 dark:text-gray-200">{{ bucket.name }} <span class="text-xs text-gray-400">{{ bucket.currency }}</span></span>
-                                <TextInput v-model="overrideAmounts[bucket.id]" type="number" step="0.01" min="0" class="block w-32" placeholder="0" />
-                            </div>
-                            <InputError class="mt-1" :message="form.errors['allocation_overrides.0.bucket_id'] || form.errors['allocation_overrides.0.amount']" />
-                        </div>
-
-                        <div>
-                            <InputLabel for="notes" :value="$t('ui.cash_flow.notes')" />
-                            <TextInput id="notes" v-model="form.notes" type="text" class="mt-1 block w-full" />
-                        </div>
-                    </div>
-                </details>
-
-                <fieldset v-if="editingEvent && editingEvent.seriesId" class="space-y-2 rounded-lg bg-gray-50 px-4 py-3 text-sm dark:bg-gray-900/40">
-                    <legend class="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $t('ui.cash_flow.this_repeats') }}</legend>
-                    <label class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-                        <input v-model="form.scope" type="radio" value="this" class="text-primary-600" /> {{ $t('ui.cash_flow.only_this') }}
-                    </label>
-                    <label class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-                        <input v-model="form.scope" type="radio" value="future" class="text-primary-600" /> {{ $t('ui.cash_flow.this_future') }}
-                    </label>
-                </fieldset>
-            </form>
-
-            <template #footer>
-                <SecondaryButton type="button" @click="closeModal">{{ $t('ui.common.cancel') }}</SecondaryButton>
-                <PrimaryButton form="planned-event-form" type="submit" :disabled="form.processing">{{ $t('ui.cash_flow.save') }}</PrimaryButton>
-            </template>
-        </ModalForm>
-
-        <ModalForm
-            :show="realizing !== null"
-            :title="$t('ui.cash_flow.done_title')"
-            :description="$t('ui.cash_flow.done_hint')"
-            @close="realizing = null"
-        >
-            <form id="realize-form" class="space-y-4" @submit.prevent="submitRealize">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <InputLabel for="r_amount" :value="$t('ui.cash_flow.amount')" />
-                        <TextInput id="r_amount" v-model="realizeForm.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
-                        <InputError class="mt-1" :message="realizeForm.errors.amount" />
-                    </div>
-                    <div>
-                        <InputLabel for="r_date" :value="$t('ui.cash_flow.date')" />
-                        <TextInput id="r_date" v-model="realizeForm.date" type="date" class="mt-1 block w-full" />
-                        <InputError class="mt-1" :message="realizeForm.errors.date" />
-                    </div>
-                </div>
-                <div>
-                    <InputLabel for="r_account" :value="$t('ui.cash_flow.account')" />
-                    <SelectInput id="r_account" v-model="realizeForm.account_id">
-                        <option value="">{{ $t('ui.cash_flow.select_account') }}</option>
-                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
-                    </SelectInput>
-                    <InputError class="mt-1" :message="realizeForm.errors.account_id" />
-                </div>
-                <div>
-                    <InputLabel for="r_category" :value="$t('ui.cash_flow.category')" />
-                    <SelectInput id="r_category" v-model="realizeForm.category_id">
-                        <option value="">{{ $t('ui.cash_flow.select_category') }}</option>
-                        <option v-for="category in realizeCategories" :key="category.id" :value="category.id">{{ category.name }}</option>
-                    </SelectInput>
-                    <InputError class="mt-1" :message="realizeForm.errors.category_id" />
-                </div>
-                <div>
-                    <InputLabel for="r_description" :value="$t('ui.cash_flow.description')" />
-                    <TextInput id="r_description" v-model="realizeForm.description" type="text" class="mt-1 block w-full" />
-                </div>
-            </form>
-
-            <template #footer>
-                <SecondaryButton type="button" @click="realizing = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
-                <PrimaryButton form="realize-form" type="submit" :disabled="realizeForm.processing">{{ $t('ui.cash_flow.record') }}</PrimaryButton>
-            </template>
-        </ModalForm>
 
         <Modal :show="confirmingDelete !== null" @close="confirmingDelete = null">
             <div class="p-6">
