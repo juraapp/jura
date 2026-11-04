@@ -10,7 +10,6 @@ use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Enums\WishlistStatus;
 use App\Modules\Planning\Models\Bucket;
-use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\WishlistItem;
 use App\Modules\Planning\Support\Forecast\EngineBucket;
 use App\Modules\Planning\Support\Forecast\EngineIncome;
@@ -19,6 +18,7 @@ use App\Modules\Planning\Support\Forecast\EngineLine;
 use App\Modules\Planning\Support\Forecast\EngineResult;
 use App\Modules\Planning\Support\Forecast\ForecastEngine;
 use App\Modules\Planning\Support\Forecast\ScenarioSuggester;
+use App\Modules\Planning\Support\ProjectedItem;
 use Carbon\CarbonImmutable;
 
 /**
@@ -33,6 +33,7 @@ class PlannerService
         private readonly ScenarioSuggester $suggester,
         private readonly MoneyMap $moneyMap,
         private readonly LedgerQuery $ledger,
+        private readonly PlannedOccurrences $occurrences,
     ) {}
 
     public function context(User $user, string $currency, ForecastView $view, int $horizonMonths): PlannerContext
@@ -71,15 +72,10 @@ class PlannerService
         })->values()->all();
 
         $onBudget = $this->ledger->onBudgetAccountIds($user->id);
-        $incomes = PlannedEvent::forUser($user)
-            ->open()
-            ->where('type', TransactionType::Income->value)
-            ->where('currency', $currency)
-            ->where('date', '<=', $end->toDateString())
-            ->orderBy('date')
-            ->get()
-            ->filter(fn (PlannedEvent $event) => $view->includesIncome($event->certainty) && ($event->account_id === null || in_array($event->account_id, $onBudget, true)))
-            ->map(fn (PlannedEvent $event) => new EngineIncome(CarbonImmutable::parse($event->date->toDateString()), $event->amount, $event->account_id))
+        $incomes = $this->occurrences->open($user, $end, $currency, TransactionType::Income)
+            ->filter(fn (ProjectedItem $item) => $view->includesIncome($item->certainty) && ($item->accountId === null || in_array($item->accountId, $onBudget, true)))
+            ->map(fn (ProjectedItem $item) => new EngineIncome($item->effectiveDate($start), $item->amount, $item->accountId))
+            ->sortBy(fn (EngineIncome $income) => $income->date->format('Y-m-d'))
             ->values()
             ->all();
 

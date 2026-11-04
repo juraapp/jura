@@ -5,7 +5,6 @@ namespace App\Modules\Planning\Services;
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
-use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
@@ -33,6 +32,7 @@ class PlannedEventService
         private readonly LedgerQuery $ledger,
         private readonly RecordsTransactions $transactions,
         private readonly IncomeAllocator $allocator,
+        private readonly PlannedOccurrences $occurrences,
     ) {}
 
     /**
@@ -467,19 +467,11 @@ class PlannedEventService
     }
 
     /**
-     * Open planned expenses in one category and currency between two dates (inclusive).
+     * Open planned expenses in one category and currency between two dates (inclusive); overdue ones count as today.
      */
     public function plannedExpenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, CarbonInterface $to): Money
     {
-        return Money::of(
-            PlannedEvent::forUser($userId)
-                ->open()
-                ->where('type', TransactionType::Expense->value)
-                ->where('category_id', $categoryId)
-                ->where('currency', $currency)
-                ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
-                ->sum('amount')
-        );
+        return $this->occurrences->expenseTotal($userId, $categoryId, $currency, $from, $to);
     }
 
     /**
