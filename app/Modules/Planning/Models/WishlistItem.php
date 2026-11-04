@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'project_id', 'bucket_id', 'name', 'price', 'currency', 'importance', 'desired_by', 'allowed_account_ids',
-    'status', 'purchased_on', 'purchased_transaction_id', 'purchase_allocation_id', 'url', 'notes',
+    'status', 'purchased_on', 'purchased_transaction_id', 'purchase_allocation_id', 'completion_allocation_ids', 'url', 'notes',
 ])]
 class WishlistItem extends Model
 {
@@ -27,6 +27,7 @@ class WishlistItem extends Model
             'importance' => 'integer',
             'desired_by' => 'date',
             'purchased_on' => 'date',
+            'completion_allocation_ids' => 'array',
             'allowed_account_ids' => 'array',
             'status' => WishlistStatus::class,
         ];

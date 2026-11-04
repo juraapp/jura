@@ -9,6 +9,7 @@ use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Enums\WishlistStatus;
 use App\Modules\Planning\Models\Allocation;
+use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\WishlistItem;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonInterface;
@@ -137,8 +138,9 @@ class WishlistService
             }
         }
 
+        $completion = null;
         if ($item->bucket !== null && $item->bucket->completes_on_purchase && ! $item->bucket->isCompletedOn($date)) {
-            $this->funds->complete($item->bucket, $date);
+            $completion = $this->funds->complete($item->bucket, $date);
         }
 
         $item->update([
@@ -146,6 +148,7 @@ class WishlistService
             'purchased_on' => $date->toDateString(),
             'purchased_transaction_id' => $transactionId,
             'purchase_allocation_id' => $allocationId,
+            'completion_allocation_ids' => $completion ?: null,
         ]);
     }
 
@@ -157,6 +160,7 @@ class WishlistService
         if ($item->bucket !== null && $item->bucket->completes_on_purchase
             && $item->bucket->completed_on?->toDateString() === $item->purchased_on?->toDateString()) {
             $this->funds->reopen($item->bucket);
+            $this->takeBackLeftover($item);
         }
 
         if ($item->purchase_allocation_id !== null) {
@@ -171,7 +175,38 @@ class WishlistService
             'status' => WishlistStatus::Wanted,
             'purchased_on' => null,
             'purchase_allocation_id' => null,
+            'completion_allocation_ids' => null,
         ]);
+    }
+
+    /**
+     * Brings back the leftover the purchase's completion moved out of the bucket: from ready to assign in full, or
+     * from the overflow bucket up to what it still holds (what it already used stays used).
+     */
+    private function takeBackLeftover(WishlistItem $item): void
+    {
+        $rows = Allocation::forUser($item->user_id)->whereKey($item->completion_allocation_ids ?? [])->get();
+
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $moved = $rows->first(fn (Allocation $row) => $row->bucket_id !== $item->bucket_id);
+        $target = $moved !== null ? Bucket::forUser($item->user_id)->find($moved->bucket_id) : null;
+
+        if ($moved === null || $target === null) {
+            Allocation::forUser($item->user_id)->whereKey($rows->modelKeys())->where('source', AllocationSource::Ready->value)->delete();
+
+            return;
+        }
+
+        $back = $this->smaller($moved->amount, $this->funds->available($target));
+
+        if ($back->equals($moved->amount)) {
+            Allocation::forUser($item->user_id)->whereKey($rows->modelKeys())->delete();
+        } elseif ($back->isPositive()) {
+            $this->funds->move($target, $item->bucket, $back, null, AllocationSource::Carry, $item->purchased_on);
+        }
     }
 
     private function smaller(Money $a, Money $b): Money

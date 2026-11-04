@@ -130,4 +130,52 @@ class EnvelopeSpendingTest extends TestCase
         $this->assertSame('300.00', $this->envelope($bike));
         $this->assertSame('700.00', $this->ready());
     }
+
+    public function test_undoing_a_purchase_that_completed_its_bucket_takes_back_the_released_leftover(): void
+    {
+        $this->bank->update(['initial_balance' => 2000]);
+        $fund = $this->savings('Purchase fund');
+        $fund->update(['completes_on_purchase' => true]);
+        $this->fund($fund, 1200);
+        $item = WishlistItem::factory()->for($this->user)->create(['currency' => 'COP', 'price' => 1000, 'bucket_id' => $fund->id]);
+        $this->assertSame('800.00', $this->ready());
+
+        $this->buy($item);
+
+        // The fund pays 1000 and releases its 200 leftover: bank 1000, fund 0, ready 1000.
+        $this->assertNotNull($fund->fresh()->completed_on);
+        $this->assertSame('0.00', $this->envelope($fund));
+        $this->assertSame('1000.00', $this->ready());
+
+        $this->post("/planning/wishlist/{$item->id}/unpurchase")->assertSessionHasNoErrors();
+
+        // Exactly as before: bank 2000, fund 1200 (reopened), ready 800.
+        $this->assertNull($fund->fresh()->completed_on);
+        $this->assertSame('1200.00', $this->envelope($fund));
+        $this->assertSame('800.00', $this->ready());
+    }
+
+    public function test_undoing_a_purchase_takes_back_only_what_the_overflow_bucket_still_holds(): void
+    {
+        $this->bank->update(['initial_balance' => 2000]);
+        $restoration = $this->savings('Restoration');
+        $fund = $this->savings('Purchase fund');
+        $fund->update(['completes_on_purchase' => true, 'carry_over' => 'overflow', 'overflow_bucket_id' => $restoration->id]);
+        $this->fund($fund, 1200);
+        $item = WishlistItem::factory()->for($this->user)->create(['currency' => 'COP', 'price' => 1000, 'bucket_id' => $fund->id]);
+
+        $this->buy($item);
+        // Fund 0, its 200 leftover went to restoration; bank 1000; ready 800.
+        $this->assertSame('200.00', $this->envelope($restoration));
+        $this->assertSame('800.00', $this->ready());
+        $this->post("/planning/buckets/{$restoration->id}/move", ['to_bucket_id' => 'ready', 'amount' => 150])->assertSessionHasNoErrors();
+        // Restoration 50; ready 950.
+
+        $this->post("/planning/wishlist/{$item->id}/unpurchase")->assertSessionHasNoErrors();
+
+        // Restoration gives back the 50 it still has, the fund gets 1000 + 50; bank 2000; ready 2000 - 1050 = 950.
+        $this->assertSame('0.00', $this->envelope($restoration));
+        $this->assertSame('1050.00', $this->envelope($fund));
+        $this->assertSame('950.00', $this->ready());
+    }
 }
