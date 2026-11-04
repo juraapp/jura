@@ -39,13 +39,22 @@ class TransactionService implements RecordsTransactions
         return $this->createSimple($user, TransactionType::Expense, $data);
     }
 
-    public function record(User $user, TransactionType $type, array $data): int
+    public function record(User $user, TransactionType $type, array $data, bool $autoPosted = false): int
     {
+        $data['is_recurring_generated'] = $autoPosted;
+
         return match ($type) {
             TransactionType::Income => $this->createIncome($user, $data)->id,
             TransactionType::Expense => $this->createExpense($user, $data)->id,
             default => throw new \InvalidArgumentException('Only income and expense can be recorded this way.'),
         };
+    }
+
+    public function recordTransfer(User $user, array $data, bool $autoPosted = false): int
+    {
+        [$out] = $this->createTransfer($user, $data + ['is_recurring_generated' => $autoPosted]);
+
+        return $out->id;
     }
 
     /**
@@ -94,6 +103,7 @@ class TransactionService implements RecordsTransactions
                 'description' => $data['description'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'transfer_group_id' => $groupId,
+                'is_recurring_generated' => (bool) ($data['is_recurring_generated'] ?? false),
             ]);
 
             $in = $user->transactions()->create([
@@ -106,6 +116,7 @@ class TransactionService implements RecordsTransactions
                 'description' => $data['description'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'transfer_group_id' => $groupId,
+                'is_recurring_generated' => (bool) ($data['is_recurring_generated'] ?? false),
             ]);
 
             $this->announce($user, collect([$out->account, $in->account]));
@@ -338,6 +349,7 @@ class TransactionService implements RecordsTransactions
                 'notes' => $data['notes'] ?? null,
                 'payment_method' => $data['payment_method'] ?? null,
                 'bucket_id' => $type === TransactionType::Expense ? ($data['bucket_id'] ?? null) : null,
+                'is_recurring_generated' => (bool) ($data['is_recurring_generated'] ?? false),
             ]);
 
             $this->announce($user, collect([$transaction->account]));

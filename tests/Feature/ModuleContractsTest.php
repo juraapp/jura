@@ -124,6 +124,38 @@ class ModuleContractsTest extends TestCase
         $this->assertFalse($transaction->is_recurring_generated);
     }
 
+    public function test_record_can_mark_a_transaction_as_auto_posted(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+
+        $id = app(RecordsTransactions::class)->record($user, TransactionType::Expense, [
+            'account_id' => $account->id, 'category_id' => $category->id, 'amount' => 20, 'date' => '2026-10-12', 'description' => 'Gym',
+        ], autoPosted: true);
+
+        $this->assertTrue(Transaction::withoutGlobalScopes()->findOrFail($id)->is_recurring_generated);
+    }
+
+    public function test_record_transfer_creates_both_legs_and_returns_the_outgoing_one(): void
+    {
+        $user = User::factory()->create();
+        $from = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $to = Account::factory()->for($user)->create(['currency' => 'COP']);
+
+        $id = app(RecordsTransactions::class)->recordTransfer($user, [
+            'from_account_id' => $from->id, 'to_account_id' => $to->id, 'amount' => 75.5, 'date' => '2026-10-12', 'description' => 'Savings',
+        ], autoPosted: true);
+
+        $legs = Transaction::withoutGlobalScopes()->orderBy('id')->get();
+        $this->assertCount(2, $legs);
+        $this->assertSame($id, $legs[0]->id);
+        $this->assertSame(TransactionType::TransferOut, $legs[0]->type);
+        $this->assertSame($to->id, $legs[1]->account_id);
+        $this->assertSame($legs[0]->transfer_group_id, $legs[1]->transfer_group_id);
+        $this->assertTrue($legs[1]->is_recurring_generated);
+    }
+
     public function test_planning_contract_resolves_to_its_implementation(): void
     {
         $this->assertInstanceOf(BucketService::class, app(BucketProgress::class));
