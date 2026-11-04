@@ -176,12 +176,19 @@ Use this page to write down money you expect to receive or spend in the future, 
 your balance could look like. Planned events are **estimates**: they never change your real balances or reports
 until you mark them as done.
 
-**Adding a planned event.** Press **Expect income** or **Plan an event**, then fill in what it is, the amount, the
-date and how sure you are. Under **More options** you can pick an account and category, add notes, or make it
-**repeat** (weekly, every two weeks, monthly or yearly), optionally until a date. Repeating events are created
-from today up to 12 months ahead and extended automatically; projections and the planner that look further (up to
-36 months) still count the later dates. If the first date is in the past, it only sets the
-rhythm: occurrences before today are not created (record those as real transactions if they happened).
+**Adding a planned event.** Press **Add** (or the add button on any page and choose **Planned**), then fill in what it
+is, the amount, the date and how sure you are. You can pick an account and category, add notes, make it
+**repeat** (weekly, every two weeks, monthly or yearly), optionally until a date, and tick **Record it automatically
+on the date** (see below). Repeating events are created from today up to 12 months ahead and extended
+automatically; projections and the planner that look further (up to 36 months) still count the later dates. If the
+first date is in the past, it only sets the rhythm: occurrences before today are not created (record those as real
+transactions if they happened).
+
+**Recording automatically.** A plan with **Record it automatically on the date** (it needs an account and a
+category) becomes a real transaction on its date, in your time zone, without you doing anything. It is marked
+**Auto** on the page. If you missed some dates (for example the app was not running), each one is recorded on its
+own date the next time it runs. If its account was archived or deleted or its category deleted, the plan stays open
+with a red note saying why; fix the account or category and it is recorded on the next try.
 
 **How sure are you?**
 - **Confirmed**: it will happen (a signed contract, a fixed bill).
@@ -197,8 +204,9 @@ Planned expenses always count in full in every view. The chart and table show, m
 income, planned expenses and your projected balance, per currency. Today's balance is your real net worth.
 
 **When the money really moves.**
-- Press the **check** button (*Mark as done*) to record the real transaction from the plan. You can adjust the
-  amount, date, account and category first.
+- Press the **check** button (*Mark as done*) to record the real transaction from the plan. When the plan has an
+  account and a category, one click records it on the planned date (today if the plan is dated later); otherwise
+  the form opens, prefilled, to ask for what is missing. Edit the transaction afterwards to change anything.
 - If you already recorded a similar transaction yourself, the plan shows **Looks done: ...** with a **Yes, link
   it** button. Nothing is ever linked without your confirmation.
 - Press **Skip** for something that will not happen. A skipped plan stays in the list (dimmed) with **Reopen**
@@ -211,6 +219,15 @@ income, planned expenses and your projected balance, per currency. Today's balan
 **Changing repeating events.** Editing or deleting one occurrence asks whether it is **only this one** or **this
 and all future ones**. Earlier occurrences, and ones already done, are never touched. When you change "all future",
 the dates stay as they are; to move a date, edit that single occurrence.
+
+**Repeating plans.** The **Repeating plans** list shows each rule with its next date, frequency, end date and
+whether it records automatically (**Auto**) or is **Paused**.
+- **Edit** changes the whole plan from today on: dates before today that are still open (overdue) keep what they
+  were. Changing the frequency or the **Next date** moves every upcoming date to the new rhythm; an earlier end date
+  removes the dates after it.
+- **Pause** removes its upcoming dates; overdue ones stay as reminders and no longer record automatically.
+  **Resume** starts again from today and never records dates missed while paused.
+- **Delete** removes the plan and its open dates; dates already recorded or skipped stay in your history.
 
 **Interest.** Accounts with an interest rate add a projected interest line to each month (planned incomes and
 expenses on that account move its balance on their dates, so the interest follows them).
