@@ -85,6 +85,7 @@ class SeriesPoster
             ->with([
                 'user',
                 'account' => fn ($query) => $query->withoutGlobalScope('user')->withTrashed(),
+                'counterAccount' => fn ($query) => $query->withoutGlobalScope('user')->withTrashed(),
                 'category' => fn ($query) => $query->withoutGlobalScope('visibleToUser')->withTrashed(),
             ]);
     }
@@ -93,7 +94,8 @@ class SeriesPoster
     {
         $problem = match (true) {
             $event->account === null || $event->account->trashed() || ! $event->account->is_active => self::ACCOUNT_INACTIVE,
-            $event->category === null || $event->category->trashed() => self::CATEGORY_MISSING,
+            $event->isTransfer() && ($event->counterAccount === null || $event->counterAccount->trashed() || ! $event->counterAccount->is_active) => self::ACCOUNT_INACTIVE,
+            ! $event->isTransfer() && ($event->category === null || $event->category->trashed()) => self::CATEGORY_MISSING,
             default => null,
         };
 

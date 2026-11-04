@@ -5,6 +5,7 @@ namespace App\Modules\Planning\Services;
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
+use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
@@ -107,6 +108,7 @@ class PlannedEventService
                 'currency' => $series->currency,
                 'date' => $date->toDateString(),
                 'account_id' => $series->account_id,
+                'counter_account_id' => $series->counter_account_id,
                 'category_id' => $series->category_id,
                 'certainty' => $series->certainty,
                 'notes' => $series->notes,
@@ -365,7 +367,7 @@ class PlannedEventService
      * is locked and re-read first, so a plan already closed (by another click or by the auto-poster) records
      * nothing and returns null.
      *
-     * @param  array{account_id?: int|null, category_id?: int|null, amount?: mixed, date?: string|null, description?: string|null}  $data
+     * @param  array{account_id?: int|null, counter_account_id?: int|null, category_id?: int|null, amount?: mixed, date?: string|null, description?: string|null}  $data
      */
     public function realize(PlannedEvent $event, array $data = [], bool $autoPosted = false): ?int
     {
@@ -378,26 +380,42 @@ class PlannedEventService
             $user = $current->user;
             $today = $user->today();
             $accountId = $data['account_id'] ?? $current->account_id;
-            $categoryId = $data['category_id'] ?? $current->category_id;
+            $counterAccountId = $current->isTransfer() ? ($data['counter_account_id'] ?? $current->counter_account_id) : null;
+            $categoryId = $current->isTransfer() ? null : ($data['category_id'] ?? $current->category_id);
             $date = $data['date'] ?? ($current->date->gt($today) ? $today : $current->date)->toDateString();
+            $amount = $data['amount'] ?? $current->amount->toDecimalString();
+            $description = $data['description'] ?? $current->description;
 
-            $record = fn () => $this->transactions->record($user, $current->type, [
-                'account_id' => $accountId,
-                'category_id' => $categoryId,
-                'amount' => $data['amount'] ?? $current->amount->toDecimalString(),
-                'date' => $date,
-                'description' => $data['description'] ?? $current->description,
-                'notes' => $current->notes,
-            ], $autoPosted);
+            if ($current->isTransfer()) {
+                // The outgoing leg's id identifies the transfer; deleting or restoring either leg moves both.
+                $transactionId = $this->transactions->recordTransfer($user, [
+                    'from_account_id' => $accountId,
+                    'to_account_id' => $counterAccountId,
+                    'amount' => $amount,
+                    'date' => $date,
+                    'description' => $description,
+                    'notes' => $current->notes,
+                ], $autoPosted);
+            } else {
+                $record = fn () => $this->transactions->record($user, $current->type, [
+                    'account_id' => $accountId,
+                    'category_id' => $categoryId,
+                    'amount' => $amount,
+                    'date' => $date,
+                    'description' => $description,
+                    'notes' => $current->notes,
+                ], $autoPosted);
 
-            $transactionId = $current->isIncome() && ! empty($current->allocation_overrides)
-                ? $this->allocator->withOverrides($current->allocation_overrides, $record)
-                : $record();
+                $transactionId = $current->isIncome() && ! empty($current->allocation_overrides)
+                    ? $this->allocator->withOverrides($current->allocation_overrides, $record)
+                    : $record();
+            }
 
             $current->update([
                 'status' => PlannedEventStatus::Realized,
                 'realized_transaction_id' => $transactionId,
                 'account_id' => $accountId,
+                'counter_account_id' => $counterAccountId,
                 'category_id' => $categoryId,
                 'post_error' => null,
             ]);
@@ -551,14 +569,16 @@ class PlannedEventService
         $accountId = $data['account_id'] ?? null;
         $currency = ($accountId !== null ? $this->ledger->accountCurrency($user->id, (int) $accountId) : null)
             ?? $data['currency'] ?? $user->currency_default;
+        $transfer = in_array($data['type'], ['transfer', TransactionType::TransferOut->value], true);
 
         return [
-            'type' => $data['type'],
+            'type' => $transfer ? TransactionType::TransferOut->value : $data['type'],
             'description' => $data['description'],
             'amount' => Money::of($data['amount']),
             'currency' => $currency,
             'account_id' => $accountId,
-            'category_id' => $data['category_id'] ?? null,
+            'counter_account_id' => $transfer ? ($data['counter_account_id'] ?? null) : null,
+            'category_id' => $transfer ? null : ($data['category_id'] ?? null),
             'certainty' => $data['certainty'] ?? 'expected',
         ];
     }

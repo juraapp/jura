@@ -145,10 +145,15 @@ export function overridesList(amounts) {
 export function payload(state) {
     const { intent, when, type } = state;
 
+    const transfer = type === 'transfer';
+    /* A planned transfer is stored as account_id (from) and counter_account_id (to). */
+    const accounts = transfer
+        ? { account_id: blank(state.from_account_id), counter_account_id: blank(state.to_account_id) }
+        : { account_id: blank(state.account_id), category_id: blank(state.category_id) };
+
     if (intent === 'confirmPlanned') {
         return {
-            account_id: blank(state.account_id),
-            category_id: blank(state.category_id),
+            ...accounts,
             amount: state.amount,
             date: state.date,
             description: state.description,
@@ -161,8 +166,7 @@ export function payload(state) {
             description: state.description,
             amount: state.amount,
             certainty: state.certainty,
-            account_id: blank(state.account_id),
-            category_id: blank(state.category_id),
+            ...accounts,
             notes: blank(state.notes),
             auto_post: Boolean(state.auto_post),
             allocation_overrides: type === 'income' ? overridesList(state.overrides) : [],

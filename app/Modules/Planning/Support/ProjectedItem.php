@@ -50,4 +50,12 @@ final readonly class ProjectedItem
     {
         return $this->type === TransactionType::Expense;
     }
+
+    /**
+     * A planned transfer moves money between two accounts of one currency: net zero for the currency.
+     */
+    public function isTransfer(): bool
+    {
+        return $this->type === TransactionType::TransferOut;
+    }
 }

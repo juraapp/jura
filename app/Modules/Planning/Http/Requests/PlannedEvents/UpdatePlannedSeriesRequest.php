@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Http\Requests\PlannedEvents;
 
+use App\Modules\Ledger\Enums\TransactionType;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -18,7 +19,8 @@ class UpdatePlannedSeriesRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(['type' => $this->route('plannedEventSeries')->type->value]);
+        $type = $this->route('plannedEventSeries')->type;
+        $this->merge(['type' => $type === TransactionType::TransferOut ? 'transfer' : $type->value]);
     }
 
     public function rules(): array

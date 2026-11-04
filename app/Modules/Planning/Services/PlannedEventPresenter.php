@@ -33,6 +33,7 @@ class PlannedEventPresenter
             'autoPost' => (bool) $event->auto_post,
             'postError' => $event->post_error,
             'account' => $event->account ? ['id' => $event->account->id, 'name' => $event->account->name] : null,
+            'counterAccount' => $event->counterAccount ? ['id' => $event->counterAccount->id, 'name' => $event->counterAccount->name] : null,
             'category' => $event->category ? [
                 'id' => $event->category->id,
                 'name' => $event->category->name,
@@ -65,6 +66,7 @@ class PlannedEventPresenter
             'notes' => $series->notes,
             'allocationOverrides' => $series->allocation_overrides ?? [],
             'account' => $series->account ? ['id' => $series->account->id, 'name' => $series->account->name] : null,
+            'counterAccount' => $series->counterAccount ? ['id' => $series->counterAccount->id, 'name' => $series->counterAccount->name] : null,
             'category' => $series->category ? [
                 'id' => $series->category->id,
                 'name' => $series->category->name,

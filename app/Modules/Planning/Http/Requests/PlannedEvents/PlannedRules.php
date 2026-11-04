@@ -2,13 +2,16 @@
 
 namespace App\Modules\Planning\Http\Requests\PlannedEvents;
 
+use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Shared\Validation\LedgerRules;
 use App\Modules\Shared\Validation\MoneyRules;
+use Closure;
 use Illuminate\Validation\Rule;
 
 /**
  * Validation shared by creating and editing a plan or a repeating plan. A plan that records itself
- * automatically needs an active account and a category; an income's bucket split is kept only for incomes.
+ * automatically needs an active account and a category; a planned transfer goes from account_id to a different
+ * active counter_account_id in the same currency and has no category; an income's bucket split is kept only for incomes.
  */
 trait PlannedRules
 {
@@ -19,14 +22,25 @@ trait PlannedRules
     {
         $userId = $this->user()->id;
         $autoPost = $this->boolean('auto_post');
+        $transfer = $this->input('type') === 'transfer';
 
         return [
-            'type' => ['required', 'in:income,expense'],
+            'type' => ['required', 'in:income,expense,transfer'],
             'description' => ['required', 'string', 'max:255'],
             'amount' => ['required', ...MoneyRules::positive()],
             'currency' => ['nullable', 'string', 'size:3'],
-            'account_id' => [Rule::requiredIf($autoPost), 'nullable', 'integer', LedgerRules::account($userId, activeOnly: $autoPost)],
-            'category_id' => [Rule::requiredIf($autoPost), 'nullable', 'integer', LedgerRules::category($userId, (string) $this->input('type'))],
+            'account_id' => [Rule::requiredIf($autoPost || $transfer), 'nullable', 'integer', LedgerRules::account($userId, activeOnly: $autoPost || $transfer)],
+            'counter_account_id' => [
+                'exclude_unless:type,transfer',
+                'required',
+                'integer',
+                'different:account_id',
+                LedgerRules::account($userId, activeOnly: true),
+                fn (string $attribute, mixed $value, Closure $fail) => app(LedgerQuery::class)->accountCurrency($userId, (int) $value) !== app(LedgerQuery::class)->accountCurrency($userId, (int) $this->input('account_id'))
+                    ? $fail(__('transactions.currency_mismatch'))
+                    : null,
+            ],
+            'category_id' => [Rule::requiredIf($autoPost && ! $transfer), Rule::prohibitedIf($transfer), 'nullable', 'integer', LedgerRules::category($userId, (string) $this->input('type'))],
             'certainty' => ['required', 'in:confirmed,expected,speculative'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'auto_post' => ['sometimes', 'boolean'],

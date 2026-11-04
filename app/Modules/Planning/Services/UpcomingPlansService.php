@@ -49,7 +49,7 @@ class UpcomingPlansService implements UpcomingPlans
     {
         $query = $this->reviewQuery($user);
         $count = (clone $query)->count();
-        $events = $query->with(['account', 'category'])->orderBy('date')->orderBy('id')->limit($limit)->get();
+        $events = $query->with(['account', 'counterAccount', 'category'])->orderBy('date')->orderBy('id')->limit($limit)->get();
 
         return ['count' => $count, 'items' => $this->present($user, $events, withMatches: true)];
     }
@@ -79,7 +79,9 @@ class UpcomingPlansService implements UpcomingPlans
     {
         return PlannedEvent::forUser($user)
             ->open()
-            ->when($filters['account'] ?? null, fn (Builder $query, int $accountId) => $query->where('account_id', $accountId))
+            ->when($filters['account'] ?? null, fn (Builder $query, int $accountId) => $query->where(
+                fn (Builder $either) => $either->where('account_id', $accountId)->orWhere('counter_account_id', $accountId)
+            ))
             ->when($filters['category'] ?? null, fn (Builder $query, int $categoryId) => $query->where('category_id', $categoryId))
             ->when($filters['type'] ?? null, fn (Builder $query, string $type) => $query->where('type', $type));
     }
@@ -91,7 +93,7 @@ class UpcomingPlansService implements UpcomingPlans
     private function band(User $user, Builder $query, bool $withMatches): array
     {
         $count = (clone $query)->count();
-        $events = $query->with(['account', 'category'])->orderBy('date')->orderBy('id')->limit(self::BAND_LIMIT)->get();
+        $events = $query->with(['account', 'counterAccount', 'category'])->orderBy('date')->orderBy('id')->limit(self::BAND_LIMIT)->get();
 
         return ['count' => $count, 'items' => $this->present($user, $events, $withMatches)];
     }

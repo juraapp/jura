@@ -52,14 +52,14 @@ const deleteSeries = () => {
                         <span>{{ rule.frequencyLabel }}</span>
                         <span v-if="rule.isActive && rule.nextDate">· {{ $t('ui.cash_flow.next') }} {{ format.date(rule.nextDate) }}</span>
                         <span v-if="rule.endsOn">· {{ $t('ui.cash_flow.ends') }} {{ format.date(rule.endsOn) }}</span>
-                        <span v-if="rule.account">· {{ rule.account.name }}</span>
+                        <span v-if="rule.account">· {{ rule.account.name }}<template v-if="rule.counterAccount"> &rarr; {{ rule.counterAccount.name }}</template></span>
                         <span v-if="rule.autoPost && rule.isActive" class="rounded-full bg-primary-50 px-2 py-0.5 font-medium text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">{{ $t('ui.cash_flow.auto') }}</span>
                         <span v-if="!rule.isActive" class="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ $t('ui.cash_flow.paused') }}</span>
                     </p>
                 </div>
 
-                <p class="text-right text-sm font-semibold tabular-nums" :class="rule.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                    {{ rule.type === 'income' ? '+' : '-' }}<Money :amount="rule.amount" :currency="rule.currency" />
+                <p class="text-right text-sm font-semibold tabular-nums" :class="{ income: 'text-green-600 dark:text-green-400', transfer_out: 'text-gray-600 dark:text-gray-300' }[rule.type] ?? 'text-red-600 dark:text-red-400'">
+                    {{ { income: '+', transfer_out: '' }[rule.type] ?? '-' }}<Money :amount="rule.amount" :currency="rule.currency" />
                 </p>
 
                 <div class="flex items-center gap-1">

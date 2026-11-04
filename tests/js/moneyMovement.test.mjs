@@ -106,6 +106,22 @@ test('editing a series sends its schedule and editing an occurrence sends its sc
     assert.equal('frequency' in occurrence, false);
 });
 
+test('a planned transfer goes from one account to the other without a category', () => {
+    const body = payload({
+        intent: 'create', when: 'planned', type: 'transfer', description: 'Savings', amount: '50', date: '2026-11-25',
+        certainty: 'confirmed', from_account_id: 1, to_account_id: 2, account_id: 9, category_id: 3, overrides: { 5: '20' },
+    });
+
+    assert.equal(body.type, 'transfer');
+    assert.equal(body.account_id, 1);
+    assert.equal(body.counter_account_id, 2);
+    assert.equal('category_id' in body, false);
+    assert.deepEqual(body.allocation_overrides, []);
+
+    const confirm = payload({ intent: 'confirmPlanned', when: 'happened', type: 'transfer', from_account_id: 1, to_account_id: 2, amount: '50', date: '2026-11-10' });
+    assert.deepEqual([confirm.account_id, confirm.counter_account_id], [1, 2]);
+});
+
 test('confirming a plan sends only what the transaction needs', () => {
     assert.deepEqual(
         Object.keys(payload({ intent: 'confirmPlanned', when: 'happened', type: 'expense', account_id: 1, category_id: 2, amount: '5', date: '2026-11-10', description: 'd' })).sort(),

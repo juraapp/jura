@@ -99,7 +99,7 @@ If you pick a date after today, the form points it out and offers **Plan it inst
 save it**; it is only saved once you choose the second (also when an edit moves a transaction after today). CSV
 imports are not asked. For a plan, the form asks how sure you are, whether it **repeats**, whether to **record it automatically
 on the date**, and, for an income, where it goes. A one-off plan dated before today suggests recording it as already
-happened instead. Transfers can only be recorded as already happened for now.
+happened instead. A transfer can be planned too (from one account to another of the same currency).
 
 **Pay from bucket (optional, expenses only).** Pick the bucket that pays for an expense, for example *Trip* for a
 hotel. The whole amount comes out of that bucket, even if that takes it below zero (the card then says
@@ -205,6 +205,13 @@ with a red note saying why; fix the account or category and it is recorded on th
 not be recorded automatically, wait for you: **Confirm** records them (one click when the plan has an account and a
 category), **Match** links a transaction you already recorded, **Adjust** confirms with other details, **Skip** says it
 did not happen. An overdue plan counts as happening today in every projection until you deal with it.
+
+**Planned transfers.** Choose **Transfer** to plan moving money between two of your accounts in the same currency
+(for example a monthly move to savings). It needs both accounts and no category, can repeat and record itself like
+any plan, and confirming it records both sides of the transfer. It does not change the projected income or expenses
+(the money stays yours), but it moves the projected balance between the two accounts, so interest is projected on the
+right one. For now the projection does not show how a planned transfer to or from an account outside your budget
+changes ready to assign.
 
 **How sure are you?**
 - **Confirmed**: it will happen (a signed contract, a fixed bill).

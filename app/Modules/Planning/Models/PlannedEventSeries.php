@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'type', 'description', 'amount', 'currency', 'account_id', 'category_id',
+    'type', 'description', 'amount', 'currency', 'account_id', 'counter_account_id', 'category_id',
     'certainty', 'frequency', 'starts_on', 'ends_on', 'excluded_dates',
     'auto_post', 'is_active', 'notes', 'allocation_overrides',
 ])]
@@ -50,6 +50,14 @@ class PlannedEventSeries extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * The destination of a planned transfer (account_id is where the money leaves).
+     */
+    public function counterAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'counter_account_id');
     }
 
     public function category(): BelongsTo

@@ -52,7 +52,10 @@ class Account extends Model
      */
     public function isUsedByActiveSeries(): bool
     {
-        return $this->plannedEventSeries()->withoutGlobalScope('user')->where('is_active', true)->exists();
+        return PlannedEventSeries::forUser($this->user_id)
+            ->where('is_active', true)
+            ->where(fn ($query) => $query->where('account_id', $this->id)->orWhere('counter_account_id', $this->id))
+            ->exists();
     }
 
     /**
@@ -61,7 +64,9 @@ class Account extends Model
      */
     public function isCurrencyLocked(): bool
     {
-        $planned = fn (string $model) => $model::forUser($this->user_id)->where('account_id', $this->id)->exists();
+        $planned = fn (string $model) => $model::forUser($this->user_id)
+            ->where(fn ($query) => $query->where('account_id', $this->id)->orWhere('counter_account_id', $this->id))
+            ->exists();
         $allows = fn (string $model) => $model::forUser($this->user_id)->whereJsonContains('allowed_account_ids', $this->id)->exists();
 
         return $this->transactions()->withTrashed()->exists()
