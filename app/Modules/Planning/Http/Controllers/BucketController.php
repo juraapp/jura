@@ -159,8 +159,8 @@ class BucketController extends Controller
 
     public function store(StoreBucketRequest $request, BucketManager $manager, AssignGuard $guard): RedirectResponse
     {
-        $opening = Money::of($request->validated('opening_balance') ?? 0);
-        if ($warning = $this->overAssignWarning($request, $guard, (string) $request->validated('currency'), $opening)) {
+        $effect = $manager->openingEffect($request->user(), $request->validated());
+        if ($warning = $this->overAssignWarning($request, $guard, (string) $request->validated('currency'), $effect)) {
             return $warning;
         }
 
@@ -169,13 +169,11 @@ class BucketController extends Controller
         return back()->with('success', __('buckets.saved'));
     }
 
-    public function update(UpdateBucketRequest $request, Bucket $bucket, BucketManager $manager, BucketLedger $funds, AssignGuard $guard): RedirectResponse
+    public function update(UpdateBucketRequest $request, Bucket $bucket, BucketManager $manager, AssignGuard $guard): RedirectResponse
     {
-        if ($request->has('opening_balance')) {
-            $delta = Money::of($request->validated('opening_balance') ?? 0)->subtract($funds->openingBalance($bucket));
-            if ($warning = $this->overAssignWarning($request, $guard, (string) $request->validated('currency'), $delta)) {
-                return $warning;
-            }
+        $effect = $manager->openingEffect($request->user(), $request->validated(), $bucket);
+        if ($warning = $this->overAssignWarning($request, $guard, (string) $request->validated('currency'), $effect)) {
+            return $warning;
         }
 
         $manager->save($request->user(), $request->validated(), $bucket);
@@ -214,7 +212,7 @@ class BucketController extends Controller
         $description = $request->validated('description');
 
         if ($request->boolean('from_ready')) {
-            if ($warning = $this->overAssignWarning($request, $guard, $bucket->currency, $amount)) {
+            if ($warning = $this->overAssignWarning($request, $guard, $bucket->currency, $funds->assignEffect($bucket, $amount))) {
                 return $warning;
             }
 
@@ -247,7 +245,7 @@ class BucketController extends Controller
             return back()->withErrors(['amount' => __('buckets.not_enough_funds')]);
         }
 
-        if ($warning = $this->overAssignWarning($request, $guard, $bucket->currency, $amount)) {
+        if ($warning = $this->overAssignWarning($request, $guard, $bucket->currency, $funds->assignEffect($bucket, $amount))) {
             return $warning;
         }
 

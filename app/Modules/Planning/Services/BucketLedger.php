@@ -67,30 +67,101 @@ class BucketLedger
     }
 
     /**
-     * Whether money was ever put in the bucket (at least one allocation).
+     * Whether the bucket is an envelope in the money map: it was funded at some point (see fundedSince).
      */
     public function isFunded(Bucket $bucket): bool
     {
-        return Allocation::forUser($bucket->user_id)->where('bucket_id', $bucket->id)->exists();
+        return $this->storedFundedSince($bucket) !== null;
     }
 
     /**
-     * From when the bucket's category spending comes out of its envelope: tracking start or its first
-     * allocation, whichever is later. Null while the bucket has never been funded.
+     * From when the bucket's category spending comes out of its envelope: tracking start or the day it was first
+     * funded, whichever is later. Null while the bucket has never been funded.
+     *
+     * The first-funded day is stored (`buckets.funded_since`): an allocation dated earlier moves it earlier, but
+     * removing or redating the earliest allocation never moves it later, so spending recorded against the envelope
+     * stays counted. It is cleared only when the bucket is left with no allocations and no category spending
+     * since then (see forgetFundingIfUnused).
      */
     public function fundedSince(Bucket $bucket): ?Carbon
     {
-        $first = Allocation::forUser($bucket->user_id)->where('bucket_id', $bucket->id)->min('date');
+        return $this->effectiveFrom($bucket, $this->storedFundedSince($bucket));
+    }
 
-        if ($first === null) {
+    /**
+     * Forgets that the bucket was funded once it holds no allocations and its category had no spending since it
+     * was funded: nothing happened to that envelope, so it goes back to being a limit only (later spending then
+     * comes out of ready to assign, not out of an empty envelope). With spending since, the date stays: that
+     * spending was budgeted from the envelope, which now shows as overspent until it is covered.
+     */
+    public function forgetFundingIfUnused(Bucket $bucket): void
+    {
+        $since = $this->fundedSince($bucket);
+
+        if ($since === null || Allocation::forUser($bucket->user_id)->where('bucket_id', $bucket->id)->exists()) {
+            return;
+        }
+
+        if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null
+            && ! $this->ledger->expenseTotal($bucket->user_id, $bucket->category_id, $bucket->currency, $since, null, onBudgetOnly: true)->isZero()) {
+            return;
+        }
+
+        Bucket::forUser($bucket->user_id)->whereKey($bucket->id)->update(['funded_since' => null]);
+        $bucket->funded_since = null;
+    }
+
+    /**
+     * How much putting this much in the bucket on a date really moves out of ready to assign. Usually the amount
+     * itself, but funding a category bucket earlier than before (or for the first time) also brings the category's
+     * spending since that day into the envelope, which then holds less.
+     */
+    public function assignEffect(Bucket $bucket, Money $amount, ?CarbonInterface $date = null): Money
+    {
+        if (! $amount->isPositive() || $bucket->kind !== BucketKind::Spending || $bucket->category_id === null) {
+            return $amount;
+        }
+
+        $date = Carbon::instance($date ?? User::todayFor($bucket->user_id))->startOfDay();
+        $stored = $bucket->exists ? $this->storedFundedSince($bucket) : null;
+
+        if ($stored !== null && $date->gte($stored)) {
+            return $amount;
+        }
+
+        $newFrom = $this->effectiveFrom($bucket, $date);
+        $oldFrom = $this->effectiveFrom($bucket, $stored);
+
+        if ($oldFrom !== null && $newFrom->gte($oldFrom)) {
+            return $amount;
+        }
+
+        return $amount->subtract($this->ledger->expenseTotal(
+            $bucket->user_id, $bucket->category_id, $bucket->currency, $newFrom, $oldFrom?->copy()->subDay(), onBudgetOnly: true,
+        ));
+    }
+
+    private function storedFundedSince(Bucket $bucket): ?Carbon
+    {
+        $stored = Bucket::forUser($bucket->user_id)->whereKey($bucket->id)->value('funded_since');
+
+        return $stored === null ? null : Carbon::parse($stored)->startOfDay();
+    }
+
+    /**
+     * The later of tracking start and the given first-funded day.
+     */
+    private function effectiveFrom(Bucket $bucket, ?CarbonInterface $funded): ?Carbon
+    {
+        if ($funded === null) {
             return null;
         }
 
-        $first = Carbon::parse($first)->startOfDay();
+        $funded = Carbon::instance($funded)->startOfDay();
 
-        return $bucket->tracking_started_on !== null && $bucket->tracking_started_on->gt($first)
-            ? $bucket->tracking_started_on->copy()
-            : $first;
+        return $bucket->tracking_started_on !== null && $bucket->tracking_started_on->gt($funded)
+            ? $bucket->tracking_started_on->copy()->startOfDay()
+            : $funded;
     }
 
     /**
@@ -187,8 +258,7 @@ class BucketLedger
      */
     public function hasFunding(Bucket $bucket): bool
     {
-        return $bucket->fill_rule !== null
-            || Allocation::forUser($bucket->user_id)->where('bucket_id', $bucket->id)->exists();
+        return $bucket->fill_rule !== null || $this->isFunded($bucket);
     }
 
     public function credit(
@@ -246,8 +316,9 @@ class BucketLedger
     }
 
     /**
-     * The money a bucket started with: a single allocation dated when tracking began.
-     * Zero removes it.
+     * The money a bucket started with: a single allocation, dated the day it is first set (the user's today) so
+     * that assigning it moves exactly that much out of ready to assign (only spending from that day on comes out
+     * of it). Changing it later keeps that date; zero removes it.
      */
     public function setOpeningBalance(Bucket $bucket, Money $amount): void
     {
@@ -257,7 +328,10 @@ class BucketLedger
             ->first();
 
         if (! $amount->isPositive()) {
-            $existing?->delete();
+            if ($existing !== null) {
+                $existing->delete();
+                $this->forgetFundingIfUnused($bucket);
+            }
 
             return;
         }
@@ -268,7 +342,7 @@ class BucketLedger
             return;
         }
 
-        $this->credit($bucket, $amount, AllocationSource::Opening, null, $bucket->tracking_started_on, __('buckets.opening_balance'));
+        $this->credit($bucket, $amount, AllocationSource::Opening, null, null, __('buckets.opening_balance'));
     }
 
     /**
@@ -284,19 +358,42 @@ class BucketLedger
      */
     public function remove(Allocation $allocation): void
     {
-        DB::transaction(function () use ($allocation) {
-            if ($allocation->source === AllocationSource::Transfer && $allocation->source_id !== null) {
-                Allocation::forUser($allocation->user_id)
-                    ->where('bucket_id', $allocation->source_id)
-                    ->where('source', AllocationSource::Transfer->value)
-                    ->where('source_id', $allocation->bucket_id)
-                    ->where('amount', $allocation->amount->negate()->toDecimalString())
-                    ->whereDate('date', $allocation->date->toDateString())
-                    ->limit(1)
-                    ->delete();
-            }
+        $counterpart = $this->counterpart($allocation);
 
+        DB::transaction(function () use ($allocation, $counterpart) {
+            $counterpart?->delete();
             $allocation->delete();
         });
+
+        $buckets = Bucket::forUser($allocation->user_id)->whereKey(array_filter([$allocation->bucket_id, $counterpart?->bucket_id]))->get();
+        $buckets->each(fn (Bucket $bucket) => $this->forgetFundingIfUnused($bucket));
+    }
+
+    /**
+     * How much removing a manual allocation puts back into buckets from ready to assign (negative when it gives
+     * money back): a move between two buckets nets out, a lone negative row (a move to ready to assign, or one
+     * whose other side is gone) takes its amount from ready to assign again.
+     */
+    public function removalEffect(Allocation $allocation): Money
+    {
+        return $allocation->amount->add($this->counterpart($allocation)?->amount ?? Money::zero())->negate();
+    }
+
+    /**
+     * The other side of a move between buckets, if it still exists.
+     */
+    private function counterpart(Allocation $allocation): ?Allocation
+    {
+        if ($allocation->source !== AllocationSource::Transfer || $allocation->source_id === null) {
+            return null;
+        }
+
+        return Allocation::forUser($allocation->user_id)
+            ->where('bucket_id', $allocation->source_id)
+            ->where('source', AllocationSource::Transfer->value)
+            ->where('source_id', $allocation->bucket_id)
+            ->where('amount', $allocation->amount->negate()->toDecimalString())
+            ->whereDate('date', $allocation->date->toDateString())
+            ->first();
     }
 }

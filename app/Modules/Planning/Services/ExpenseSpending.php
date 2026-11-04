@@ -46,6 +46,10 @@ class ExpenseSpending
         }
 
         $this->rows($user, $transactionId, $bucketId)->delete();
+
+        if (($bucket = Bucket::forUser($user)->find($bucketId)) !== null) {
+            $this->funds->forgetFundingIfUnused($bucket);
+        }
     }
 
     private function isPurchase(User $user, int $transactionId): bool

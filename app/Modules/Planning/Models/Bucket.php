@@ -47,6 +47,7 @@ class Bucket extends Model
             'carry_over' => CarryOverPolicy::class,
             'allowed_account_ids' => 'array',
             'tracking_started_on' => 'date',
+            'funded_since' => 'date',
             'cycle_closed_through' => 'date',
             'completed_on' => 'date',
             'completes_on_purchase' => 'boolean',

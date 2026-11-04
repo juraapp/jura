@@ -154,6 +154,10 @@ class WishlistService
 
         if ($item->purchase_allocation_id !== null) {
             Allocation::forUser($item->user_id)->whereKey($item->purchase_allocation_id)->delete();
+
+            if ($item->bucket !== null) {
+                $this->funds->forgetFundingIfUnused($item->bucket);
+            }
         }
 
         $item->update([

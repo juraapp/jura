@@ -53,13 +53,7 @@ class BucketManager
                 'allowed_account_ids' => ! empty($data['allowed_account_ids']) ? array_map('intval', $data['allowed_account_ids']) : null,
             ];
 
-            if ($bucket === null && $kind === BucketKind::Spending) {
-                $bucket = Bucket::forUser($user)
-                    ->where('category_id', $attributes['category_id'])
-                    ->where('currency', strtoupper($attributes['currency']))
-                    ->where('cycle', $attributes['cycle'])
-                    ->first();
-            }
+            $bucket ??= $this->matchingSpendingBucket($user, $kind, $attributes['category_id'], $attributes['currency'], $attributes['cycle']);
 
             if ($bucket === null) {
                 $bucket = new Bucket($attributes + ['tracking_started_on' => $user->today()->toDateString()]);
@@ -75,6 +69,53 @@ class BucketManager
 
             return $bucket;
         });
+    }
+
+    /**
+     * How much saving this data would move out of ready to assign through the bucket's opening balance: the change
+     * in the opening amount, less the category spending a first opening brings into the envelope. Saving a new
+     * spending bucket for a category that already has one updates that bucket, so its opening counts as the base.
+     *
+     * @param  array<string, mixed>  $data  validated request data
+     */
+    public function openingEffect(User $user, array $data, ?Bucket $bucket = null): Money
+    {
+        if (! array_key_exists('opening_balance', $data)) {
+            return Money::zero();
+        }
+
+        $kind = BucketKind::from($data['kind']);
+        $categoryId = $kind === BucketKind::Spending ? ($data['category_id'] ?? null) : null;
+        $target = $bucket ?? $this->matchingSpendingBucket($user, $kind, $categoryId, (string) $data['currency'], $data['cycle'] ?? null);
+
+        $probe = $target !== null ? clone $target : new Bucket(['tracking_started_on' => $user->today()->toDateString()]);
+        $probe->user_id = $user->id;
+        $probe->kind = $kind;
+        $probe->category_id = $categoryId;
+        $probe->currency = (string) $data['currency'];
+
+        $amount = Money::of($data['opening_balance'] ?? 0);
+        $current = $target !== null ? $this->buckets->openingBalance($target) : Money::zero();
+
+        return $current->isZero()
+            ? $this->buckets->assignEffect($probe, $amount)
+            : $amount->subtract($current);
+    }
+
+    /**
+     * The spending bucket already tracking this category, currency and cycle (there is at most one).
+     */
+    private function matchingSpendingBucket(User $user, BucketKind $kind, mixed $categoryId, string $currency, mixed $cycle): ?Bucket
+    {
+        if ($kind !== BucketKind::Spending) {
+            return null;
+        }
+
+        return Bucket::forUser($user)
+            ->where('category_id', $categoryId)
+            ->where('currency', strtoupper($currency))
+            ->where('cycle', $cycle)
+            ->first();
     }
 
     public function delete(Bucket $bucket): void
