@@ -12,6 +12,7 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Ledger\Services\TransactionService;
+use App\Modules\Planning\Contracts\UpcomingPlans;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -26,11 +27,15 @@ class TransactionController extends Controller
 {
     private const BULK_LIMIT = 2000;
 
-    public function index(Request $request, string $type = 'all'): Response
+    /** How far ahead the list shows upcoming plans. */
+    private const PLANNED_DAYS = 30;
+
+    public function index(Request $request, UpcomingPlans $plans, string $type = 'all'): Response
     {
         $query = $this->filteredQuery($type, $request->only(['account', 'category', 'from', 'to', 'q']));
 
         $transactions = $query->paginate(15)->withQueryString();
+        $provenance = $plans->provenance($request->user(), $transactions->pluck('id')->all());
 
         $counterparts = Transaction::whereIn('transfer_group_id', $transactions->pluck('transfer_group_id')->filter())
             ->with('account:id,name')
@@ -59,7 +64,12 @@ class TransactionController extends Controller
             ] : null,
             'counterpartAccount' => $counterparts->get($transaction->transfer_group_id)
                 ?->firstWhere('id', '!=', $transaction->id)?->account?->name,
+            'autoPosted' => (bool) $transaction->is_recurring_generated,
+            'plan' => $provenance[$transaction->id] ?? null,
         ]);
+
+        // Upcoming and overdue plans sit above the first page of the list; a date range or a later page is history.
+        $showPlans = $transactions->currentPage() === 1 && ! $request->filled('from') && ! $request->filled('to');
 
         return Inertia::render('Transactions/Index', [
             'typeFilter' => $type,
@@ -67,6 +77,17 @@ class TransactionController extends Controller
             'accounts' => Account::orderBy('name')->get(['id', 'name', 'currency']),
             'categories' => Category::orderBy('name')->get(['id', 'name', 'type']),
             'filters' => $request->only(['account', 'category', 'from', 'to', 'q']),
+            'planned' => $showPlans
+                ? Inertia::defer(fn () => $plans->listBands($request->user(), self::PLANNED_DAYS, [
+                    'account' => $request->integer('account') ?: null,
+                    'category' => $request->integer('category') ?: null,
+                    'type' => match ($type) {
+                        'all' => null,
+                        'transfer' => 'transfer_out',
+                        default => $type,
+                    },
+                ]), 'planned')
+                : null,
         ]);
     }
 

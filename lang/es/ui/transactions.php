@@ -33,4 +33,10 @@ return [
     'delete_one_hint' => 'Si es una transferencia, se eliminarán ambos movimientos (origen y destino). Puedes restaurarla desde la Papelera.',
     'income' => 'Ingreso',
     'expense' => 'Gasto',
+    'overdue_band' => 'Planes vencidos',
+    'upcoming_band' => 'Próximos 30 días',
+    'not_in_balance' => 'Proyectado, no está en tu saldo',
+    'see_all' => 'Ver los {count}',
+    'auto_posted' => 'Registrado automáticamente',
+    'from_plan' => 'Desde un plan',
 ];

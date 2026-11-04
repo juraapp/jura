@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Deferred, Head, Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
@@ -9,6 +9,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
 import Modal from '@/Components/Modal.vue';
 import Pagination from '@/Components/Pagination.vue';
+import PlannedBand from '@/Components/PlannedBand.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
@@ -17,6 +18,7 @@ import BulkActionBar from '@/Components/BulkActionBar.vue';
 import { useBulkSelection } from '@/composables/useBulkSelection';
 import { destroy, bulkDestroy, bulkUpdate } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
 import { useFormat } from '@/composables/useFormat';
+import { index as plannedEventsIndex } from '@/routes/planned-events';
 
 const format = useFormat();
 const { t } = useI18n();
@@ -27,7 +29,13 @@ const props = defineProps({
     accounts: { type: Array, required: true },
     categories: { type: Array, required: true },
     filters: { type: Object, required: true },
+    /** Deferred { overdue, upcoming } bands; null when the list is showing history (a later page or a date range). */
+    planned: { type: Object, default: undefined },
 });
+
+const reviewUrl = plannedEventsIndex.url({ query: { section: 'review' } });
+const cashFlowUrl = plannedEventsIndex.url();
+const planUrl = (plan) => plannedEventsIndex.url({ query: { highlight: plan.plannedEventId } });
 
 const { open: openTransactionModal } = useTransactionModal();
 const confirmingDeleteTransaction = ref(null);
@@ -164,6 +172,16 @@ const bulkEdit = () => {
                 />
             </div>
 
+            <Deferred v-if="planned !== null" data="planned">
+                <template #fallback>
+                    <div class="mb-4 h-16 animate-pulse rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"></div>
+                </template>
+                <div v-if="planned && (planned.overdue.count || planned.upcoming.count)" class="mb-4 space-y-3">
+                    <PlannedBand :band="planned.overdue" variant="overdue" :title="$t('ui.transactions.overdue_band')" :see-all-url="reviewUrl" />
+                    <PlannedBand :band="planned.upcoming" :title="$t('ui.transactions.upcoming_band')" :see-all-url="cashFlowUrl" />
+                </div>
+            </Deferred>
+
             <EmptyState
                 v-if="transactions.data.length === 0"
                 icon="list-bullet"
@@ -228,6 +246,8 @@ const bulkEdit = () => {
                                                     <template v-if="transaction.type === 'transfer_out'">{{ $t('ui.transactions.transfer_out') }}<template v-if="transaction.counterpartAccount"> &rarr; {{ transaction.counterpartAccount }}</template></template>
                                                     <template v-else-if="transaction.type === 'transfer_in'">{{ $t('ui.transactions.transfer_in') }}<template v-if="transaction.counterpartAccount"> &larr; {{ transaction.counterpartAccount }}</template></template>
                                                     <template v-else>{{ transaction.category?.name }}</template>
+                                                    <span v-if="transaction.autoPosted" class="ml-1.5 rounded-full bg-gray-100 px-1.5 py-0.5 font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ $t('ui.transactions.auto_posted') }}</span>
+                                                    <Link v-if="transaction.plan" :href="planUrl(transaction.plan)" class="ml-1.5 rounded-full bg-primary-50 px-1.5 py-0.5 font-medium text-primary-700 hover:underline dark:bg-primary-500/10 dark:text-primary-300">{{ $t('ui.transactions.from_plan') }}</Link>
                                                 </p>
                                             </div>
                                         </div>

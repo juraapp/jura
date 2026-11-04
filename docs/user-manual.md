@@ -108,6 +108,14 @@ cannot pay from a bucket, and moving an expense to one forgets its bucket. Delet
 A completed bucket takes no new expenses, but an expense already paid from it keeps it when you edit the expense (the
 form lists it as *current*).
 
+**Plans above the list.** The first page of the list (without a date range) shows your **overdue plans** (red) and
+what is **coming up in the next 30 days** (dashed: projected, not in your balance), following the account, category
+and type you filtered by. Up to 10 of each are shown, with **See all** for the rest. Each one has **Confirm** (records
+it as planned in one click when it has an account and a category), **Adjust** (confirm with another amount, date or
+account), **Skip**, **Edit**, and **Match** when a similar transaction you already recorded looks like it.
+Transactions recorded automatically show **Auto-posted**, and ones confirmed from a plan show **From plan** (it opens
+that plan on the cash flow page).
+
 - You can **edit** or **delete** any transaction; balances update automatically. A transaction keeps its account and
   category when you edit it, even if that account was archived or the category deleted since.
 - **Filter** the list by type to see only incomes, expenses or transfers.

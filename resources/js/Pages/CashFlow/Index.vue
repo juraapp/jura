@@ -20,11 +20,11 @@ import {
     destroy,
     skip,
     reopen,
-    realize,
     link,
     bulkDestroy,
 } from '@/actions/App/Modules/Planning/Http/Controllers/PlannedEventController';
 import { useTransactionModal } from '@/composables/useTransactionModal';
+import { usePlanActions } from '@/composables/usePlanActions';
 import { useFormat } from '@/composables/useFormat';
 import BulkCheckbox from '@/Components/BulkCheckbox.vue';
 import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
@@ -44,7 +44,7 @@ const props = defineProps({
     section: { type: String, default: null },
 });
 
-const { openPlanned, openConfirm } = useTransactionModal();
+const { openPlanned } = useTransactionModal();
 
 onMounted(() => {
     if (props.section) {
@@ -114,16 +114,16 @@ const chartSeries = (currency) => [
     { name: t('ui.cash_flow.s_balance'), type: 'line', data: currency.months.map((m) => m.closing) },
 ];
 
-/* A plan with an account and a category is confirmed in one click; otherwise the form asks for what is missing. */
-const confirmEvent = (event) => {
-    if (event.account && event.category) {
-        router.post(realize.url(event.id), {}, { preserveScroll: true });
+const actions = usePlanActions();
+const confirmEvent = actions.confirm;
 
-        return;
+/* "From plan" on a transaction links here with ?highlight=<plan id>. */
+const highlighted = Number(new URLSearchParams(window.location.search).get('highlight')) || null;
+onMounted(() => {
+    if (highlighted) {
+        document.getElementById(`plan-${highlighted}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-
-    openConfirm(event);
-};
+});
 
 /* ---- skip / link / delete ---- */
 const reopenEvent = (event) => router.post(reopen.url(event.id), {}, { preserveScroll: true });
@@ -245,9 +245,10 @@ const deleteEvent = () => {
                         <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
                             <li
                                 v-for="event in group.items"
+                                :id="`plan-${event.id}`"
                                 :key="event.id"
                                 class="px-4 py-3"
-                                :class="{ 'opacity-60': event.status !== 'planned' }"
+                                :class="{ 'opacity-60': event.status !== 'planned', 'ring-2 ring-inset ring-primary-400': event.id === highlighted }"
                             >
                                 <div class="flex flex-wrap items-center gap-3">
                                     <BulkCheckbox :bulk="bulk" :id="event.id" :label="$t('ui.cash_flow.select_one', { name: event.description })" />

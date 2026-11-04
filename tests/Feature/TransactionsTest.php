@@ -6,6 +6,8 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\PlannedEventSeries;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -475,5 +477,47 @@ class TransactionsTest extends TestCase
         $this->actingAs($user)->patch("/finances/transactions/{$future->id}", $payload + ['date' => '2026-11-21', 'confirm_future' => 1])->assertSessionHasNoErrors();
 
         $this->assertSame('2026-11-21', $future->fresh()->date->toDateString());
+    }
+
+    public function test_the_list_defers_the_planned_bands_and_marks_auto_posted_and_planned_rows(): void
+    {
+        Carbon::setTestNow('2026-11-10 12:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $other = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $auto = Transaction::factory()->for($user)->for($account)->for($category)->create(['type' => 'expense', 'date' => '2026-11-01', 'is_recurring_generated' => true]);
+        $confirmed = Transaction::factory()->for($user)->for($account)->for($category)->create(['type' => 'expense', 'date' => '2026-11-02']);
+        $series = PlannedEventSeries::factory()->for($user)->create(['type' => 'expense']);
+        $plan = PlannedEvent::factory()->for($user)->create(['series_id' => $series->id, 'status' => 'realized', 'realized_transaction_id' => $confirmed->id]);
+        $overdue = PlannedEvent::factory()->for($user)->expense()->create(['date' => '2026-11-05', 'currency' => 'COP', 'account_id' => $account->id]);
+        PlannedEvent::factory()->for($user)->expense()->create(['date' => '2026-11-20', 'currency' => 'COP', 'account_id' => $other->id]);
+
+        $this->actingAs($user)->get('/finances/transactions')->assertInertia(fn (Assert $page) => $page
+            ->missing('planned')
+            ->where('transactions.data.0.id', $confirmed->id)
+            ->where('transactions.data.0.plan', ['plannedEventId' => $plan->id, 'seriesId' => $series->id])
+            ->where('transactions.data.1.autoPosted', true)
+            ->where('transactions.data.1.plan', null)
+            ->loadDeferredProps('planned', fn (Assert $reload) => $reload
+                ->where('planned.upcoming.count', 1)
+                ->where('planned.overdue.items.0.id', $overdue->id)
+            )
+        );
+
+        $this->actingAs($user)->get('/finances/transactions?account='.$account->id)->assertInertia(fn (Assert $page) => $page
+            ->loadDeferredProps('planned', fn (Assert $reload) => $reload
+                ->where('planned.overdue.count', 1)
+                ->where('planned.upcoming.count', 0)
+            )
+        );
+    }
+
+    public function test_a_later_page_or_a_date_range_shows_no_plans(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/finances/transactions?page=2')->assertInertia(fn (Assert $page) => $page->where('planned', null));
+        $this->actingAs($user)->get('/finances/transactions?from=2026-01-01')->assertInertia(fn (Assert $page) => $page->where('planned', null));
     }
 }
