@@ -49,9 +49,11 @@ class BucketController extends Controller
         $recent = $this->recentAllocations($buckets);
         $projections = $buckets->pluck('currency')->unique()->mapWithKeys(fn (string $currency) => [$currency => $projector->project(Auth::user(), $currency)]);
 
-        $cards = $buckets->map(function (Bucket $bucket) use ($limits, $funds, $planned, $accountNames, $recent, $projections) {
-            $available = $funds->available($bucket);
-            $funded = $funds->isFunded($bucket);
+        $availableById = $funds->availableMany($buckets);
+
+        $cards = $buckets->map(function (Bucket $bucket) use ($limits, $funds, $planned, $accountNames, $recent, $projections, $availableById) {
+            $available = $availableById[$bucket->id];
+            $funded = $bucket->funded_since !== null;
             $card = [
                 'id' => $bucket->id,
                 'name' => $bucket->name,
@@ -88,7 +90,7 @@ class BucketController extends Controller
                 'balance' => $funds->balance($bucket)->toFloat(),
                 'openingBalance' => $funds->openingBalance($bucket)->toFloat(),
                 'available' => $available->toFloat(),
-                'hasFunding' => $funds->hasFunding($bucket),
+                'hasFunding' => $funded || $bucket->fill_rule !== null,
                 'funded' => $funded,
                 'overspent' => $funded && $available->isNegative(),
                 'tracksLimit' => $bucket->tracksLimit(),
@@ -142,18 +144,20 @@ class BucketController extends Controller
         $this->authorize('viewAny', Bucket::class);
         $include = $request->integer('include') ?: null;
 
+        $buckets = Bucket::where(fn ($query) => $query->whereNull('completed_on')->when($include !== null, fn ($inner) => $inner->orWhere('id', $include)))
+            ->inPriorityOrder()->get();
+        $available = $funds->availableMany($buckets);
+
         return response()->json([
-            'buckets' => Bucket::where(fn ($query) => $query->whereNull('completed_on')->when($include !== null, fn ($inner) => $inner->orWhere('id', $include)))
-                ->inPriorityOrder()->get()
-                ->map(fn (Bucket $bucket) => [
-                    'id' => $bucket->id,
-                    'name' => $bucket->name,
-                    'currency' => $bucket->currency,
-                    'categoryId' => $bucket->category_id,
-                    'available' => $funds->available($bucket)->toFloat(),
-                    'funded' => $funds->isFunded($bucket),
-                    'current' => $bucket->id === $include,
-                ])->values(),
+            'buckets' => $buckets->map(fn (Bucket $bucket) => [
+                'id' => $bucket->id,
+                'name' => $bucket->name,
+                'currency' => $bucket->currency,
+                'categoryId' => $bucket->category_id,
+                'available' => $available[$bucket->id]->toFloat(),
+                'funded' => $bucket->funded_since !== null,
+                'current' => $bucket->id === $include,
+            ])->values(),
         ]);
     }
 

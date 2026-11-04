@@ -11,7 +11,8 @@ use App\Modules\Planning\Support\MoneyMapRow;
 use App\Modules\Shared\Support\Money;
 
 /**
- * Feeds the pure money-map calculator with real balances and bucket envelopes.
+ * Feeds the pure money-map calculator with real balances and bucket envelopes, in a constant number of queries
+ * however many accounts and buckets there are (it runs on every page).
  */
 class MoneyMapService implements MoneyMap
 {
@@ -44,11 +45,13 @@ class MoneyMapService implements MoneyMap
         $accounts = $this->balances->budgetBalances($user)
             ->when($currency !== null, fn ($rows) => $rows->where('currency', $currency));
 
-        $buckets = Bucket::forUser($user)
+        $funded = Bucket::forUser($user)
+            ->whereNotNull('funded_since')
             ->when($currency !== null, fn ($query) => $query->where('currency', $currency))
-            ->get()
-            ->filter(fn (Bucket $bucket) => $this->funds->isFunded($bucket))
-            ->map(fn (Bucket $bucket) => ['currency' => $bucket->currency, 'envelope' => $this->funds->envelope($bucket)]);
+            ->get();
+        $envelopes = $this->funds->availableMany($funded);
+
+        $buckets = $funded->map(fn (Bucket $bucket) => ['currency' => $bucket->currency, 'envelope' => $envelopes[$bucket->id]]);
 
         return MoneyMapCalculator::summarize($accounts->all(), $buckets->all());
     }

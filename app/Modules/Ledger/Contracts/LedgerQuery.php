@@ -24,6 +24,16 @@ interface LedgerQuery
     public function expenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, ?CarbonInterface $to, bool $onBudgetOnly = false): Money;
 
     /**
+     * Several category spending totals in one query, each like expenseTotal(..., to: null, onBudgetOnly: true): the
+     * expenses in one category, in accounts of one currency that are in the budget, not paid from a bucket, dated on
+     * or after a day (future-dated ones included).
+     *
+     * @param  array<array-key, array{category_id: int, currency: string, from: CarbonInterface}>  $windows
+     * @return array<array-key, Money> the same keys
+     */
+    public function budgetSpending(int $userId, array $windows): array;
+
+    /**
      * Whether one of the user's accounts counts in the budget (false when it is off budget, archived or not theirs).
      */
     public function isOnBudget(int $userId, int $accountId): bool;
