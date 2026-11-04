@@ -11,6 +11,7 @@ use App\Modules\Ledger\Http\Controllers\TrashController;
 use App\Modules\Notifications\Http\Controllers\NotificationController;
 use App\Modules\Planning\Http\Controllers\BucketController;
 use App\Modules\Planning\Http\Controllers\PlannedEventController;
+use App\Modules\Planning\Http\Controllers\PlannedSeriesController;
 use App\Modules\Planning\Http\Controllers\PlannerController;
 use App\Modules\Planning\Http\Controllers\ProjectController;
 use App\Modules\Planning\Http\Controllers\RecurringTransactionController;
@@ -113,6 +114,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/cash-flow/{plannedEvent}/skip', [PlannedEventController::class, 'skip'])->name('planned-events.skip');
     Route::post('planning/cash-flow/{plannedEvent}/reopen', [PlannedEventController::class, 'reopen'])->name('planned-events.reopen');
     Route::post('planning/cash-flow/{plannedEvent}/link', [PlannedEventController::class, 'link'])->name('planned-events.link');
+    Route::patch('planning/series/{plannedEventSeries}', [PlannedSeriesController::class, 'update'])->name('planned-series.update');
+    Route::post('planning/series/{plannedEventSeries}/pause', [PlannedSeriesController::class, 'pause'])->name('planned-series.pause');
+    Route::post('planning/series/{plannedEventSeries}/resume', [PlannedSeriesController::class, 'resume'])->name('planned-series.resume');
+    Route::delete('planning/series/{plannedEventSeries}', [PlannedSeriesController::class, 'destroy'])->name('planned-series.destroy');
     Route::get('planning/recurring', [RecurringTransactionController::class, 'index'])->name('recurring-transactions.index');
     Route::post('planning/recurring', [RecurringTransactionController::class, 'store'])->name('recurring-transactions.store');
     Route::patch('planning/recurring/{recurringTransaction}', [RecurringTransactionController::class, 'update'])->name('recurring-transactions.update');

@@ -138,6 +138,142 @@ class PlannedEventService
     }
 
     /**
+     * The next date a series is planned for: its first open occurrence from today on, or, when none is
+     * stored, the first date its rule gives from today. Null when the series has ended.
+     */
+    public function nextDate(PlannedEventSeries $series, ?CarbonInterface $today = null): ?CarbonImmutable
+    {
+        $today = CarbonImmutable::instance($today ?? $series->user->today())->startOfDay();
+
+        $stored = PlannedEvent::forUser($series->user_id)
+            ->where('series_id', $series->id)
+            ->open()
+            ->where('date', '>=', $today->toDateString())
+            ->min('date');
+
+        if ($stored !== null) {
+            return CarbonImmutable::parse($stored);
+        }
+
+        $lastDate = PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date');
+
+        return Recurrence::occurrences(
+            $series->frequency,
+            CarbonImmutable::parse($series->starts_on->toDateString()),
+            $series->ends_on !== null ? CarbonImmutable::parse($series->ends_on->toDateString()) : null,
+            $series->excluded_dates ?? [],
+            $lastDate !== null ? CarbonImmutable::parse($lastDate) : null,
+            $today,
+            $today->addYears(2),
+            1,
+        )[0] ?? null;
+    }
+
+    /**
+     * Edits a whole repeating plan from the owner's today on. Overdue occurrences (before today) and closed
+     * ones keep what they were. A new frequency or next date rebuilds the open occurrences from today, with
+     * the next date as the new rhythm anchor; a stricter end date removes open occurrences after it.
+     * A realized occurrence dated today or later stays, and occurrences up to its date are not created again.
+     *
+     * @param  array<string, mixed>  $data  plan fields plus frequency, next_date and optional ends_on
+     */
+    public function updateSeries(PlannedEventSeries $series, array $data): void
+    {
+        $user = $series->user;
+        $today = $user->today();
+        $nextDate = CarbonImmutable::parse($data['next_date']);
+        $current = $this->nextDate($series, $today);
+        $rescheduled = $data['frequency'] !== $series->frequency->value
+            || $current === null
+            || ! $nextDate->isSameDay($current);
+        $attributes = $this->attributes($user, ['type' => $series->type->value] + $data) + $this->extras($data);
+
+        DB::transaction(function () use ($series, $data, $today, $nextDate, $rescheduled, $attributes) {
+            $series->fill($attributes + [
+                'frequency' => $data['frequency'],
+                'ends_on' => $data['ends_on'] ?? null,
+            ]);
+
+            if ($rescheduled) {
+                $series->starts_on = $nextDate->toDateString();
+                $series->excluded_dates = collect($series->excluded_dates ?? [])
+                    ->filter(fn (string $date) => $date < $today->toDateString())
+                    ->values()
+                    ->all();
+            }
+            $series->save();
+
+            $upcoming = PlannedEvent::forUser($series->user_id)
+                ->where('series_id', $series->id)
+                ->open()
+                ->where('date', '>=', $today->toDateString());
+
+            if ($rescheduled) {
+                $upcoming->delete();
+            } else {
+                $upcoming->get()->each(fn (PlannedEvent $occurrence) => $occurrence->update($attributes));
+            }
+
+            if ($series->ends_on !== null) {
+                PlannedEvent::forUser($series->user_id)
+                    ->where('series_id', $series->id)
+                    ->open()
+                    ->where('date', '>', $series->ends_on->toDateString())
+                    ->delete();
+            }
+
+            if (! $series->auto_post) {
+                PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->open()->update(['auto_post' => false]);
+            }
+
+            $this->materialize($series, $today->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS), $today);
+        });
+    }
+
+    /**
+     * Stops a repeating plan: its upcoming occurrences go away and the overdue ones stay as reminders but
+     * no longer record themselves.
+     */
+    public function pauseSeries(PlannedEventSeries $series): void
+    {
+        $today = $series->user->today();
+
+        DB::transaction(function () use ($series, $today) {
+            $series->update(['is_active' => false]);
+
+            $open = fn () => PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->open();
+            $open()->where('date', '>=', $today->toDateString())->delete();
+            $open()->update(['auto_post' => false]);
+        });
+    }
+
+    /**
+     * Starts a paused plan again from today. Dates missed while it was paused are never created, so nothing
+     * is recorded for the past.
+     */
+    public function resumeSeries(PlannedEventSeries $series): void
+    {
+        $today = $series->user->today();
+
+        DB::transaction(function () use ($series, $today) {
+            $series->update(['is_active' => true]);
+            $this->materialize($series, $today->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS), $today);
+        });
+    }
+
+    /**
+     * Deletes a repeating plan and its open occurrences. Realized and skipped occurrences stay as history
+     * (their series link is cleared by the foreign key).
+     */
+    public function deleteSeries(PlannedEventSeries $series): void
+    {
+        DB::transaction(function () use ($series) {
+            PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->open()->delete();
+            $series->delete();
+        });
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      * @param  'this'|'future'  $scope
      */
