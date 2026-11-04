@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
@@ -42,6 +43,17 @@ class BulkDeleteTest extends TestCase
         $this->assertCount(2, $series->fresh()->excluded_dates);
         $this->artisan('planning:extend-series');
         $this->assertDatabaseMissing('planned_events', ['id' => $occurrences[1]->id]);
+    }
+
+    public function test_bulk_delete_keeps_realized_plans(): void
+    {
+        $realized = PlannedEvent::factory()->for($this->user)->status(PlannedEventStatus::Realized)->create();
+        $open = PlannedEvent::factory()->for($this->user)->create();
+
+        $this->actingAs($this->user)->post('/planning/cash-flow/bulk-delete', ['ids' => [$realized->id, $open->id]])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('planned_events', ['id' => $realized->id]);
+        $this->assertDatabaseMissing('planned_events', ['id' => $open->id]);
     }
 
     public function test_wishlist_items_and_goals_are_deleted_in_bulk(): void

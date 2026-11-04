@@ -143,7 +143,8 @@ class PlannedEventController extends Controller
     {
         $count = 0;
 
-        foreach (PlannedEvent::whereIn('id', $request->validated('ids'))->get() as $item) {
+        // A realized plan is the record of where its transaction came from: bulk delete leaves it alone.
+        foreach (PlannedEvent::whereIn('id', $request->validated('ids'))->where('status', '!=', PlannedEventStatus::Realized->value)->get() as $item) {
             $this->authorize('delete', $item);
             $service->deleteEvent($item, 'this');
             $count++;
