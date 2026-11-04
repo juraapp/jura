@@ -331,9 +331,11 @@ change or a restore from the Trash).
   the available amount (for a spending bucket, what is left after this cycle's spending).
 - **All activity, edit or remove entries** (under *Recent activity*) lists everything that ever went in or out of the
   bucket. Entries you made yourself (opening balance, adjustments, moves between buckets) have a trash button, and
-  **Reset to zero** empties the bucket. Removing an entry asks for confirmation first: it is deleted for good, and
+  **Reset to zero** brings what the bucket holds to zero: a full bucket gives its money back to ready to assign, and an
+  overspent one is topped up from ready to assign. Removing an entry asks for confirmation first: it is deleted for good, and
   removing a move between buckets also removes the matching entry in the other bucket. Entries created by income or
-  by closing a cycle cannot be removed.
+  by closing a cycle cannot be removed. When a reset or a removal would put more money in the bucket than is ready to
+  assign (for example removing a move back to ready to assign), you are asked to confirm, as with any assignment.
 - Deleting a bucket makes its money ready to assign again (or, if it was overspent, lowers ready to assign).
 
 **Cycles.** A spending bucket works in cycles: set **Cycle: repeats every N days / weeks / months / years**, and

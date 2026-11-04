@@ -409,13 +409,23 @@ class BucketController extends Controller
         return back()->with('success', __('buckets.reopened'));
     }
 
-    public function reset(Bucket $bucket, BucketLedger $funds): RedirectResponse
+    /**
+     * Brings the bucket's envelope (what it really holds, after its category's spending) to zero. An overspent
+     * envelope is topped up from ready to assign, which asks for confirmation when it would over-assign. A bucket
+     * that was never funded is a limit only and has nothing to reset.
+     */
+    public function reset(Request $request, Bucket $bucket, BucketLedger $funds, AssignGuard $guard): RedirectResponse
     {
         $this->authorize('update', $bucket);
 
-        $balance = $funds->balance($bucket);
-        if (! $balance->isZero()) {
-            $funds->credit($bucket, $balance->negate(), AllocationSource::Adjustment, null, null, __('buckets.reset_note'));
+        $change = $funds->isFunded($bucket) ? $funds->envelope($bucket)->negate() : Money::zero();
+
+        if (! $change->isZero()) {
+            if ($warning = $this->overAssignWarning($request, $guard, $bucket->currency, $funds->assignEffect($bucket, $change))) {
+                return $warning;
+            }
+
+            $funds->credit($bucket, $change, AllocationSource::Adjustment, null, null, __('buckets.reset_note'));
         }
 
         return back()->with('success', __('buckets.reset'));
@@ -442,13 +452,21 @@ class BucketController extends Controller
         ]);
     }
 
-    public function destroyAllocation(Bucket $bucket, Allocation $allocation, BucketLedger $funds): RedirectResponse
+    /**
+     * Removes an entry the user made. Removing a money-out entry (a negative adjustment, a move to ready to assign or
+     * to a bucket that no longer has its side) puts that money back from ready to assign, so it is guarded.
+     */
+    public function destroyAllocation(Request $request, Bucket $bucket, Allocation $allocation, BucketLedger $funds, AssignGuard $guard): RedirectResponse
     {
         $this->authorize('update', $bucket);
         abort_unless($allocation->bucket_id === $bucket->id, 404);
 
         if (! $funds->isRemovable($allocation)) {
             return back()->with('error', __('buckets.allocation_locked'));
+        }
+
+        if ($warning = $this->overAssignWarning($request, $guard, $bucket->currency, $funds->removalEffect($allocation))) {
+            return $warning;
         }
 
         $funds->remove($allocation);

@@ -246,6 +246,7 @@ const openHistory = (bucket) => {
     historyBucket.value = bucket;
     historyRows.value = [];
     confirmingRemove.value = null;
+    historyOverAssign.value = null;
     loadHistory();
 };
 
@@ -272,19 +273,32 @@ const historyRequestOptions = {
     onSuccess: () => loadHistory(),
 };
 
+/* Removing an entry or resetting can put money back in the bucket from ready to assign: confirm it here, like a move. */
+const historyOverAssign = ref(null);
+const sendGuarded = (send, confirm = false) => {
+    historyOverAssign.value = null;
+    send(confirm ? { confirm_over_assign: true } : {}, (errors) => {
+        if (errors.over_assign) {
+            historyOverAssign.value = { message: errors.over_assign, retry: () => sendGuarded(send, true) };
+        }
+    });
+};
+
 const removeEntry = () => {
     const row = confirmingRemove.value;
-    router.delete(destroyAllocation.url({ bucket: historyBucket.value.id, allocation: row.id }), {
+    sendGuarded((data, onError) => router.delete(destroyAllocation.url({ bucket: historyBucket.value.id, allocation: row.id }), {
         ...historyRequestOptions,
+        data,
+        onError,
         onFinish: () => {
             historyBusy.value = false;
             confirmingRemove.value = null;
         },
-    });
+    }));
 };
 
 const resetToZero = () => {
-    router.post(reset.url(historyBucket.value.id), {}, historyRequestOptions);
+    sendGuarded((data, onError) => router.post(reset.url(historyBucket.value.id), data, { ...historyRequestOptions, onError }));
 };
 
 const adjusting = ref(null);
@@ -739,6 +753,14 @@ const deleteBucket = () => {
                     <div class="mt-3 flex justify-end gap-3">
                         <SecondaryButton type="button" :disabled="historyBusy" @click="confirmingRemove = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
                         <DangerButton type="button" :disabled="historyBusy" @click="removeEntry">{{ $t('ui.buckets.remove_entry') }}</DangerButton>
+                    </div>
+                </div>
+                <div v-if="historyOverAssign" class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $t('ui.buckets.over_assign_title') }}</p>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ historyOverAssign.message }}</p>
+                    <div class="mt-3 flex justify-end gap-3">
+                        <SecondaryButton type="button" :disabled="historyBusy" @click="historyOverAssign = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                        <PrimaryButton type="button" :disabled="historyBusy" @click="historyOverAssign.retry()">{{ $t('ui.buckets.over_assign_confirm') }}</PrimaryButton>
                     </div>
                 </div>
                 <p v-if="historyLoading" class="mt-4 text-sm text-gray-400">{{ $t('ui.common.loading') }}</p>
