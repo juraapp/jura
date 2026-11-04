@@ -499,6 +499,11 @@ The bell in the top bar collects alerts. Mark one or all as read from there.
 - **Budget threshold / exceeded**: you have used most of, or gone over, a spending bucket's limit.
 - **Goal behind schedule**: a savings goal is falling behind its target date.
 - **Upcoming payment**: a recurring item is due within 3 days.
+- **Upcoming planned payment**: a planned expense is due within 3 days (counted in your time zone). It says whether
+  it will be **recorded automatically** or whether you need to **confirm it** once it is paid. Plans on an archived
+  account are left out.
+- **Couldn't record automatically**: a plan set to record itself could not be recorded, with the reason (its account
+  is archived or deleted, its category was deleted). You are told once per reason; it is tried again every hour.
 - **Low balance**: an account balance has dropped below about three days of your typical spending, or below zero.
 
 You are notified once per crossing; an unread alert is not repeated.

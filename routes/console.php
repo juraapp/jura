@@ -13,6 +13,7 @@ Artisan::command('inspire', function () {
 Schedule::job(new GenerateDueRecurringTransactions)->hourlyAt(5);
 Schedule::job(new PostDuePlannedEvents)->hourlyAt(5);
 Schedule::command('app:notify-upcoming-recurring-payments')->dailyAt('07:00');
+Schedule::command('app:notify-upcoming-planned-payments')->dailyAt('07:00');
 Schedule::command('app:notify-behind-savings-goals')->weeklyOn(1, '07:00');
 Schedule::command('planning:extend-series')->dailyAt('05:30');
 Schedule::command('planning:close-bucket-cycles')->hourlyAt(30)->withoutOverlapping();
