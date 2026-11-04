@@ -53,6 +53,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
    - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances and planned money in a date window.
    - `Planning\Contracts\MoneyMap`: per currency, money in on-budget accounts, in funded bucket envelopes, and ready to assign (computed, never stored).
    - `Planning\Contracts\PlanningOverview`: bucket balances, allocation history, projected bucket balances and project summaries for reports.
+   - Planning events: `PlannedPostingFailed` (user, planned event id, reason) when an auto-posting plan cannot be recorded.
 4. Contracts are bound in each module's service provider; providers are listed in `bootstrap/providers.php`.
 
 To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to `bootstrap/providers.php` if it binds contracts or registers listeners/commands, and run the architecture test. Listeners and commands inside modules are **not auto-discovered**; register them in the module provider.

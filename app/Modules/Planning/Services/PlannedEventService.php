@@ -358,32 +358,48 @@ class PlannedEventService
     }
 
     /**
-     * Records the real transaction for a plan and closes it.
+     * Records the real transaction for a plan and closes it. Anything left out comes from the plan: its
+     * account, category, amount and description, and its date (today when the plan is dated later). The plan
+     * is locked and re-read first, so a plan already closed (by another click or by the auto-poster) records
+     * nothing and returns null.
      *
-     * @param  array{account_id: int, category_id: int, amount?: mixed, date?: string|null, description?: string|null}  $data
+     * @param  array{account_id?: int|null, category_id?: int|null, amount?: mixed, date?: string|null, description?: string|null}  $data
      */
-    public function realize(PlannedEvent $event, array $data): int
+    public function realize(PlannedEvent $event, array $data = [], bool $autoPosted = false): ?int
     {
-        return DB::transaction(function () use ($event, $data) {
-            $record = fn () => $this->transactions->record($event->user, $event->type, [
-                'account_id' => $data['account_id'],
-                'category_id' => $data['category_id'],
-                'amount' => $data['amount'] ?? $event->amount->toDecimalString(),
-                'date' => $data['date'] ?? $event->user->today()->toDateString(),
-                'description' => $data['description'] ?? $event->description,
-                'notes' => $event->notes,
-            ]);
+        return DB::transaction(function () use ($event, $data, $autoPosted) {
+            $current = PlannedEvent::withoutGlobalScope('user')->lockForUpdate()->find($event->id);
+            if ($current === null || $current->status !== PlannedEventStatus::Planned) {
+                return null;
+            }
 
-            $transactionId = $event->isIncome() && ! empty($event->allocation_overrides)
-                ? $this->allocator->withOverrides($event->allocation_overrides, $record)
+            $user = $current->user;
+            $today = $user->today();
+            $accountId = $data['account_id'] ?? $current->account_id;
+            $categoryId = $data['category_id'] ?? $current->category_id;
+            $date = $data['date'] ?? ($current->date->gt($today) ? $today : $current->date)->toDateString();
+
+            $record = fn () => $this->transactions->record($user, $current->type, [
+                'account_id' => $accountId,
+                'category_id' => $categoryId,
+                'amount' => $data['amount'] ?? $current->amount->toDecimalString(),
+                'date' => $date,
+                'description' => $data['description'] ?? $current->description,
+                'notes' => $current->notes,
+            ], $autoPosted);
+
+            $transactionId = $current->isIncome() && ! empty($current->allocation_overrides)
+                ? $this->allocator->withOverrides($current->allocation_overrides, $record)
                 : $record();
 
-            $event->update([
+            $current->update([
                 'status' => PlannedEventStatus::Realized,
                 'realized_transaction_id' => $transactionId,
-                'account_id' => $data['account_id'],
-                'category_id' => $data['category_id'],
+                'account_id' => $accountId,
+                'category_id' => $categoryId,
+                'post_error' => null,
             ]);
+            $event->setRawAttributes($current->getAttributes(), true);
 
             return $transactionId;
         });

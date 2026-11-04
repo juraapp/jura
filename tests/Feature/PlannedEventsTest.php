@@ -594,4 +594,36 @@ class PlannedEventsTest extends TestCase
 
         $this->assertSame(0, $series->events()->count());
     }
+
+    public function test_one_click_realize_takes_everything_from_the_plan_and_keeps_an_overdue_plans_date(): void
+    {
+        Carbon::setTestNow('2026-10-12 09:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $event = PlannedEvent::factory()->for($user)->expense()->create([
+            'amount' => 45, 'date' => '2026-10-08', 'account_id' => $account->id, 'category_id' => $category->id, 'description' => 'Water',
+        ]);
+
+        $this->actingAs($user)->post("/planning/cash-flow/{$event->id}/realize")->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        $transaction = Transaction::sole();
+        $this->assertSame('2026-10-08', $transaction->date->toDateString());
+        $this->assertSame('45.00', $transaction->amount->toDecimalString());
+        $this->assertSame($category->id, $transaction->category_id);
+        $this->assertFalse($transaction->is_recurring_generated);
+    }
+
+    public function test_realizing_rejects_a_date_after_today(): void
+    {
+        Carbon::setTestNow('2026-10-12 09:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $event = PlannedEvent::factory()->for($user)->expense()->create(['account_id' => $account->id, 'category_id' => $category->id]);
+
+        $this->actingAs($user)->post("/planning/cash-flow/{$event->id}/realize", ['date' => '2026-10-13'])->assertSessionHasErrors('date');
+
+        $this->assertDatabaseCount('transactions', 0);
+    }
 }

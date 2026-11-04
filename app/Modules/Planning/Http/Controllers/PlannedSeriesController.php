@@ -5,6 +5,7 @@ namespace App\Modules\Planning\Http\Controllers;
 use App\Modules\Planning\Http\Requests\PlannedEvents\UpdatePlannedSeriesRequest;
 use App\Modules\Planning\Models\PlannedEventSeries;
 use App\Modules\Planning\Services\PlannedEventService;
+use App\Modules\Planning\Services\SeriesPoster;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 
@@ -13,9 +14,13 @@ use Illuminate\Http\RedirectResponse;
  */
 class PlannedSeriesController extends Controller
 {
-    public function update(UpdatePlannedSeriesRequest $request, PlannedEventSeries $plannedEventSeries, PlannedEventService $service): RedirectResponse
+    public function update(UpdatePlannedSeriesRequest $request, PlannedEventSeries $plannedEventSeries, PlannedEventService $service, SeriesPoster $poster): RedirectResponse
     {
         $service->updateSeries($plannedEventSeries, $request->validated());
+
+        if ($request->boolean('auto_post')) {
+            $poster->postDueForUser($request->user());
+        }
 
         return back()->with('success', __('planned-events.series_updated'));
     }

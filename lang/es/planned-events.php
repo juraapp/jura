@@ -18,4 +18,5 @@ return [
     'series_paused' => 'Plan repetido en pausa.',
     'series_resumed' => 'Plan repetido reanudado desde hoy.',
     'series_deleted' => 'Plan repetido eliminado. Las fechas registradas y omitidas siguen en tu historial.',
+    'future_not_allowed' => 'Una transacción registrada no puede tener fecha posterior a hoy.',
 ];
