@@ -12,6 +12,7 @@ use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
+use App\Modules\Planning\Services\PlannedEventService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -639,5 +640,21 @@ class PlannedEventsTest extends TestCase
             ->assertJsonCount(1, 'buckets')
             ->assertJsonPath('buckets.0.id', $bucket->id)
             ->assertJsonPath('buckets.0.currency', 'USD');
+    }
+
+    public function test_an_old_overdue_plan_only_matches_transactions_up_to_ten_days_after_its_date(): void
+    {
+        Carbon::setTestNow('2026-11-10 09:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        Transaction::factory()->for($user)->for($account)->create(['type' => 'expense', 'amount' => 100, 'date' => '2026-10-15']);
+        $old = PlannedEvent::factory()->for($user)->expense()->create(['amount' => 100, 'currency' => 'COP', 'date' => '2026-10-01']);
+        $recent = PlannedEvent::factory()->for($user)->expense()->create(['amount' => 100, 'currency' => 'COP', 'date' => '2026-11-02']);
+        Transaction::factory()->for($user)->for($account)->create(['type' => 'expense', 'amount' => 100, 'date' => '2026-11-10']);
+
+        $matches = app(PlannedEventService::class)->suggestedMatches($user, collect([$old, $recent]));
+
+        $this->assertNull($matches[$old->id], 'a transaction 14 days later is too far');
+        $this->assertNotNull($matches[$recent->id], 'a recent overdue plan still looks up to today');
     }
 }
