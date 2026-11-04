@@ -234,4 +234,31 @@ class EnvelopeSpendingTest extends TestCase
         $card->update(['on_budget' => true]);
         $this->assertSame(['120.00', '800.00'], [$this->envelope($bike), $this->ready()]);
     }
+
+    public function test_a_bucket_that_gains_a_category_keeps_its_linked_expenses_without_counting_them_twice(): void
+    {
+        $fund = Bucket::factory()->for($this->user)->create(['name' => 'Fund', 'currency' => 'COP', 'category_id' => null, 'tracking_started_on' => '2026-10-01']);
+        $this->fund($fund, 300);
+        $this->post('/finances/transactions', ['type' => 'expense', 'account_id' => $this->bank->id, 'category_id' => $this->food->id, 'amount' => 100, 'date' => '2026-10-12', 'bucket_id' => $fund->id])->assertSessionHasNoErrors();
+        $linked = Transaction::sole();
+        // Bank 900; fund 200; ready 700.
+        $this->assertSame(['200.00', '700.00'], [$this->envelope($fund), $this->ready()]);
+
+        $this->patch("/planning/buckets/{$fund->id}", [
+            'kind' => 'spending', 'name' => 'Fund', 'currency' => 'COP', 'category_id' => $this->food->id, 'cycle' => 'monthly', 'cap_amount' => 1000,
+        ])->assertSessionHasNoErrors();
+        $this->post('/finances/transactions', ['type' => 'expense', 'account_id' => $this->bank->id, 'category_id' => $this->food->id, 'amount' => 50, 'date' => '2026-10-12'])->assertSessionHasNoErrors();
+
+        // The linked 100 stays a spend row and out of the category's spending; the new 50 counts as category spending:
+        // fund 300 - 100 - 50 = 150; bank 850; ready 700.
+        $this->assertSame(['150.00', '700.00'], [$this->envelope($fund), $this->ready()]);
+
+        // An edit may keep the link; a new expense may not take it (the category already counts).
+        $this->patch("/finances/transactions/{$linked->id}", [
+            'account_id' => $this->bank->id, 'category_id' => $this->food->id, 'amount' => 120, 'date' => '2026-10-12', 'bucket_id' => $fund->id,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(['130.00', '700.00'], [$this->envelope($fund), $this->ready()]);
+        $this->post('/finances/transactions', ['type' => 'expense', 'account_id' => $this->bank->id, 'category_id' => $this->food->id, 'amount' => 10, 'date' => '2026-10-12', 'bucket_id' => $fund->id])
+            ->assertSessionHasErrors('bucket_id');
+    }
 }
