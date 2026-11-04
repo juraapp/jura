@@ -4,9 +4,11 @@ namespace App\Modules\Planning\Http\Controllers;
 
 use App\Modules\Planning\Http\Requests\PlannedEvents\UpdatePlannedSeriesRequest;
 use App\Modules\Planning\Models\PlannedEventSeries;
+use App\Modules\Planning\Services\PlannedEventPresenter;
 use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Planning\Services\SeriesPoster;
 use App\Modules\Shared\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -14,6 +16,16 @@ use Illuminate\Http\RedirectResponse;
  */
 class PlannedSeriesController extends Controller
 {
+    /**
+     * The repeating plan as the money-movement form edits it (JSON).
+     */
+    public function editData(PlannedEventSeries $plannedEventSeries, PlannedEventService $service, PlannedEventPresenter $presenter): JsonResponse
+    {
+        $this->authorize('update', $plannedEventSeries);
+
+        return response()->json($presenter->series($plannedEventSeries, $service->nextDate($plannedEventSeries)));
+    }
+
     public function update(UpdatePlannedSeriesRequest $request, PlannedEventSeries $plannedEventSeries, PlannedEventService $service, SeriesPoster $poster): RedirectResponse
     {
         $service->updateSeries($plannedEventSeries, $request->validated());

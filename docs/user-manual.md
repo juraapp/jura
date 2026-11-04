@@ -89,8 +89,14 @@ There are three kinds:
 | **Expense** | you spend money | lowers the account balance |
 | **Transfer** | you move money between your own accounts | lowers one account and raises the other; it is not counted as income or expense |
 
-To add one, use the add button (it is available from any page). Choose the account, category, amount, date and
+To add one, use the add button (it is available from any page). The same form records money that **Already
+happened** (a real transaction, the default) or money that is **Planned** (it doesn't touch your balance; see
+[Cash flow](#cash-flow-planned-income-and-expenses)). For a real one, choose the account, category, amount, date and
 an optional **time** (it defaults to now and can be cleared), an optional description, notes and payment method (cash, debit card, credit card, bank transfer or other).
+If you pick a date after today, the form points it out and offers **Plan it instead** or **It already happened,
+save it**. For a plan, the form asks how sure you are, whether it **repeats**, whether to **record it automatically
+on the date**, and, for an income, where it goes. A one-off plan dated before today suggests recording it as already
+happened instead. Transfers can only be recorded as already happened for now.
 
 **Pay from bucket (optional, expenses only).** Pick the bucket that pays for an expense, for example *Trip* for a
 hotel. The whole amount comes out of that bucket, even if that takes it below zero (the card then says
@@ -99,6 +105,8 @@ category are offered; a category's spending already comes out of its spending bu
 the category you picked is counted in one (an expense paid from a bucket is not counted there as well). Editing or
 deleting the expense, or restoring it from the Trash, updates the bucket too. Accounts that do not count in your budget
 cannot pay from a bucket, and moving an expense to one forgets its bucket. Deleting the bucket keeps the expense.
+A completed bucket takes no new expenses, but an expense already paid from it keeps it when you edit the expense (the
+form lists it as *current*).
 
 - You can **edit** or **delete** any transaction; balances update automatically. A transaction keeps its account and
   category when you edit it, even if that account was archived or the category deleted since.

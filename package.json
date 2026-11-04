@@ -5,7 +5,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "test:js": "node --test tests/js/format.test.mjs tests/js/today.test.mjs"
+        "test:js": "node --test tests/js/format.test.mjs tests/js/today.test.mjs tests/js/moneyMovement.test.mjs"
     },
     "devDependencies": {
         "@laravel/vite-plugin-wayfinder": "^0.1.7",
