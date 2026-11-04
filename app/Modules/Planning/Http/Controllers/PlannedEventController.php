@@ -15,10 +15,12 @@ use App\Modules\Planning\Http\Requests\PlannedEvents\UpdatePlannedEventRequest;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Services\CashFlowProjector;
+use App\Modules\Planning\Services\PlannedEventPresenter;
 use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Planning\Services\SeriesPoster;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Http\Requests\BulkIdsRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -27,7 +29,7 @@ use Inertia\Response;
 
 class PlannedEventController extends Controller
 {
-    public function index(Request $request, CashFlowProjector $projector, PlannedEventService $service, LedgerQuery $ledger): Response
+    public function index(Request $request, CashFlowProjector $projector, PlannedEventService $service, LedgerQuery $ledger, PlannedEventPresenter $presenter): Response
     {
         $this->authorize('viewAny', PlannedEvent::class);
 
@@ -62,7 +64,7 @@ class PlannedEventController extends Controller
         ])->values();
 
         return Inertia::render('CashFlow/Index', [
-            'events' => $events->map(fn (PlannedEvent $event) => $this->present($event, $matches[$event->id] ?? null))->values(),
+            'events' => $events->map(fn (PlannedEvent $event) => $presenter->event($event, $matches[$event->id] ?? null))->values(),
             'projection' => $projection,
             'view' => $view->value,
             'views' => collect(ForecastView::cases())->map(fn (ForecastView $case) => ['value' => $case->value, 'label' => $case->label()]),
@@ -73,6 +75,21 @@ class PlannedEventController extends Controller
             'frequencies' => collect(RecurringFrequency::cases())->map(fn (RecurringFrequency $case) => ['value' => $case->value, 'label' => $case->label()]),
             'buckets' => Bucket::inPriorityOrder()->get(['id', 'name', 'currency']),
             'certainties' => collect(Certainty::cases())->map(fn (Certainty $case) => ['value' => $case->value, 'label' => $case->label()]),
+        ]);
+    }
+
+    /**
+     * What the money-movement form needs once "Planned" is chosen (loaded on demand, like the transaction
+     * form options).
+     */
+    public function formOptions(): JsonResponse
+    {
+        $this->authorize('viewAny', PlannedEvent::class);
+
+        return response()->json([
+            'frequencies' => collect(RecurringFrequency::cases())->map(fn (RecurringFrequency $case) => ['value' => $case->value, 'label' => $case->label()]),
+            'certainties' => collect(Certainty::cases())->map(fn (Certainty $case) => ['value' => $case->value, 'label' => $case->label()]),
+            'buckets' => Bucket::inPriorityOrder()->get(['id', 'name', 'currency']),
         ]);
     }
 
@@ -180,35 +197,5 @@ class PlannedEventController extends Controller
         $service->link($plannedEvent, (int) $request->validated('transaction_id'));
 
         return back()->with('success', __('planned-events.linked'));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function present(PlannedEvent $event, ?\stdClass $match): array
-    {
-        return [
-            'id' => $event->id,
-            'type' => $event->type->value,
-            'description' => $event->description,
-            'amount' => $event->amount->toFloat(),
-            'currency' => $event->currency,
-            'date' => $event->date->toDateString(),
-            'status' => $event->status->value,
-            'statusLabel' => $event->status->label(),
-            'certainty' => $event->certainty->value,
-            'certaintyLabel' => $event->certainty->label(),
-            'seriesId' => $event->series_id,
-            'notes' => $event->notes,
-            'allocationOverrides' => $event->allocation_overrides ?? [],
-            'account' => $event->account ? ['id' => $event->account->id, 'name' => $event->account->name] : null,
-            'category' => $event->category ? [
-                'id' => $event->category->id,
-                'name' => $event->category->name,
-                'icon' => $event->category->icon,
-                'color' => $event->category->color,
-            ] : null,
-            'suggestedMatch' => $match,
-        ];
     }
 }

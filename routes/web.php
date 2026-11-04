@@ -106,6 +106,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/planner/simulate', [PlannerController::class, 'simulate'])->name('planner.simulate');
     Route::delete('planning/planner/{scenario}', [PlannerController::class, 'destroy'])->name('planner.destroy');
     Route::get('planning/cash-flow', [PlannedEventController::class, 'index'])->name('planned-events.index');
+    Route::get('planning/cash-flow/form-options', [PlannedEventController::class, 'formOptions'])->name('planned-events.form-options');
     Route::post('planning/cash-flow', [PlannedEventController::class, 'store'])->name('planned-events.store');
     Route::patch('planning/cash-flow/{plannedEvent}', [PlannedEventController::class, 'update'])->name('planned-events.update');
     Route::delete('planning/cash-flow/{plannedEvent}', [PlannedEventController::class, 'destroy'])->name('planned-events.destroy');
@@ -114,6 +115,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/cash-flow/{plannedEvent}/skip', [PlannedEventController::class, 'skip'])->name('planned-events.skip');
     Route::post('planning/cash-flow/{plannedEvent}/reopen', [PlannedEventController::class, 'reopen'])->name('planned-events.reopen');
     Route::post('planning/cash-flow/{plannedEvent}/link', [PlannedEventController::class, 'link'])->name('planned-events.link');
+    Route::get('planning/series/{plannedEventSeries}/edit-data', [PlannedSeriesController::class, 'editData'])->name('planned-series.edit-data');
     Route::patch('planning/series/{plannedEventSeries}', [PlannedSeriesController::class, 'update'])->name('planned-series.update');
     Route::post('planning/series/{plannedEventSeries}/pause', [PlannedSeriesController::class, 'pause'])->name('planned-series.pause');
     Route::post('planning/series/{plannedEventSeries}/resume', [PlannedSeriesController::class, 'resume'])->name('planned-series.resume');

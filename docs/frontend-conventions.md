@@ -68,21 +68,43 @@ Use the shared components, never a hand-styled `bg-primary-600` element:
 
 JSON endpoints called with `fetch()` (global transaction modal, import wizard, bucket history, planner) must check `response.ok`, catch network errors and tell the user, through `useToast().push({ type: 'error', message })` or an inline error with a retry, never by silently showing an empty or "done" state. When a newer request can supersede an older one (planner runs, opening another transaction), number the requests and ignore responses that are no longer the latest. Labels built with `t()` in `<script setup>` go in a `computed`, so they follow a language switch without a reload.
 
-## The global transaction modal
+## The global transaction modal (one money-movement form)
 
-`Components/GlobalTransactionModal.vue` is mounted once in `AuthenticatedLayout.vue` so any page can open it — the topbar's "New transaction" button, an empty-state CTA, or a transaction row's edit action all call the same composable:
+`Components/GlobalTransactionModal.vue` is mounted once in `AuthenticatedLayout.vue`. It is a thin `ModalForm` shell
+around `Components/MoneyMovementForm.vue`, the one form for real transactions, plans, repeating plans and confirming a
+plan. Any page drives it through the composable:
 
 ```js
 import { useTransactionModal } from '@/composables/useTransactionModal';
-const { open } = useTransactionModal();
+const { open, openPlanned, openSeries, openConfirm } = useTransactionModal();
 
-open(null, 'expense');   // create, default tab = expense
-open(transaction.id);    // edit — pass the transaction's *id*, not a hydrated object
+open(null, 'expense');           // create a real transaction, default tab = expense
+open(null, 'income', 'planned'); // create, starting on "Planned"
+open(transaction.id);            // edit a transaction: pass its *id*, not a hydrated object
+openPlanned(null, { type: 'income' }); // new plan
+openPlanned(event);              // edit a plan (a presented planned event: PlannedEventPresenter::event)
+openSeries(series.id);           // edit a whole repeating plan (fetches planned-series.edit-data)
+openConfirm(event);              // record a plan as real, prefilled; date = the plan's date or today if later
 ```
 
-`useTransactionModal.js` holds its state in **module-scope `ref`s** (a plain shared-singleton pattern), not Vue's `provide`/`inject` — simpler than the original plan's provide/inject sketch and equally global since ES modules are singletons. If you need the same "any component can drive shared state" pattern elsewhere, copy this composable's shape rather than reaching for `provide`/`inject` or a state library.
+The form's intents are `create`, `editTransaction`, `editPlanned`, `editSeries` and `confirmPlanned`; only `create`
+shows the **Already happened / Planned** switch and the type tabs. Its rules (which route to submit to, the request
+body, the future-date prompt, which buckets an expense can be paid from) live in the pure `resources/js/moneyMovement.js`,
+tested with `npm run test:js`. An expense's saved bucket is fetched with `spend-options?include=<id>` and kept on load;
+only a change the user makes (account or type) may drop it (`keepBucket`).
 
-The modal fetches its own reference data **on open**, via plain `fetch()` against two small non-Inertia JSON endpoints (`TransactionController@formOptions`, `@editData`) rather than via shared Inertia props — deliberately, so every page doesn't have to carry `accounts`/`categories` just in case the modal opens. Account options carry `id`, `name` and `currency` (shown as "Name · CUR" everywhere an account is picked), and `editData` also returns the transaction's own `accounts`, so an inactive account still shows its name when editing. These `fetch()` calls need a manual CSRF header (`resources/js/csrf.js`'s `withCsrfHeader()`, reading the `XSRF-TOKEN` cookie) since they bypass Inertia's router, which handles CSRF automatically. The CSV import wizard (`Pages/Transactions/Import.vue`) uses the same `fetch()` + `withCsrfHeader()` pattern against its own `parse`/`store` JSON endpoints, for the same reason (multi-step wizard state that doesn't map to a single Inertia page visit).
+`useTransactionModal.js` holds its state in **module-scope `ref`s** (a plain shared-singleton pattern), not Vue's
+`provide`/`inject`. If you need the same "any component can drive shared state" pattern elsewhere, copy this
+composable's shape rather than reaching for `provide`/`inject` or a state library.
+
+The shell fetches reference data **on demand** via plain `fetch()` against small non-Inertia JSON endpoints rather than
+shared Inertia props: `TransactionController@formOptions` once (accounts with `id`, `name`, `currency`, `on_budget`, and
+categories), `PlannedEventController@formOptions` (`planned-events.form-options`: frequencies, certainties, buckets) the
+first time a plan is shown, and on every open the form fetches `editData`, `planned-series.edit-data` and the bucket
+`spend-options`. These `fetch()` calls need a manual CSRF header (`resources/js/csrf.js`'s `withCsrfHeader()`, reading
+the `XSRF-TOKEN` cookie) when they are not GETs, since they bypass Inertia's router. The CSV import wizard
+(`Pages/Transactions/Import.vue`) uses the same `fetch()` + `withCsrfHeader()` pattern against its own `parse`/`store`
+JSON endpoints.
 
 ## Flowbite + Inertia navigation
 

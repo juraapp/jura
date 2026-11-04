@@ -210,4 +210,18 @@ class PlannedSeriesTest extends TestCase
         $this->actingAs($intruder)->delete("/planning/series/{$series->id}")->assertNotFound();
         $this->assertTrue($series->fresh()->is_active);
     }
+
+    public function test_the_form_gets_a_series_with_its_next_date(): void
+    {
+        $series = $this->series(['auto_post' => true, 'ends_on' => '2027-06-30']);
+
+        $this->actingAs($this->user)->getJson("/planning/series/{$series->id}/edit-data")->assertOk()
+            ->assertJsonPath('frequency', 'monthly')
+            ->assertJsonPath('nextDate', '2026-12-05')
+            ->assertJsonPath('endsOn', '2027-06-30')
+            ->assertJsonPath('autoPost', true)
+            ->assertJsonPath('isActive', true);
+
+        $this->actingAs(User::factory()->create())->getJson("/planning/series/{$series->id}/edit-data")->assertNotFound();
+    }
 }

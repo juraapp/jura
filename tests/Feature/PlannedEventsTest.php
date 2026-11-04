@@ -626,4 +626,18 @@ class PlannedEventsTest extends TestCase
 
         $this->assertDatabaseCount('transactions', 0);
     }
+
+    public function test_the_form_gets_frequencies_certainties_and_only_the_users_buckets(): void
+    {
+        $user = User::factory()->create();
+        $bucket = Bucket::factory()->for($user)->create(['currency' => 'USD']);
+        Bucket::factory()->create();
+
+        $this->actingAs($user)->getJson('/planning/cash-flow/form-options')->assertOk()
+            ->assertJsonCount(4, 'frequencies')
+            ->assertJsonCount(3, 'certainties')
+            ->assertJsonCount(1, 'buckets')
+            ->assertJsonPath('buckets.0.id', $bucket->id)
+            ->assertJsonPath('buckets.0.currency', 'USD');
+    }
 }
