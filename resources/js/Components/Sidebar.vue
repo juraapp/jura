@@ -50,7 +50,7 @@ const sections = [
     {
         title: 'ui.shell.nav.planning',
         items: [
-            { label: 'ui.shell.nav.cash_flow', route: plannedEventsIndex, icon: 'calendar' },
+            { label: 'ui.shell.nav.cash_flow', route: plannedEventsIndex, icon: 'calendar', badge: 'reviewCount' },
             { label: 'ui.shell.nav.buckets', route: bucketsIndex, icon: 'chart-pie' },
             { label: 'ui.shell.nav.wish_list', route: wishlistIndex, icon: 'flag' },
             { label: 'ui.shell.nav.planner', route: plannerIndex, icon: 'scale' },
@@ -135,7 +135,12 @@ const isActive = (routeFn) => activeUrl.value === pathOf(routeFn.url());
                             @click="close"
                         >
                             <DynamicIcon :name="item.icon" class="h-5 w-5 shrink-0" />
-                            {{ $t(item.label) }}
+                            <span class="flex-1">{{ $t(item.label) }}</span>
+                            <span
+                                v-if="item.badge && page.props[item.badge] > 0"
+                                class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-500/20 dark:text-red-300"
+                                :title="$t('ui.shell.review_badge', { count: page.props[item.badge] })"
+                            >{{ page.props[item.badge] }}</span>
                         </Link>
                     </li>
                 </ul>

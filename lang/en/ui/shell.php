@@ -30,6 +30,7 @@ return [
         'trash' => 'Trash',
         'export_data' => 'Export my data',
     ],
+    'review_badge' => '{count} plans need review',
     'topbar' => [
         'open_menu' => 'Open menu',
         'new_transaction' => 'New transaction',

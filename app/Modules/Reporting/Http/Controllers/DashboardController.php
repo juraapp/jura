@@ -32,6 +32,7 @@ class DashboardController extends Controller
                 'hasAnyTransaction' => $hasAnyTransaction,
                 'currencies' => [],
                 'upcoming' => [],
+                'needsReview' => ['count' => 0, 'items' => []],
             ]);
         }
 
@@ -80,6 +81,7 @@ class DashboardController extends Controller
             'hasAnyTransaction' => $hasAnyTransaction,
             'currencies' => $currencies,
             'upcoming' => $planning->upcoming($user),
+            'needsReview' => $planning->needsReview($user),
         ]);
     }
 

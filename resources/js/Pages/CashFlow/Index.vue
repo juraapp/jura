@@ -9,6 +9,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import Modal from '@/Components/Modal.vue';
 import Money from '@/Components/Money.vue';
 import SeriesList from '@/Components/SeriesList.vue';
+import NeedsReviewList from '@/Components/NeedsReviewList.vue';
 import SegmentedControl from '@/Components/SegmentedControl.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -41,6 +42,7 @@ const props = defineProps({
     views: { type: Array, required: true },
     months: { type: Number, required: true },
     series: { type: Array, required: true },
+    review: { type: Object, required: true },
     section: { type: String, default: null },
 });
 
@@ -160,6 +162,11 @@ const deleteEvent = () => {
         </template>
 
         <div class="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+            <section v-if="review.count > 0 || section === 'review'" id="review" class="scroll-mt-20">
+                <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">{{ $t('ui.cash_flow.review_title', { count: review.count }) }}</h3>
+                <NeedsReviewList :review="review" />
+            </section>
+
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <SegmentedControl :model-value="view" :options="views" @update:model-value="changeView" />

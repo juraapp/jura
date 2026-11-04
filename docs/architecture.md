@@ -68,6 +68,7 @@ To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to 
 - `auth.user` — the authenticated user, or `null`.
 - `today` — the user's current date (`Y-m-d`) in their timezone (`$user->today()`), or `null` for guests. Vue reads it through `useToday()` (see `frontend-conventions.md`).
 - `flash` — `{ success, error, warning }`, read by pages that want to react to a flash message (most currently rely on the flash surfacing naturally via a full Inertia re-render rather than reading this explicitly).
+- `reviewCount` — deferred in the `topbar` group: how many plans need review (`UpcomingPlans::needsReviewCount`), shown as a badge on the sidebar's *Upcoming & cash flow* item.
 - `netWorth` / `moneyMap` / `notifications` — deferred (`Inertia::defer(..., 'topbar')`) since the topbar needs them on every page but they're not worth blocking the initial render for. The Vue-side `NetWorthBadge`/`ReadyToAssignBadge`/`NotificationBell` components consume them, and `MoneyMapStrip` shows `moneyMap` (`[{currency, inAccounts, inBuckets, readyToAssign, overAssigned}]`) on the Dashboard, Accounts and Buckets pages; see `frontend-conventions.md`.
 
 ## Frontend directory layout

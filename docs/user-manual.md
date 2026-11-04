@@ -47,6 +47,9 @@ The first page after you sign in. It answers "how am I doing this month?" at a g
 - **Average daily expense**, **Biggest expense this month** and **Top spending category**.
 - **Days of financial autonomy**: how many days your available money would last at your current spending pace
   if no new income arrived.
+- A **Needs review** card when plans are waiting for you: planned money whose date has passed and that is still open,
+  or that could not be recorded automatically. It shows the first five with **Confirm**, **Match**, **Adjust**, **Skip**
+  and **Edit**, and **See all** opens the full list. The same count appears next to **Upcoming & cash flow** in the menu.
 - A **Next 30 days** card with planned income, planned expenses and the net, clearly marked as planned and not yet real
   (it appears only when you have planned events; income counts when it is confirmed or expected).
 - Short plain-language **insights**, for example "You spent 12% more than last month".
@@ -197,6 +200,11 @@ category) becomes a real transaction on its date, in your time zone, without you
 **Auto** on the page. If you missed some dates (for example the app was not running), each one is recorded on its
 own date the next time it runs. If its account was archived or deleted or its category deleted, the plan stays open
 with a red note saying why; fix the account or category and it is recorded on the next try.
+
+**Needs review.** At the top of the page, plans whose date has passed and that are still open, and plans that could
+not be recorded automatically, wait for you: **Confirm** records them (one click when the plan has an account and a
+category), **Match** links a transaction you already recorded, **Adjust** confirms with other details, **Skip** says it
+did not happen. An overdue plan counts as happening today in every projection until you deal with it.
 
 **How sure are you?**
 - **Confirmed**: it will happen (a signed contract, a fixed bill).

@@ -1,4 +1,5 @@
 <script setup>
+import NeedsReviewList from '@/Components/NeedsReviewList.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -27,6 +28,7 @@ const props = defineProps({
     hasAnyTransaction: { type: Boolean, required: true },
     currencies: { type: Array, required: true },
     upcoming: { type: Array, default: () => [] },
+    needsReview: { type: Object, default: () => ({ count: 0, items: [] }) },
 });
 
 const page = usePage();
@@ -161,6 +163,11 @@ const netWorthEvolutionOptions = (currency) => ({
                         </div>
                     </StatCard>
                 </div>
+
+                <section v-if="needsReview.count > 0" class="rounded-xl border border-red-200 bg-red-50/40 p-4 dark:border-red-500/30 dark:bg-red-500/5">
+                    <h3 class="mb-2 text-sm font-semibold text-red-700 dark:text-red-300">{{ $t('ui.dashboard.needs_review', { count: needsReview.count }) }}</h3>
+                    <NeedsReviewList :review="needsReview" :see-all-url="plannedEventsIndex.url({ query: { section: 'review' } })" />
+                </section>
 
                 <!-- Projected, not recorded: kept visually apart from the real figures below -->
                 <div v-if="upcoming.length" class="rounded-xl border border-dashed border-primary-300 bg-primary-50/40 p-4 dark:border-primary-500/40 dark:bg-primary-500/5">

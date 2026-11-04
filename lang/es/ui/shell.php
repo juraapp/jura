@@ -30,6 +30,7 @@ return [
         'trash' => 'Papelera',
         'export_data' => 'Exportar mis datos',
     ],
+    'review_badge' => '{count} planes por revisar',
     'topbar' => [
         'open_menu' => 'Abrir menú',
         'new_transaction' => 'Nueva transacción',
