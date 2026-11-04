@@ -35,19 +35,69 @@ class BalanceCalculator implements Balances
         return Money::of($decimal);
     }
 
+    /**
+     * Read on every page (the money map), so it takes a constant number of queries: cached balances in one cache
+     * read, and the missing ones in one grouped query (then cached like accountBalance does).
+     */
     public function budgetBalances(User $user): Collection
     {
-        return $user->accounts()
+        $accounts = $user->accounts()
             ->where('is_active', true)
             ->where('on_budget', true)
             ->orderBy('id')
-            ->get()
+            ->get();
+
+        $balances = $this->balancesOf($accounts);
+
+        return $accounts
             ->map(fn (Account $account) => [
                 'id' => $account->id,
                 'currency' => $account->currency,
-                'balance' => $this->accountBalance($account),
+                'balance' => $balances[$account->id],
             ])
             ->values();
+    }
+
+    /**
+     * @param  Collection<int, Account>  $accounts
+     * @return array<int, Money> keyed by account id
+     */
+    private function balancesOf(Collection $accounts): array
+    {
+        if ($accounts->isEmpty()) {
+            return [];
+        }
+
+        $keys = $accounts->mapWithKeys(fn (Account $account) => [$account->id => $this->accountCacheKey($account)]);
+        $cached = Cache::many($keys->values()->all());
+
+        $balances = [];
+        $missing = collect();
+        foreach ($accounts as $account) {
+            $decimal = $cached[$keys[$account->id]] ?? null;
+            $decimal === null ? $missing->push($account) : $balances[$account->id] = Money::of($decimal);
+        }
+
+        if ($missing->isNotEmpty()) {
+            $sums = DB::table('transactions')
+                ->whereIn('account_id', $missing->pluck('id')->all())
+                ->whereNull('deleted_at')
+                ->selectRaw('account_id, type, COALESCE(SUM(amount), 0) as total')
+                ->groupBy('account_id', 'type')
+                ->get()
+                ->groupBy('account_id');
+
+            $fresh = [];
+            foreach ($missing as $account) {
+                $balance = $this->fromSums($account, collect($sums->get($account->id, []))->pluck('total', 'type'));
+                $balances[$account->id] = $balance;
+                $fresh[$keys[$account->id]] = $balance->toDecimalString();
+            }
+
+            Cache::putMany($fresh, self::TTL);
+        }
+
+        return $balances;
     }
 
     public function yieldBearing(User $user): Collection
@@ -110,6 +160,14 @@ class BalanceCalculator implements Balances
             ->groupBy('type')
             ->pluck('total', 'type');
 
+        return $this->fromSums($account, $sums);
+    }
+
+    /**
+     * @param  Collection<string, mixed>  $sums  total per transaction type
+     */
+    private function fromSums(Account $account, Collection $sums): Money
+    {
         $balance = $account->initial_balance;
 
         $balance = $balance->add(Money::of($sums[TransactionType::Income->value] ?? 0));

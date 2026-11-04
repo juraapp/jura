@@ -31,6 +31,39 @@ class EloquentLedgerQuery implements LedgerQuery
         );
     }
 
+    public function budgetSpending(int $userId, array $windows): array
+    {
+        if ($windows === []) {
+            return [];
+        }
+
+        $keys = array_keys($windows);
+        $query = Transaction::forUser($userId)
+            ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
+            ->where('transactions.type', TransactionType::Expense->value)
+            ->whereIn('transactions.category_id', array_unique(array_column($windows, 'category_id')))
+            ->where('accounts.on_budget', true)
+            ->where('accounts.is_active', true)
+            ->whereNull('accounts.deleted_at')
+            ->whereNull('transactions.bucket_id');
+
+        foreach (array_values($windows) as $index => $window) {
+            $query->selectRaw(
+                "COALESCE(SUM(CASE WHEN transactions.category_id = ? AND accounts.currency = ? AND transactions.date >= ? THEN transactions.amount ELSE 0 END), 0) AS w{$index}",
+                [$window['category_id'], strtoupper($window['currency']), $window['from']->toDateString()],
+            );
+        }
+
+        $row = (array) $query->toBase()->first();
+
+        $totals = [];
+        foreach ($keys as $index => $key) {
+            $totals[$key] = Money::of($row["w{$index}"] ?? 0);
+        }
+
+        return $totals;
+    }
+
     public function isOnBudget(int $userId, int $accountId): bool
     {
         return Account::forUser($userId)->whereKey($accountId)->where('on_budget', true)->where('is_active', true)->exists();

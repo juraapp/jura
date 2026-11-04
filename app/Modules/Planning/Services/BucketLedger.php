@@ -12,6 +12,7 @@ use App\Modules\Planning\Models\Bucket;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -55,6 +56,42 @@ class BucketLedger
         }
 
         return $balance;
+    }
+
+    /**
+     * available() for many buckets at once in two queries (allocation sums, then every category window), for pages
+     * that show many buckets. The buckets' `funded_since` must be freshly loaded.
+     *
+     * @param  Collection<int, Bucket>  $buckets
+     * @return array<int, Money> keyed by bucket id
+     */
+    public function availableMany(Collection $buckets): array
+    {
+        if ($buckets->isEmpty()) {
+            return [];
+        }
+
+        $userId = $buckets->first()->user_id;
+        $sums = Allocation::forUser($userId)
+            ->whereIn('bucket_id', $buckets->modelKeys())
+            ->selectRaw('bucket_id, SUM(amount) as total')
+            ->groupBy('bucket_id')
+            ->toBase()
+            ->pluck('total', 'bucket_id');
+
+        $windows = [];
+        foreach ($buckets as $bucket) {
+            $from = $this->effectiveFrom($bucket, $bucket->funded_since) ?? $bucket->tracking_started_on;
+            if ($bucket->kind === BucketKind::Spending && $bucket->category_id !== null && $from !== null) {
+                $windows[$bucket->id] = ['category_id' => $bucket->category_id, 'currency' => $bucket->currency, 'from' => $from];
+            }
+        }
+
+        $spent = $this->ledger->budgetSpending($userId, $windows);
+
+        return $buckets->mapWithKeys(fn (Bucket $bucket) => [
+            $bucket->id => Money::of($sums[$bucket->id] ?? 0)->subtract($spent[$bucket->id] ?? Money::zero()),
+        ])->all();
     }
 
     /**
