@@ -68,10 +68,10 @@ class UserTimezoneTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('today', '2026-10-12'));
     }
 
-    public function test_realizing_a_plan_and_buying_an_item_default_to_the_users_date(): void
+    public function test_realizing_a_later_plan_and_buying_an_item_default_to_the_users_date(): void
     {
         $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
-        $event = PlannedEvent::factory()->for($this->user)->create(['type' => 'expense', 'amount' => 100, 'currency' => 'COP', 'date' => '2026-10-10']);
+        $event = PlannedEvent::factory()->for($this->user)->create(['type' => 'expense', 'amount' => 100, 'currency' => 'COP', 'date' => '2026-10-20']);
         $item = WishlistItem::factory()->for($this->user)->create(['currency' => 'COP', 'bucket_id' => null]);
 
         $this->actingAs($this->user)

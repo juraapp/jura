@@ -16,6 +16,7 @@ use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Services\CashFlowProjector;
 use App\Modules\Planning\Services\PlannedEventService;
+use App\Modules\Planning\Services\SeriesPoster;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use Illuminate\Http\RedirectResponse;
@@ -75,28 +76,34 @@ class PlannedEventController extends Controller
         ]);
     }
 
-    public function store(StorePlannedEventRequest $request, PlannedEventService $service): RedirectResponse
+    public function store(StorePlannedEventRequest $request, PlannedEventService $service, SeriesPoster $poster): RedirectResponse
     {
         $data = $request->validated();
 
         if (! empty($data['frequency'])) {
             $service->createSeries($request->user(), $data);
-
-            return back()->with('success', __('planned-events.series_saved'));
+        } else {
+            $service->createEvent($request->user(), $data);
         }
 
-        $service->createEvent($request->user(), $data);
+        if (! empty($data['auto_post'])) {
+            $poster->postDueForUser($request->user());
+        }
 
-        return back()->with('success', __('planned-events.saved'));
+        return back()->with('success', __(! empty($data['frequency']) ? 'planned-events.series_saved' : 'planned-events.saved'));
     }
 
-    public function update(UpdatePlannedEventRequest $request, PlannedEvent $plannedEvent, PlannedEventService $service): RedirectResponse
+    public function update(UpdatePlannedEventRequest $request, PlannedEvent $plannedEvent, PlannedEventService $service, SeriesPoster $poster): RedirectResponse
     {
         if ($plannedEvent->status !== PlannedEventStatus::Planned) {
             return back()->with('error', __('planned-events.already_closed'));
         }
 
         $service->updateEvent($plannedEvent, $request->validated(), $request->input('scope', 'this'));
+
+        if ($request->boolean('auto_post')) {
+            $poster->postDueForUser($request->user());
+        }
 
         return back()->with('success', __('planned-events.updated'));
     }
@@ -131,7 +138,9 @@ class PlannedEventController extends Controller
             return back()->with('error', __('planned-events.already_closed'));
         }
 
-        $service->realize($plannedEvent, $request->validated());
+        if ($service->realize($plannedEvent, $request->validated()) === null) {
+            return back()->with('error', __('planned-events.already_closed'));
+        }
 
         return back()->with('success', __('planned-events.realized'));
     }

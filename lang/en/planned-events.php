@@ -18,4 +18,5 @@ return [
     'series_paused' => 'Repeating plan paused.',
     'series_resumed' => 'Repeating plan resumed from today.',
     'series_deleted' => 'Repeating plan deleted. Recorded and skipped dates stay in your history.',
+    'future_not_allowed' => 'A recorded transaction cannot be dated after today.',
 ];
