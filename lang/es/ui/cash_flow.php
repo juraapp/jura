@@ -88,4 +88,7 @@ return [
         'category_missing' => 'No se pudo registrar automáticamente: su categoría fue eliminada.',
         'failed' => 'No se pudo registrar automáticamente. Se intentará de nuevo.',
     ],
+    'confirm' => 'Confirmar',
+    'adjust' => 'Ajustar',
+    'match' => 'Vincular',
 ];

@@ -106,6 +106,15 @@ the `XSRF-TOKEN` cookie) when they are not GETs, since they bypass Inertia's rou
 (`Pages/Transactions/Import.vue`) uses the same `fetch()` + `withCsrfHeader()` pattern against its own `parse`/`store`
 JSON endpoints.
 
+## Planned rows
+
+`Components/PlannedBand.vue` (the overdue and upcoming bands on the transactions list, from the deferred `planned`
+prop, which Inertia reloads after every visit that returns the page, POST redirects included), the cash flow list and
+the review inbox share `composables/usePlanActions.js`: **Confirm** (one click through `planned-events.realize` when
+the plan has an account and a category, else `openConfirm`), **Adjust** (`openConfirm`), **Skip**, **Match** (link
+the suggested transaction) and **Edit** (`openPlanned`). Projected rows are labelled "Projected, not in your balance"
+and never mixed into real totals.
+
 ## Flowbite + Inertia navigation
 
 Flowbite's dropdowns/modals/tooltips are wired via `data-*` attributes and only auto-init on `DOMContentLoaded`. Since Inertia swaps the page without a full reload, `resources/js/app.js` re-runs the initializer after every client-side navigation:

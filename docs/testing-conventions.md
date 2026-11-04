@@ -99,6 +99,8 @@ $partial = $this->actingAs($user)->getJson('/dashboard', [
 $partial->assertJsonStructure(['props' => ['netWorth', 'notifications' => ['items', 'unreadCount']]]);
 ```
 
+For a page's own deferred props, `AssertableInertia::loadDeferredProps('group', fn (Assert $reload) => ...)` does this reload for you (see `TransactionsTest`'s planned bands).
+
 Don't try to precompute `X-Inertia-Version` — it's not stable when resolved outside of actual route dispatch (e.g. calling `Inertia::getVersion()` directly from a test body, before making a request, returns a different value than what the middleware computes for the live request). Bootstrap it from a real response's header instead, as above. Sending a *wrong* version on a GET request with the `X-Inertia` header produces a 409, not a 200 with a fallback — this is the most common way this specific test pattern goes subtly wrong.
 
 ## What's covered, what isn't

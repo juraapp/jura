@@ -88,4 +88,7 @@ return [
         'category_missing' => 'Could not be recorded automatically: its category was deleted.',
         'failed' => 'Could not be recorded automatically. It will be tried again.',
     ],
+    'confirm' => 'Confirm',
+    'adjust' => 'Adjust',
+    'match' => 'Match',
 ];

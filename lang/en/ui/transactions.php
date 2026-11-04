@@ -33,4 +33,10 @@ return [
     'delete_one_hint' => 'If this is a transfer, both movements (source and destination) are deleted. You can restore it from the Trash.',
     'income' => 'Income',
     'expense' => 'Expense',
+    'overdue_band' => 'Overdue plans',
+    'upcoming_band' => 'Coming up in the next 30 days',
+    'not_in_balance' => 'Projected, not in your balance',
+    'see_all' => 'See all {count}',
+    'auto_posted' => 'Auto-posted',
+    'from_plan' => 'From plan',
 ];
