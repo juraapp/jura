@@ -25,14 +25,31 @@ class EloquentLedgerQuery implements LedgerQuery
                 ->where('accounts.currency', $currency)
                 ->where('transactions.date', '>=', $from->toDateString())
                 ->when($to !== null, fn ($query) => $query->where('transactions.date', '<=', $to->toDateString()))
-                ->when($onBudgetOnly, fn ($query) => $query->where('accounts.on_budget', true)->whereNull('transactions.bucket_id'))
+                ->when($onBudgetOnly, fn ($query) => $query->where('accounts.on_budget', true)->where('accounts.is_active', true)
+                    ->whereNull('accounts.deleted_at')->whereNull('transactions.bucket_id'))
                 ->sum('transactions.amount')
         );
     }
 
     public function isOnBudget(int $userId, int $accountId): bool
     {
-        return Account::forUser($userId)->whereKey($accountId)->where('on_budget', true)->exists();
+        return Account::forUser($userId)->whereKey($accountId)->where('on_budget', true)->where('is_active', true)->exists();
+    }
+
+    public function bucketExpenses(int $userId, int $accountId): Collection
+    {
+        return Transaction::forUser($userId)
+            ->where('account_id', $accountId)
+            ->where('type', TransactionType::Expense->value)
+            ->whereNotNull('bucket_id')
+            ->orderBy('id')
+            ->get(['id', 'bucket_id', 'amount', 'date'])
+            ->map(fn (Transaction $transaction) => [
+                'id' => $transaction->id,
+                'bucket_id' => $transaction->bucket_id,
+                'amount' => $transaction->amount,
+                'date' => $transaction->date,
+            ]);
     }
 
     public function onBudgetAccountIds(int $userId): array

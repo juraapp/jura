@@ -18,15 +18,22 @@ interface LedgerQuery
     /**
      * Sum of expense transactions in one category, in accounts of one currency, between two dates (inclusive;
      * no end date = every expense from the start date on, future-dated ones included). With $onBudgetOnly, only
-     * expenses in on-budget accounts that were not paid from a bucket count (the spending that shrinks a
+     * expenses in accounts in the budget (on budget and not archived) that were not paid from a bucket count (the spending that shrinks a
      * category's envelope; an expense paid from a bucket comes out of that bucket instead).
      */
     public function expenseTotal(int $userId, int $categoryId, string $currency, CarbonInterface $from, ?CarbonInterface $to, bool $onBudgetOnly = false): Money;
 
     /**
-     * Whether one of the user's accounts counts in the budget (false when it is off budget or not theirs).
+     * Whether one of the user's accounts counts in the budget (false when it is off budget, archived or not theirs).
      */
     public function isOnBudget(int $userId, int $accountId): bool;
+
+    /**
+     * The expenses on one of the user's accounts that were paid from a bucket (trashed ones left out).
+     *
+     * @return Collection<int, array{id: int, bucket_id: int, amount: Money, date: CarbonInterface}>
+     */
+    public function bucketExpenses(int $userId, int $accountId): Collection;
 
     /**
      * @return list<int> ids of the user's on-budget accounts (archived ones included)

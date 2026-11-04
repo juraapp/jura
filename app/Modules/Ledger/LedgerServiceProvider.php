@@ -5,6 +5,7 @@ namespace App\Modules\Ledger;
 use App\Modules\Ledger\Contracts\Balances;
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
+use App\Modules\Ledger\Events\AccountBudgetChanged;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Ledger\Listeners\InvalidateBalanceCache;
 use App\Modules\Ledger\Models\Account;
@@ -31,5 +32,14 @@ class LedgerServiceProvider extends ServiceProvider
         Account::saved($forgetBalance);
         Account::deleted($forgetBalance);
         Account::restored($forgetBalance);
+
+        Account::updated(function (Account $account) {
+            $was = (bool) $account->getOriginal('on_budget') && (bool) $account->getOriginal('is_active');
+            $is = $account->on_budget && $account->is_active;
+
+            if ($was !== $is) {
+                AccountBudgetChanged::dispatch($account->user_id, $account->id, $is);
+            }
+        });
     }
 }

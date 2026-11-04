@@ -73,7 +73,12 @@ An account is any place that holds money: a bank account, digital wallet, cash, 
   current balance directly. To correct it, add a transaction.
 - **Count in my budget.** On by default. Turn it off for money you never plan to spend from (a long-term deposit, an
   investment account): the account is then marked **Off budget** and its balance stays out of *ready to assign*
-  (see *Buckets*). Turning it off or on, or archiving the account, moves ready to assign by the account's balance.
+  (see *Buckets*). An archived account is out of your budget in the same way. While an account is out of the budget,
+  nothing it paid comes out of a bucket: expenses paid from a bucket give that bucket its money back, and its spending
+  in a category no longer shrinks that category's bucket. Ready to assign moves by the account's balance and by what
+  the buckets get back; for a card whose spending all came out of buckets, the two cancel and it does not move at all.
+  Turning it back on, or unarchiving it, takes that spending out of the buckets again. Income from the account that
+  already filled buckets stays in them.
 - **Deleting an account:** if it has no transactions it is removed. If it has transactions (including ones you
   deleted that are still in the Trash) or an active repeating plan uses it, it is **archived**: kept in your history so your reports stay correct, but it
   can no longer receive new transactions, transfers, automatically recorded plans or purchases. Existing transactions on
