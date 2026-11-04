@@ -91,4 +91,6 @@ return [
     'confirm' => 'Confirmar',
     'adjust' => 'Ajustar',
     'match' => 'Vincular',
+    'review_title' => 'Por revisar ({count})',
+    'review_empty' => 'Nada por revisar: cada plan cuya fecha pasó está confirmado, vinculado u omitido.',
 ];

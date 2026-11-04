@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Http\Controllers;
 
+use App\Modules\Planning\Contracts\UpcomingPlans;
 use App\Modules\Planning\Enums\Certainty;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Enums\PlannedEventStatus;
@@ -28,7 +29,10 @@ use Inertia\Response;
 
 class PlannedEventController extends Controller
 {
-    public function index(Request $request, CashFlowProjector $projector, PlannedEventService $service, PlannedEventPresenter $presenter): Response
+    /** Rows the review inbox shows on the cash flow page. */
+    private const REVIEW_LIMIT = 50;
+
+    public function index(Request $request, CashFlowProjector $projector, PlannedEventService $service, PlannedEventPresenter $presenter, UpcomingPlans $upcoming): Response
     {
         $this->authorize('viewAny', PlannedEvent::class);
 
@@ -73,6 +77,7 @@ class PlannedEventController extends Controller
         return Inertia::render('CashFlow/Index', [
             'events' => $events->map(fn (PlannedEvent $event) => $presenter->event($event, $matches[$event->id] ?? null))->values(),
             'series' => $series,
+            'review' => $upcoming->needsReview($request->user(), self::REVIEW_LIMIT),
             'projection' => $projection,
             'view' => $view->value,
             'views' => collect(ForecastView::cases())->map(fn (ForecastView $case) => ['value' => $case->value, 'label' => $case->label()]),

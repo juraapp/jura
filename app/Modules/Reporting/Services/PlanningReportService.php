@@ -5,6 +5,7 @@ namespace App\Modules\Reporting\Services;
 use App\Modules\Identity\Models\User;
 use App\Modules\Planning\Contracts\CashFlowForecast;
 use App\Modules\Planning\Contracts\PlanningOverview;
+use App\Modules\Planning\Contracts\UpcomingPlans;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Carbon;
@@ -25,6 +26,7 @@ class PlanningReportService
         private readonly ReportService $reports,
         private readonly CashFlowForecast $forecast,
         private readonly PlanningOverview $overview,
+        private readonly UpcomingPlans $upcomingPlans,
     ) {}
 
     /**
@@ -96,6 +98,16 @@ class PlanningReportService
     public function projects(User $user, ForecastView $view): array
     {
         return $this->overview->projectSummaries($user, $view, 24);
+    }
+
+    /**
+     * Plans that need the user (overdue or could not be recorded automatically): the first few and how many.
+     *
+     * @return array{count: int, items: list<array<string, mixed>>}
+     */
+    public function needsReview(User $user, int $limit = 5): array
+    {
+        return $this->upcomingPlans->needsReview($user, $limit);
     }
 
     /**

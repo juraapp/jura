@@ -6,7 +6,9 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Models\PlannedEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -127,6 +129,31 @@ class DashboardTest extends TestCase
         $partial->assertOk();
         $partial->assertJsonStructure(['props' => ['netWorth', 'notifications' => ['items', 'unreadCount']]]);
         $this->assertEquals(1000000.0, $partial->json('props.netWorth.COP'));
+    }
+
+    public function test_the_dashboard_lists_the_first_plans_that_need_review_and_every_page_shares_their_count(): void
+    {
+        Carbon::setTestNow('2026-11-10 12:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        Account::factory()->for($user)->create(['currency' => 'COP']);
+        foreach (range(1, 6) as $day) {
+            PlannedEvent::factory()->for($user)->expense()->create(['date' => "2026-11-0{$day}", 'currency' => 'COP']);
+        }
+        PlannedEvent::factory()->for($user)->expense()->create(['date' => '2026-11-20', 'currency' => 'COP']);
+        PlannedEvent::factory()->expense()->create(['date' => '2026-11-01']);
+
+        $this->actingAs($user)->get('/dashboard')->assertInertia(fn (Assert $page) => $page
+            ->where('needsReview.count', 6)
+            ->has('needsReview.items', 5)
+            ->where('needsReview.items.0.date', '2026-11-01')
+            ->missing('reviewCount')
+            ->loadDeferredProps('topbar', fn (Assert $reload) => $reload->where('reviewCount', 6))
+        );
+
+        $this->actingAs($user)->get('/planning/cash-flow')->assertInertia(fn (Assert $page) => $page
+            ->where('review.count', 6)
+            ->has('review.items', 6)
+        );
     }
 
     public function test_guests_cannot_access_the_dashboard(): void

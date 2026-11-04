@@ -4,6 +4,7 @@ namespace App\Modules\Shared\Http\Middleware;
 
 use App\Modules\Ledger\Contracts\Balances;
 use App\Modules\Planning\Contracts\MoneyMap;
+use App\Modules\Planning\Contracts\UpcomingPlans;
 use App\Modules\Shared\Support\UiMessages;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -73,6 +74,7 @@ class HandleInertiaRequests extends Middleware
                     'overAssigned' => $row['overAssigned'],
                 ], app(MoneyMap::class)->summary($request->user())));
             }, 'topbar'),
+            'reviewCount' => Inertia::defer(fn () => $request->user() ? app(UpcomingPlans::class)->needsReviewCount($request->user()) : 0, 'topbar'),
             'notifications' => Inertia::defer(function () use ($request) {
                 if (! $request->user()) {
                     return ['items' => [], 'unreadCount' => 0];

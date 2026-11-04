@@ -91,4 +91,6 @@ return [
     'confirm' => 'Confirm',
     'adjust' => 'Adjust',
     'match' => 'Match',
+    'review_title' => 'Needs review ({count})',
+    'review_empty' => 'Nothing to review: every plan whose date has passed is confirmed, matched or skipped.',
 ];
