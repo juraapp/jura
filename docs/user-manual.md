@@ -93,7 +93,7 @@ There are three kinds:
 
 To add one, use the add button (it is available from any page). The same form records money that **Already
 happened** (a real transaction, the default) or money that is **Planned** (it doesn't touch your balance; see
-[Cash flow](#upcoming--cash-flow-planned-income-and-expenses)). For a real one, choose the account, category, amount, date and
+[Upcoming & cash flow](#upcoming--cash-flow-planned-income-and-expenses)). For a real one, choose the account, category, amount, date and
 an optional **time** (it defaults to now and can be cleared), an optional description, notes and payment method (cash, debit card, credit card, bank transfer or other).
 If you pick a date after today, the form points it out and offers **Plan it instead** or **It already happened,
 save it**; it is only saved once you choose the second (also when an edit moves a transaction after today). CSV
@@ -333,7 +333,7 @@ month never breaks it: a cycle that starts on the 31st starts on the 28th in Feb
 **What happens during a cycle.** Say you earn 1000 a month, **Groceries** has a limit of 500 at **P0** that fills up to
 its target and sends its leftover to **Emergency** (target 1000, **P10**):
 1. When the month starts, the bucket card shows what is **expected** (in italics): 500 for groceries and 500 for the
-   emergency fund, taken from the income you planned in Cash flow. It is an estimate only, nothing is saved yet. When
+   emergency fund, taken from the income you planned in Upcoming & cash flow. It is an estimate only, nothing is saved yet. When
    the real income arrives it fills the buckets for real and the estimate disappears.
 2. During the month you spend, say, 100 on groceries. The card shows that about 400 will move on at the end.
 3. When the cycle ends, the 400 that was not spent moves to the emergency fund, which starts the next month with 900.
@@ -581,5 +581,8 @@ What it held is now simply ready to assign, and buckets that sent leftovers to i
 - Jura never converts between currencies. Each currency is planned, projected and reported on its own.
 - Planned expenses reduce your projected account balance but do not take money out of buckets, and spending in a
   category is not predicted when the planner looks ahead.
+- Something that already happened and repeats cannot be recorded and planned in one step yet: record it as a
+  transaction, then add a repeating plan starting on the next date.
+- A planned transfer to or from an account outside your budget does not yet show its effect on ready to assign.
 - Items that share a bucket each compare themselves with the same pot, so their "funded" bars can overlap.
 - Screens, messages, labels, exports and PDFs follow your language preference (English or Spanish). Names you type yourself (accounts, categories, buckets) are shown as you wrote them.
