@@ -14,6 +14,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateTransactionRequest extends FormRequest
 {
+    use GuardsFutureDates;
+
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('transaction'));
@@ -24,7 +26,7 @@ class UpdateTransactionRequest extends FormRequest
         if ($this->route('transaction')->type->isTransfer()) {
             return [
                 'amount' => ['required', ...MoneyRules::positive()],
-                'date' => ['required', 'date'],
+                'date' => ['required', 'date', $this->futureDateGuard($this->route('transaction')->date->toDateString())],
                 'time' => ['nullable', 'date_format:H:i'],
                 'description' => ['nullable', 'string', 'max:255'],
                 'notes' => ['nullable', 'string', 'max:2000'],
@@ -48,7 +50,7 @@ class UpdateTransactionRequest extends FormRequest
             ],
             'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id, $transaction->type->value, keepId: $transaction->category_id)],
             'amount' => ['required', ...MoneyRules::positive()],
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date', $this->futureDateGuard($this->route('transaction')->date->toDateString())],
             'time' => ['nullable', 'date_format:H:i'],
             'description' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],

@@ -287,4 +287,19 @@ class TransactionImportTest extends TestCase
         $this->actingAs($user)->postJson('/finances/transactions/import', ['rows' => [['line' => 2, 'amount' => ['nested']]]])->assertUnprocessable();
         $this->actingAs($user)->postJson('/finances/transactions/import', ['rows' => array_fill(0, 1001, ['line' => 2])])->assertUnprocessable();
     }
+
+    public function test_imported_rows_dated_after_today_are_not_asked_about(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create(['name' => 'My Wallet']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id, 'name' => 'Groceries']);
+
+        $this->actingAs($user)->postJson('/finances/transactions/import', [
+            'rows' => [[
+                'line' => 2, 'date' => now()->addMonth()->toDateString(), 'description' => 'Prepaid', 'category' => $category->name,
+                'account' => $account->name, 'type' => 'Expense', 'notes' => null, 'amount' => '500',
+            ]],
+            'include_duplicates' => false,
+        ])->assertOk()->assertJson(['imported' => 1]);
+    }
 }

@@ -93,7 +93,8 @@ happened** (a real transaction, the default) or money that is **Planned** (it do
 [Cash flow](#upcoming--cash-flow-planned-income-and-expenses)). For a real one, choose the account, category, amount, date and
 an optional **time** (it defaults to now and can be cleared), an optional description, notes and payment method (cash, debit card, credit card, bank transfer or other).
 If you pick a date after today, the form points it out and offers **Plan it instead** or **It already happened,
-save it**. For a plan, the form asks how sure you are, whether it **repeats**, whether to **record it automatically
+save it**; it is only saved once you choose the second (also when an edit moves a transaction after today). CSV
+imports are not asked. For a plan, the form asks how sure you are, whether it **repeats**, whether to **record it automatically
 on the date**, and, for an income, where it goes. A one-off plan dated before today suggests recording it as already
 happened instead. Transfers can only be recorded as already happened for now.
 
