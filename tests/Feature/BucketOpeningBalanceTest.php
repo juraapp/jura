@@ -71,7 +71,7 @@ class BucketOpeningBalanceTest extends TestCase
         $this->assertSame('500.00', $this->funded($bucket));
     }
 
-    public function test_removing_funds_stops_at_what_is_available_after_spending_but_reset_still_empties_the_bucket(): void
+    public function test_removing_funds_stops_at_what_is_available_after_spending_and_reset_brings_the_envelope_to_zero(): void
     {
         $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
         $account = Account::factory()->for($this->user)->create(['currency' => 'COP']);
@@ -83,8 +83,9 @@ class BucketOpeningBalanceTest extends TestCase
             ->assertSessionHasErrors('amount');
         $this->assertSame('300.00', $this->funded($bucket));
 
+        // 300 in, 500 spent: the envelope is at -200, so reset tops it up by 200 (funded 500).
         $this->post("/planning/buckets/{$bucket->id}/reset")->assertSessionHas('success');
-        $this->assertSame('0.00', $this->funded($bucket));
+        $this->assertSame('500.00', $this->funded($bucket));
     }
 
     public function test_reset_to_zero_removes_all_funded_money(): void

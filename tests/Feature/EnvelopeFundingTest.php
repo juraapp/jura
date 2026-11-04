@@ -204,6 +204,104 @@ class EnvelopeFundingTest extends TestCase
         $this->assertSame('300.00', $this->ready());
     }
 
+    private function overAssignError(int $amount): array
+    {
+        return ['over_assign' => __('buckets.over_assign', ['amount' => $this->user->formatter()->money(Money::of($amount), 'COP')])];
+    }
+
+    private function savings(string $name, int $funded): Bucket
+    {
+        $bucket = Bucket::factory()->savings()->for($this->user)->create(['name' => $name, 'currency' => 'COP']);
+        $this->fund($bucket, $funded, '2026-10-12');
+
+        return $bucket;
+    }
+
+    public function test_reset_brings_an_overspent_envelope_to_zero_from_ready_to_assign(): void
+    {
+        $this->bank->update(['initial_balance' => 1000]);
+        $groceries = $this->groceries();
+        $this->fund($groceries, 300, '2026-10-12');
+        $this->record('expense', 500, '2026-10-12');
+        // Bank 500; envelope 300 - 500 = -200; ready 500 - (-200) = 700.
+        $this->assertSame('-200.00', $this->envelope($groceries));
+        $this->assertSame('700.00', $this->ready());
+
+        $this->post("/planning/buckets/{$groceries->id}/reset")->assertSessionHasNoErrors();
+
+        // 200 comes in from ready: envelope 0; ready 700 - 200 = 500.
+        $this->assertSame('0.00', $this->envelope($groceries));
+        $this->assertSame('500.00', $this->ready());
+    }
+
+    public function test_reset_asks_before_topping_up_more_than_is_ready(): void
+    {
+        $this->bank->update(['initial_balance' => 1000]);
+        $groceries = $this->groceries();
+        $this->fund($groceries, 300, '2026-10-12');
+        $this->savings('Trip', 600);
+        $this->record('expense', 500, '2026-10-12');
+        // Bank 500; groceries -200, trip 600; ready 500 - 400 = 100.
+        $this->assertSame('100.00', $this->ready());
+
+        $this->post("/planning/buckets/{$groceries->id}/reset")->assertSessionHasErrors($this->overAssignError(100));
+        $this->assertSame('-200.00', $this->envelope($groceries));
+
+        $this->post("/planning/buckets/{$groceries->id}/reset", ['confirm_over_assign' => true])->assertSessionHasNoErrors();
+        // Groceries 0, trip 600; ready 500 - 600 = -100.
+        $this->assertSame('0.00', $this->envelope($groceries));
+        $this->assertSame('-100.00', $this->ready());
+    }
+
+    public function test_reset_gives_a_full_bucket_back_to_ready_to_assign(): void
+    {
+        $this->bank->update(['initial_balance' => 1000]);
+        $trip = $this->savings('Trip', 400);
+        $this->assertSame('600.00', $this->ready());
+
+        $this->post("/planning/buckets/{$trip->id}/reset")->assertSessionHasNoErrors();
+
+        $this->assertSame('0.00', $this->envelope($trip));
+        $this->assertSame('1000.00', $this->ready());
+    }
+
+    public function test_removing_a_move_to_ready_to_assign_is_guarded_like_an_assignment(): void
+    {
+        $this->bank->update(['initial_balance' => 1000]);
+        $trip = $this->savings('Trip', 900);
+        $this->post("/planning/buckets/{$trip->id}/move", ['to_bucket_id' => 'ready', 'amount' => 200])->assertSessionHasNoErrors();
+        $this->savings('Car', 250);
+        // Trip 700, car 250; ready 1000 - 950 = 50.
+        $this->assertSame('50.00', $this->ready());
+        $toReady = Allocation::where('bucket_id', $trip->id)->where('amount', -200)->sole();
+
+        // Removing it puts 200 back in the trip, 150 more than is ready.
+        $this->delete("/planning/buckets/{$trip->id}/allocations/{$toReady->id}")->assertSessionHasErrors($this->overAssignError(150));
+        $this->assertSame('700.00', $this->envelope($trip));
+
+        $this->delete("/planning/buckets/{$trip->id}/allocations/{$toReady->id}", ['confirm_over_assign' => true])->assertSessionHasNoErrors();
+        // Trip 900, car 250; ready 1000 - 1150 = -150.
+        $this->assertSame('900.00', $this->envelope($trip));
+        $this->assertSame('-150.00', $this->ready());
+    }
+
+    public function test_removing_a_move_between_buckets_needs_no_confirmation(): void
+    {
+        $this->bank->update(['initial_balance' => 1000]);
+        $trip = $this->savings('Trip', 600);
+        $car = $this->savings('Car', 400);
+        $this->post("/planning/buckets/{$trip->id}/move", ['to_bucket_id' => $car->id, 'amount' => 100])->assertSessionHasNoErrors();
+        $this->assertSame('0.00', $this->ready());
+        $out = Allocation::where('bucket_id', $trip->id)->where('source', AllocationSource::Transfer->value)->sole();
+
+        $this->delete("/planning/buckets/{$trip->id}/allocations/{$out->id}")->assertSessionHasNoErrors();
+
+        // Both sides go: trip 600, car 400; ready still 0.
+        $this->assertSame('600.00', $this->envelope($trip));
+        $this->assertSame('400.00', $this->envelope($car));
+        $this->assertSame('0.00', $this->ready());
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
