@@ -217,26 +217,29 @@ class BucketLedger
 
     /**
      * Closes a bucket whose goal is done: what is left in it moves to its overflow bucket (or back to ready to
-     * assign) and it stops receiving income.
+     * assign) and it stops receiving income. Returns the ids of the allocations that moved the leftover.
+     *
+     * @return list<int>
      */
-    public function complete(Bucket $bucket, CarbonInterface $date): void
+    public function complete(Bucket $bucket, CarbonInterface $date): array
     {
-        DB::transaction(function () use ($bucket, $date) {
+        return DB::transaction(function () use ($bucket, $date) {
             $left = $this->available($bucket);
+            $rows = [];
 
             if ($left->isPositive()) {
                 $target = $bucket->carry_over === CarryOverPolicy::Overflow && $bucket->overflow_bucket_id !== null
                     ? Bucket::forUser($bucket->user_id)->find($bucket->overflow_bucket_id)
                     : null;
 
-                if ($target !== null && ! $target->is($bucket)) {
-                    $this->move($bucket, $target, $left, null, AllocationSource::Carry, $date);
-                } else {
-                    $this->releaseToReady($bucket, $left, $date);
-                }
+                $rows = $target !== null && ! $target->is($bucket)
+                    ? $this->move($bucket, $target, $left, null, AllocationSource::Carry, $date)
+                    : [$this->releaseToReady($bucket, $left, $date)];
             }
 
             $bucket->update(['completed_on' => $date->toDateString()]);
+
+            return array_map(fn (Allocation $row) => $row->id, $rows);
         });
     }
 
@@ -285,7 +288,9 @@ class BucketLedger
     }
 
     /**
-     * Moves funded money from one bucket to another of the same currency.
+     * Moves funded money from one bucket to another of the same currency; returns the outgoing and incoming rows.
+     *
+     * @return array{0: Allocation, 1: Allocation}
      */
     public function move(
         Bucket $from,
@@ -294,15 +299,15 @@ class BucketLedger
         ?string $description = null,
         AllocationSource $source = AllocationSource::Transfer,
         ?CarbonInterface $date = null,
-    ): void {
+    ): array {
         if (! $amount->isPositive() || $from->currency !== $to->currency || $from->is($to)) {
             throw new InvalidArgumentException('Money can only move between two different buckets of the same currency.');
         }
 
-        DB::transaction(function () use ($from, $to, $amount, $description, $source, $date) {
-            $this->credit($from, $amount->negate(), $source, $to->id, $date, $description);
-            $this->credit($to, $amount, $source, $from->id, $date, $description);
-        });
+        return DB::transaction(fn () => [
+            $this->credit($from, $amount->negate(), $source, $to->id, $date, $description),
+            $this->credit($to, $amount, $source, $from->id, $date, $description),
+        ]);
     }
 
     public function openingBalance(Bucket $bucket): Money

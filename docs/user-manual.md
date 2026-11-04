@@ -374,7 +374,8 @@ buckets. There are two ways:
   wish list then completes the bucket. The **Planner** does the same on the purchase date when it simulates.
 - **By hand**: **Mark as completed** on the bucket card. **Reopen** puts it back to work.
 
-Undoing a wish-list purchase reopens the bucket, but the leftover that already moved stays where it went.
+Undoing a wish-list purchase reopens the bucket and brings its leftover back: in full from ready to assign, or from
+the bucket it moved to, up to what that bucket still holds (whatever it already used stays used).
 
 **Worked example: saving for a car.** You earn 4,500,000 in month 1 (three payments) and 2,000,000 a month after
 that, and want leisure money, a general savings pot, a 10,000,000 car fund and a pot for repairs:
