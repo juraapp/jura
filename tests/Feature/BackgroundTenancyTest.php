@@ -10,11 +10,11 @@ use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Notifications\Notifications\BudgetThresholdReached;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
-use App\Modules\Planning\Jobs\GenerateDueRecurringTransactions;
+use App\Modules\Planning\Jobs\PostDuePlannedEvents;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\BucketCycle;
-use App\Modules\Planning\Models\RecurringTransaction;
+use App\Modules\Planning\Models\PlannedEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -65,7 +65,7 @@ class BackgroundTenancyTest extends TestCase
         $this->assertSame('1000000.00', $cycle->released->toDecimalString());
     }
 
-    public function test_the_recurring_job_does_not_alert_a_user_about_another_users_spending(): void
+    public function test_the_auto_post_job_does_not_alert_a_user_about_another_users_spending(): void
     {
         Carbon::setTestNow('2026-10-20 06:00:00');
         $aliceAccount = Account::factory()->for($this->alice)->create(['currency' => 'COP']);
@@ -73,31 +73,33 @@ class BackgroundTenancyTest extends TestCase
             'category_id' => $this->shared->id, 'currency' => 'COP', 'cycle' => 'monthly', 'cap_amount' => 100000,
             'tracking_started_on' => '2026-10-01',
         ]);
-        RecurringTransaction::factory()->for($this->alice)->for($aliceAccount)->create([
+        PlannedEvent::factory()->for($this->alice)->create([
+            'account_id' => $aliceAccount->id, 'currency' => 'COP', 'auto_post' => true,
             'category_id' => Category::factory()->expense()->create(['user_id' => $this->alice->id])->id,
-            'type' => TransactionType::Expense, 'amount' => 1000, 'next_due_date' => '2026-10-20',
+            'type' => TransactionType::Expense, 'amount' => 1000, 'date' => '2026-10-20',
         ]);
 
         $this->assertFalse(Auth::check());
-        app()->call([new GenerateDueRecurringTransactions, 'handle']);
+        app()->call([new PostDuePlannedEvents, 'handle']);
 
         $this->assertSame(1, Transaction::forUser($this->alice)->count());
         $this->assertSame(0, $this->alice->notifications()->where('type', BudgetThresholdReached::class)->count());
     }
 
-    public function test_a_recurring_income_fills_to_target_with_room_from_the_owners_spending_only(): void
+    public function test_an_auto_posted_income_fills_to_target_with_room_from_the_owners_spending_only(): void
     {
         Carbon::setTestNow('2026-10-20 06:00:00');
         $aliceAccount = Account::factory()->for($this->alice)->create(['currency' => 'COP']);
         $bucket = Bucket::factory()->for($this->alice)->rule(FillRule::FillToTarget)->create([
             'category_id' => $this->shared->id, 'currency' => 'COP', 'cap_amount' => 500000, 'tracking_started_on' => '2026-10-01',
         ]);
-        RecurringTransaction::factory()->income()->for($this->alice)->for($aliceAccount)->create([
+        PlannedEvent::factory()->income()->for($this->alice)->create([
+            'account_id' => $aliceAccount->id, 'currency' => 'COP', 'auto_post' => true,
             'category_id' => Category::factory()->income()->create(['user_id' => $this->alice->id])->id,
-            'amount' => 2000000, 'next_due_date' => '2026-10-20',
+            'amount' => 2000000, 'date' => '2026-10-20',
         ]);
 
-        app()->call([new GenerateDueRecurringTransactions, 'handle']);
+        app()->call([new PostDuePlannedEvents, 'handle']);
 
         $this->assertSame('500000.00', number_format((float) Allocation::forUser($this->alice)->where('bucket_id', $bucket->id)->sum('amount'), 2, '.', ''));
     }

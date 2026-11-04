@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'Cash flow',
+    'title' => 'Upcoming & cash flow',
     'expect_income' => 'Expect income',
     'plan_event' => 'Plan an event',
     'hint_conservative' => 'Only confirmed income counts. Expenses always count.',

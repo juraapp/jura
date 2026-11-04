@@ -31,7 +31,12 @@ class ReportController extends Controller
             ->where('transactions.type', TransactionType::Expense->value)
             ->whereYear('transactions.date', $year)
             ->whereMonth('transactions.date', $month)
-            ->where('transactions.is_recurring_generated', true)
+            // Fixed: recorded automatically, or confirmed from a repeating plan.
+            ->where(fn ($query) => $query->where('transactions.is_recurring_generated', true)
+                ->orWhereExists(fn ($plans) => $plans->selectRaw('1')
+                    ->from('planned_events')
+                    ->whereColumn('planned_events.realized_transaction_id', 'transactions.id')
+                    ->whereNotNull('planned_events.series_id')))
             ->selectRaw('accounts.currency as currency, SUM(transactions.amount) as total')
             ->groupBy('accounts.currency')
             ->get()

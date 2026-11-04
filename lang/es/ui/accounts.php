@@ -21,7 +21,7 @@ return [
     'active' => 'Cuenta activa',
     'save' => 'Guardar',
     'delete_title' => '¿Eliminar esta cuenta?',
-    'delete_hint' => 'Si tiene transacciones o movimientos recurrentes vinculados, se archivará en lugar de eliminarse para conservar tu historial.',
+    'delete_hint' => 'Si tiene transacciones o un plan repetido activo vinculado, se archivará en lugar de eliminarse para conservar tu historial.',
     'name_placeholder' => 'Cuenta de ahorros Bancolombia',
     'institution_placeholder' => 'Bancolombia, Nequi, PayPal...',
     'on_budget' => 'Contar en mi presupuesto (disponible para asignar)',

@@ -86,17 +86,12 @@ class MoneyValidationTest extends TestCase
     public function test_planning_amounts_are_rejected(string $amount): void
     {
         $bucket = Bucket::factory()->savings()->for($this->user)->create(['currency' => 'COP']);
-        $income = Category::factory()->income()->create(['user_id' => $this->user->id]);
 
         $this->post("/planning/buckets/{$bucket->id}/adjust", ['amount' => $amount])->assertSessionHasErrors('amount');
         $this->post('/planning/buckets', ['kind' => 'savings', 'name' => 'Trip', 'currency' => 'COP', 'cap_amount' => $amount])
             ->assertSessionHasErrors('cap_amount');
         $this->post('/planning/cash-flow', [
             'type' => 'income', 'description' => 'Salary', 'amount' => $amount, 'date' => '2026-11-01', 'certainty' => 'expected',
-        ])->assertSessionHasErrors('amount');
-        $this->post('/planning/recurring', [
-            'type' => 'income', 'account_id' => $this->account->id, 'category_id' => $income->id, 'amount' => $amount,
-            'frequency' => 'monthly', 'next_due_date' => '2026-11-01',
         ])->assertSessionHasErrors('amount');
         $this->post('/planning/goals', ['name' => 'Car', 'target_amount' => $amount])->assertSessionHasErrors('target_amount');
         $this->post('/planning/wishlist', ['name' => 'Phone', 'price' => $amount, 'currency' => 'COP'])->assertSessionHasErrors('price');

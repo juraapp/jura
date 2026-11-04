@@ -12,7 +12,7 @@ look. Do not format numbers or dates by hand: use `useFormat()` in Vue and `$use
 ```
 lang/en/   accounts.php  buckets.php  categories.php  enums.php  insights.php
            messages.php  notifications.php  pdf.php  preferences.php
-           planned-events.php  planner.php  recurring-transactions.php  savings-goals.php  transactions.php  wishlist.php
+           planned-events.php  planner.php  savings-goals.php  transactions.php  wishlist.php
 lang/es/   (mirrors lang/en/ exactly, same keys)
 ```
 

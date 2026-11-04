@@ -37,7 +37,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
 | `Shared` | `Money`, `AsMoney`, `BelongsToUser`, base `Controller`, `HandleInertiaRequests` |
 | `Identity` | `User`, auth, profile, preferences |
 | `Ledger` | `Account`, `Category`, `Transaction`, balances, CSV import, the `TransactionsMutated`, `Income*`, `Expense*` and `Transaction{Deleted,Restored,Purged}` events. Source of truth for **actual** data. |
-| `Planning` | `PlannedEvent`, `Bucket`, `Allocation`, `SavingsGoal`, `RecurringTransaction` (and, next, wish list and scenarios). Owns **projected** and **earmarked** (virtual) money. |
+| `Planning` | `PlannedEvent`, `PlannedEventSeries` (repeating plans, which can record themselves), `Bucket`, `Allocation`, `SavingsGoal`, wish list and scenarios. Owns **projected** and **earmarked** (virtual) money. |
 | `Reporting` | dashboard, reports, insights, PDF/CSV export (read-side) |
 | `Notifications` | alert notifications, their listeners and scheduled commands, the notification inbox (read-side) |
 
@@ -48,7 +48,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
 3. Nothing else (`Services`, `Http`, `Policies`, `Jobs`, ...) of another module may be imported. Cross-module calls go through contracts:
    - `Ledger\Contracts\Balances`: account balances, net worth and `budgetBalances` (active, on-budget accounts).
    - `Ledger\Contracts\LedgerQuery`: expense totals (open-ended and on-budget-only for bucket envelopes), on-budget account checks, account/category option lists, account currency and similar-transaction lookups. Every method takes the user id explicitly, so it stays scoped in jobs and console commands.
-   - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record`, `recordTransfer`, which returns the outgoing leg's id, and `recordRecurring`); `autoPosted: true` marks a transaction the app recorded by itself (`is_recurring_generated`).
+   - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record` and `recordTransfer`, which returns the outgoing leg's id); `autoPosted: true` marks a transaction the app recorded by itself (`is_recurring_generated`).
    - `Planning\Contracts\BucketProgress`: spending-bucket spent/remaining/status.
    - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances and planned money in a date window.
    - `Planning\Contracts\MoneyMap`: per currency, money in on-budget accounts, in funded bucket envelopes, and ready to assign (computed, never stored).

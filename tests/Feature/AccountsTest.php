@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Models\PlannedEventSeries;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -134,6 +135,21 @@ class AccountsTest extends TestCase
 
         $response->assertRedirect();
         $this->assertDatabaseHas('accounts', ['id' => $account->id, 'is_active' => false]);
+    }
+
+    public function test_deleting_an_account_an_active_repeating_plan_uses_archives_it_and_a_paused_one_does_not(): void
+    {
+        $user = User::factory()->create();
+        $used = Account::factory()->for($user)->create(['is_active' => true]);
+        $pausedOnly = Account::factory()->for($user)->create(['is_active' => true]);
+        PlannedEventSeries::factory()->for($user)->create(['account_id' => $used->id]);
+        PlannedEventSeries::factory()->for($user)->create(['account_id' => $pausedOnly->id, 'is_active' => false]);
+
+        $this->actingAs($user)->delete("/accounts/{$used->id}")->assertSessionHas('warning');
+        $this->actingAs($user)->delete("/accounts/{$pausedOnly->id}")->assertSessionHas('success');
+
+        $this->assertDatabaseHas('accounts', ['id' => $used->id, 'is_active' => false, 'deleted_at' => null]);
+        $this->assertSoftDeleted('accounts', ['id' => $pausedOnly->id]);
     }
 
     public function test_user_cannot_delete_another_users_account(): void

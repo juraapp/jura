@@ -8,7 +8,6 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Ledger\Services\TransactionService;
-use App\Modules\Planning\Models\RecurringTransaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use RuntimeException;
@@ -100,18 +99,6 @@ class DeletedLedgerRecordsTest extends TestCase
 
         $this->patch("/finances/transactions/{$transaction->id}", $this->expense(['category_id' => $otherTrashed->id]))
             ->assertSessionHasErrors('category_id');
-    }
-
-    public function test_a_recurring_template_cannot_be_moved_to_a_trashed_account(): void
-    {
-        $trashed = Account::factory()->for($this->user)->create();
-        $trashed->delete();
-        $recurring = RecurringTransaction::factory()->for($this->user)->for($this->account)->for($this->category)->create();
-
-        $this->patch("/planning/recurring/{$recurring->id}", [
-            'type' => 'expense', 'account_id' => $trashed->id, 'category_id' => $this->category->id, 'amount' => 10,
-            'frequency' => 'monthly', 'next_due_date' => '2026-11-01',
-        ])->assertSessionHasErrors('account_id');
     }
 
     public function test_lists_and_reports_still_render_a_transaction_whose_account_is_trashed(): void

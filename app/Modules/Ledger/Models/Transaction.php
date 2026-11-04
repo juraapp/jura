@@ -4,7 +4,6 @@ namespace App\Modules\Ledger\Models;
 
 use App\Modules\Ledger\Enums\PaymentMethod;
 use App\Modules\Ledger\Enums\TransactionType;
-use App\Modules\Planning\Models\RecurringTransaction;
 use App\Modules\Shared\Casts\AsMoney;
 use App\Modules\Shared\Concerns\BelongsToUser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'account_id', 'type', 'category_id', 'bucket_id', 'amount', 'date', 'time', 'description',
-    'notes', 'payment_method', 'is_recurring_generated', 'recurring_transaction_id',
+    'notes', 'payment_method', 'is_recurring_generated',
     'transfer_group_id',
 ])]
 class Transaction extends Model
@@ -56,11 +55,6 @@ class Transaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class)->withTrashed();
-    }
-
-    public function recurringTransaction(): BelongsTo
-    {
-        return $this->belongsTo(RecurringTransaction::class);
     }
 
     public function scopeOfType(Builder $query, TransactionType|string $type): Builder

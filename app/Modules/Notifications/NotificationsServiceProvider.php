@@ -5,7 +5,6 @@ namespace App\Modules\Notifications;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Notifications\Console\Commands\NotifyBehindSavingsGoals;
 use App\Modules\Notifications\Console\Commands\NotifyUpcomingPlannedPayments;
-use App\Modules\Notifications\Console\Commands\NotifyUpcomingRecurringPayments;
 use App\Modules\Notifications\Listeners\CheckBudgetThreshold;
 use App\Modules\Notifications\Listeners\CheckLowAccountBalance;
 use App\Modules\Notifications\Listeners\NotifyPlannedPostingFailed;
@@ -25,7 +24,6 @@ class NotificationsServiceProvider extends ServiceProvider
             $this->commands([
                 NotifyBehindSavingsGoals::class,
                 NotifyUpcomingPlannedPayments::class,
-                NotifyUpcomingRecurringPayments::class,
             ]);
         }
     }

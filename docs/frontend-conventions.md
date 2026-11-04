@@ -32,7 +32,7 @@ group="topbar">`, so a page only drops `<MoneyMapStrip />` in; never recompute r
 
 ## The established CRUD-page shape
 
-Every domain `Index.vue` (Accounts, Categories, Buckets, SavingsGoals, RecurringTransactions) follows the same shape — copy the closest existing one rather than inventing a new structure:
+Every domain `Index.vue` (Accounts, Categories, Buckets, SavingsGoals) follows the same shape — copy the closest existing one rather than inventing a new structure:
 
 ```vue
 <script setup>

@@ -22,7 +22,7 @@ return [
     'savings' => 'Ahorro',
     'savings_rate' => '{percent}% de tasa de ahorro',
     'fixed' => 'Gastos fijos',
-    'fixed_hint' => 'generados por transacciones recurrentes',
+    'fixed_hint' => 'registrados automáticamente o confirmados desde planes repetidos',
     'variable' => 'Gastos variables',
     'net_worth' => 'Patrimonio neto actual',
     'analysis' => 'Análisis mensual',

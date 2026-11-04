@@ -7,7 +7,6 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Planning\Models\PlannedEvent;
-use App\Modules\Planning\Models\RecurringTransaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -55,16 +54,6 @@ class CategoryTypeTest extends TestCase
         ])->assertSessionHasErrors('category_id');
 
         $this->assertSame($this->incomeCategory->id, $income->fresh()->category_id);
-    }
-
-    public function test_a_recurring_template_needs_a_category_of_its_own_type(): void
-    {
-        $this->post('/planning/recurring', [
-            'type' => 'income', 'account_id' => $this->account->id, 'category_id' => $this->expenseCategory->id, 'amount' => 10,
-            'frequency' => 'monthly', 'next_due_date' => '2026-11-01',
-        ])->assertSessionHasErrors('category_id');
-
-        $this->assertSame(0, RecurringTransaction::count());
     }
 
     public function test_a_planned_event_needs_a_category_of_its_own_type(): void
