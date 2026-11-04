@@ -132,12 +132,19 @@ class BucketController extends Controller
      * Buckets still taking money, for pickers outside this page (the transaction modal): an expense can be paid
      * from one without a category, and one with a category already counts that category's spending.
      */
-    public function spendOptions(BucketLedger $funds): JsonResponse
+    /**
+     * Buckets an expense can be paid from. `include` adds the bucket an edited expense is already linked
+     * to (flagged `current`), even when it was completed or gained a category since, so editing never
+     * drops the link silently.
+     */
+    public function spendOptions(Request $request, BucketLedger $funds): JsonResponse
     {
         $this->authorize('viewAny', Bucket::class);
+        $include = $request->integer('include') ?: null;
 
         return response()->json([
-            'buckets' => Bucket::whereNull('completed_on')->inPriorityOrder()->get()
+            'buckets' => Bucket::where(fn ($query) => $query->whereNull('completed_on')->when($include !== null, fn ($inner) => $inner->orWhere('id', $include)))
+                ->inPriorityOrder()->get()
                 ->map(fn (Bucket $bucket) => [
                     'id' => $bucket->id,
                     'name' => $bucket->name,
@@ -145,6 +152,7 @@ class BucketController extends Controller
                     'categoryId' => $bucket->category_id,
                     'available' => $funds->available($bucket)->toFloat(),
                     'funded' => $funds->isFunded($bucket),
+                    'current' => $bucket->id === $include,
                 ])->values(),
         ]);
     }

@@ -161,4 +161,29 @@ class ExpenseFromBucketTest extends TestCase
             ->assertJsonPath('buckets.0.available', -200);
         $this->getJson('/finances/transactions/'.Transaction::sole()->id.'/edit-data')->assertJsonPath('bucket_id', $this->trip->id);
     }
+
+    public function test_a_completed_bucket_takes_no_new_expense_but_an_expense_already_paid_from_it_keeps_the_link(): void
+    {
+        $this->post('/finances/transactions', $this->expense(['amount' => 100]))->assertSessionHasNoErrors();
+        $id = Transaction::sole()->id;
+        $this->trip->update(['completed_on' => '2026-10-12']);
+
+        $this->post('/finances/transactions', $this->expense())->assertSessionHasErrors('bucket_id');
+
+        $this->patch("/finances/transactions/{$id}", $this->expense(['amount' => 120]))->assertSessionHasNoErrors();
+        $this->assertSame($this->trip->id, Transaction::find($id)->bucket_id);
+    }
+
+    public function test_spend_options_can_include_the_bucket_an_expense_is_already_linked_to(): void
+    {
+        $this->trip->update(['completed_on' => '2026-10-12']);
+
+        $this->getJson('/planning/buckets/spend-options')->assertOk()->assertJsonCount(0, 'buckets');
+        $this->getJson('/planning/buckets/spend-options?include='.$this->trip->id)->assertOk()
+            ->assertJsonPath('buckets.0.id', $this->trip->id)
+            ->assertJsonPath('buckets.0.current', true);
+
+        $foreign = Bucket::factory()->savings()->create(['currency' => 'COP', 'completed_on' => '2026-10-12']);
+        $this->getJson('/planning/buckets/spend-options?include='.$foreign->id)->assertOk()->assertJsonCount(0, 'buckets');
+    }
 }
