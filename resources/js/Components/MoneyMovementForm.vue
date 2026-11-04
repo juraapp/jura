@@ -96,7 +96,7 @@ const plannedOptions = computed(() => props.options.planned ?? { frequencies: []
 const tabs = computed(() => [
     { value: 'expense', label: t('ui.transaction_modal.expense') },
     { value: 'income', label: t('ui.transaction_modal.income') },
-    { value: 'transfer', label: t('ui.transaction_modal.transfer'), disabled: planned.value },
+    { value: 'transfer', label: t('ui.transaction_modal.transfer') },
 ]);
 
 const accounts = computed(() => [
@@ -141,20 +141,20 @@ const title = computed(() => {
 watch(title, (value) => emit('title', value), { immediate: true });
 
 const fillPlan = (source) => {
-    type.value = source.type;
+    type.value = source.type === 'transfer_out' ? 'transfer' : source.type;
     form.description = source.description ?? '';
     form.amount = String(source.amount);
     form.certainty = source.certainty;
     form.account_id = source.account?.id ?? '';
     form.category_id = source.category?.id ?? '';
+    form.from_account_id = source.account?.id ?? '';
+    form.to_account_id = source.counterAccount?.id ?? '';
     form.notes = source.notes ?? '';
     form.auto_post = Boolean(source.autoPost);
     (source.allocationOverrides ?? []).forEach((row) => {
         overrides[row.bucket_id] = String(row.amount);
     });
-    if (source.account) {
-        editAccounts.value = [{ ...source.account, currency: source.currency }];
-    }
+    editAccounts.value = [source.account, source.counterAccount].filter(Boolean).map((account) => ({ ...account, currency: source.currency }));
 };
 
 const load = async () => {
@@ -214,9 +214,6 @@ onMounted(async () => {
 const chooseWhen = async (value) => {
     when.value = value;
     if (value === 'planned') {
-        if (type.value === 'transfer') {
-            type.value = 'expense';
-        }
         try {
             await props.loadPlannedOptions();
         } catch {

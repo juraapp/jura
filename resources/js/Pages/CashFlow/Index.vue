@@ -279,7 +279,7 @@ const deleteEvent = () => {
                                         <p class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
                                             <span class="rounded-full px-2 py-0.5 font-medium" :class="certaintyClass(event.certainty)">{{ event.certaintyLabel }}</span>
                                             <span v-if="event.status !== 'planned'" class="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ event.statusLabel }}</span>
-                                            <span v-if="event.account">{{ event.account.name }}</span>
+                                            <span v-if="event.account">{{ event.account.name }}<template v-if="event.counterAccount"> &rarr; {{ event.counterAccount.name }}</template></span>
                                             <span v-if="event.autoPost && event.status === 'planned'" class="rounded-full bg-primary-50 px-2 py-0.5 font-medium text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">{{ $t('ui.cash_flow.auto') }}</span>
                                         </p>
                                         <p v-if="event.postError && event.status === 'planned'" class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $t(`ui.cash_flow.post_error.${event.postError}`) }}</p>
@@ -287,9 +287,9 @@ const deleteEvent = () => {
 
                                     <p
                                         class="text-right text-sm font-semibold tabular-nums"
-                                        :class="event.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                        :class="{ income: 'text-green-600 dark:text-green-400', transfer_out: 'text-gray-600 dark:text-gray-300' }[event.type] ?? 'text-red-600 dark:text-red-400'"
                                     >
-                                        {{ event.type === 'income' ? '+' : '-' }}<Money :amount="event.amount" :currency="event.currency" />
+                                        {{ { income: '+', transfer_out: '' }[event.type] ?? '-' }}<Money :amount="event.amount" :currency="event.currency" />
                                     </p>
 
                                     <div v-if="event.status === 'planned'" class="flex items-center gap-1">

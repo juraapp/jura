@@ -126,13 +126,17 @@ class CashFlowProjector implements CashFlowForecast
 
         foreach ($this->balances->yieldBearing($user) as $account) {
             $flows = [];
-            foreach ($items->where('accountId', $account['id']) as $item) {
-                if (($item->isIncome() && ! $view->includesIncome($item->certainty)) || (! $item->isIncome() && ! $item->isExpense())) {
+            foreach ($items as $item) {
+                $leaves = $item->accountId === $account['id'];
+                $arrives = $item->isTransfer() && $item->counterAccountId === $account['id'];
+                if ((! $leaves && ! $arrives) || ($item->isIncome() && ! $view->includesIncome($item->certainty))) {
                     continue;
                 }
 
+                // Money in: an income, or the destination of a transfer. Money out: an expense, or a transfer's source.
+                $flow = $item->isIncome() || ($arrives && ! $leaves) ? $item->amount : $item->amount->negate();
                 $date = $item->effectiveDate($today)->toDateString();
-                $flows[$date] = ($flows[$date] ?? Money::zero())->add($item->isIncome() ? $item->amount : $item->amount->negate());
+                $flows[$date] = ($flows[$date] ?? Money::zero())->add($flow);
             }
 
             $months = $this->yield->run($account['balance'], $account['rate'], $account['compounding'], $today, $horizonEnd->endOfDay(), $flows);

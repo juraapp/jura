@@ -41,7 +41,7 @@ class PlannedEventController extends Controller
         $monthStart = Carbon::instance($request->user()->today())->startOfMonth();
         $horizonEnd = $monthStart->copy()->addMonthsNoOverflow($months)->subDay();
 
-        $events = PlannedEvent::with(['account', 'category'])
+        $events = PlannedEvent::with(['account', 'counterAccount', 'category'])
             ->where(function ($query) use ($monthStart) {
                 $query->where('date', '>=', $monthStart->toDateString())
                     ->orWhere('status', PlannedEventStatus::Planned->value);
@@ -67,7 +67,7 @@ class PlannedEventController extends Controller
         ])->values();
 
         $today = $request->user()->today();
-        $series = PlannedEventSeries::with(['account', 'category'])
+        $series = PlannedEventSeries::with(['account', 'counterAccount', 'category'])
             ->orderByDesc('is_active')
             ->orderBy('description')
             ->get()

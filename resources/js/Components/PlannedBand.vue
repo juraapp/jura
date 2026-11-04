@@ -54,10 +54,10 @@ const actions = usePlanActions();
                     <p v-else-if="event.suggestedMatch" class="text-xs text-primary-700 dark:text-primary-300">
                         {{ $t('ui.cash_flow.looks_done', { description: event.suggestedMatch.description || $t('ui.cash_flow.a_transaction') }) }}
                     </p>
-                    <p v-else-if="event.account" class="text-xs text-gray-400">{{ event.account.name }}</p>
+                    <p v-else-if="event.account" class="text-xs text-gray-400">{{ event.account.name }}<template v-if="event.counterAccount"> &rarr; {{ event.counterAccount.name }}</template></p>
                 </div>
-                <p class="text-sm font-semibold tabular-nums" :class="event.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                    {{ event.type === 'income' ? '+' : '−' }}<Money :amount="event.amount" :currency="event.currency" />
+                <p class="text-sm font-semibold tabular-nums" :class="{ income: 'text-green-600 dark:text-green-400', transfer_out: 'text-gray-600 dark:text-gray-300' }[event.type] ?? 'text-red-600 dark:text-red-400'">
+                    {{ { income: '+', transfer_out: '' }[event.type] ?? '−' }}<Money :amount="event.amount" :currency="event.currency" />
                 </p>
                 <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
                     <button v-if="event.suggestedMatch" type="button" class="text-primary-600 hover:underline dark:text-primary-400" @click="actions.match(event)">{{ $t('ui.cash_flow.match') }}</button>
