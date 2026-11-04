@@ -10,6 +10,7 @@ use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\WishlistItem;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -19,14 +20,32 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class ExpenseSpending
 {
+    /** True while a wish-list purchase records its expense: the purchase writes its own spend row. */
+    private bool $paused = false;
+
     public function __construct(
         private readonly BucketLedger $funds,
         private readonly LedgerQuery $ledger,
     ) {}
 
+    /**
+     * Runs a callback during which recorded expenses get no spend row (a wish-list purchase records its expense
+     * linked to the bucket, then spends from it only what the bucket has).
+     */
+    public function withoutSpending(Closure $callback): mixed
+    {
+        $this->paused = true;
+
+        try {
+            return $callback();
+        } finally {
+            $this->paused = false;
+        }
+    }
+
     public function apply(User $user, int $transactionId, int $accountId, Money $amount, CarbonInterface $date, ?int $bucketId): void
     {
-        if ($bucketId === null || $this->isPurchase($user, $transactionId) || ! $this->ledger->isOnBudget($user->id, $accountId)) {
+        if ($this->paused || $bucketId === null || $this->isPurchase($user, $transactionId) || ! $this->ledger->isOnBudget($user->id, $accountId)) {
             return;
         }
 
