@@ -48,7 +48,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
 3. Nothing else (`Services`, `Http`, `Policies`, `Jobs`, ...) of another module may be imported. Cross-module calls go through contracts:
    - `Ledger\Contracts\Balances`: account balances, net worth and `budgetBalances` (active, on-budget accounts).
    - `Ledger\Contracts\LedgerQuery`: expense totals (open-ended and on-budget-only for bucket envelopes), on-budget account checks, account/category option lists, account currency and similar-transaction lookups. Every method takes the user id explicitly, so it stays scoped in jobs and console commands.
-   - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record`, `recordRecurring`).
+   - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record`, `recordTransfer`, which returns the outgoing leg's id, and `recordRecurring`); `autoPosted: true` marks a transaction the app recorded by itself (`is_recurring_generated`).
    - `Planning\Contracts\BucketProgress`: spending-bucket spent/remaining/status.
    - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances and planned money in a date window.
    - `Planning\Contracts\MoneyMap`: per currency, money in on-budget accounts, in funded bucket envelopes, and ready to assign (computed, never stored).

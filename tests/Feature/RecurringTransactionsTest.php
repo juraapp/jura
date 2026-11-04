@@ -270,7 +270,12 @@ class RecurringTransactionsTest extends TestCase
         {
             public function __construct(private int $failingId, private array &$recorded) {}
 
-            public function record(User $user, TransactionType $type, array $data): int
+            public function record(User $user, TransactionType $type, array $data, bool $autoPosted = false): int
+            {
+                return 0;
+            }
+
+            public function recordTransfer(User $user, array $data, bool $autoPosted = false): int
             {
                 return 0;
             }
