@@ -24,6 +24,7 @@ use App\Modules\Planning\Listeners\SyncExpenseSpend;
 use App\Modules\Planning\Listeners\UnlinkPurgedRecords;
 use App\Modules\Planning\Services\BucketService;
 use App\Modules\Planning\Services\CashFlowProjector;
+use App\Modules\Planning\Services\ExpenseSpending;
 use App\Modules\Planning\Services\IncomeAllocator;
 use App\Modules\Planning\Services\MoneyMapService;
 use App\Modules\Planning\Services\PlanningOverviewService;
@@ -41,6 +42,7 @@ class PlanningServiceProvider extends ServiceProvider
         $this->app->bind(MoneyMap::class, MoneyMapService::class);
         $this->app->bind(UpcomingPlans::class, UpcomingPlansService::class);
         $this->app->singleton(IncomeAllocator::class);
+        $this->app->singleton(ExpenseSpending::class);
     }
 
     public function boot(): void
