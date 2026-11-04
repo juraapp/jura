@@ -7,6 +7,7 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -432,5 +433,47 @@ class TransactionsTest extends TestCase
         $ids = collect($this->actingAs($user)->get('/finances/transactions')->viewData('page')['props']['transactions']['data'])->pluck('id')->all();
 
         $this->assertSame([$evening->id, $morning->id, $untimed->id], $ids);
+    }
+
+    public function test_a_transaction_dated_after_the_users_today_is_saved_only_once_confirmed(): void
+    {
+        Carbon::setTestNow('2026-11-10 12:00:00'); // Auckland is already on Nov 11.
+        $user = User::factory()->create(['timezone' => 'America/Bogota']);
+        $kiwi = User::factory()->create(['timezone' => 'Pacific/Auckland']);
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $kiwiAccount = Account::factory()->for($kiwi)->create();
+        $kiwiCategory = Category::factory()->expense()->create(['user_id' => $kiwi->id]);
+        $expense = fn (Account $on, Category $in, array $extra = []) => [
+            'type' => 'expense', 'account_id' => $on->id, 'category_id' => $in->id, 'amount' => 10, 'date' => '2026-11-11', ...$extra,
+        ];
+
+        $this->actingAs($user)->post('/finances/transactions', $expense($account, $category))
+            ->assertSessionHasErrors(['date' => __('transactions.future_date_confirm')]);
+        $this->actingAs($user)->post('/finances/transactions', $expense($account, $category, ['confirm_future' => 1]))->assertSessionHasNoErrors();
+        $this->actingAs($kiwi)->post('/finances/transactions', $expense($kiwiAccount, $kiwiCategory))->assertSessionHasNoErrors();
+
+        $other = Account::factory()->for($user)->create();
+        $this->actingAs($user)->post('/finances/transactions', [
+            'type' => 'transfer', 'from_account_id' => $account->id, 'to_account_id' => $other->id, 'amount' => 5, 'date' => '2026-11-12',
+        ])->assertSessionHasErrors('date');
+
+        $this->assertSame(2, Transaction::withoutGlobalScopes()->count());
+    }
+
+    public function test_an_edit_is_asked_only_when_it_moves_the_date_after_today(): void
+    {
+        Carbon::setTestNow('2026-11-10 12:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $future = Transaction::factory()->for($user)->for($account)->for($category)->create(['type' => 'expense', 'date' => '2026-11-20']);
+        $payload = ['account_id' => $account->id, 'category_id' => $category->id, 'amount' => 15];
+
+        $this->actingAs($user)->patch("/finances/transactions/{$future->id}", $payload + ['date' => '2026-11-20'])->assertSessionHasNoErrors();
+        $this->actingAs($user)->patch("/finances/transactions/{$future->id}", $payload + ['date' => '2026-11-21'])->assertSessionHasErrors('date');
+        $this->actingAs($user)->patch("/finances/transactions/{$future->id}", $payload + ['date' => '2026-11-21', 'confirm_future' => 1])->assertSessionHasNoErrors();
+
+        $this->assertSame('2026-11-21', $future->fresh()->date->toDateString());
     }
 }

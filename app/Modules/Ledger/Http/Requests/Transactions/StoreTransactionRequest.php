@@ -14,6 +14,8 @@ use Illuminate\Validation\Rule;
 
 class StoreTransactionRequest extends FormRequest
 {
+    use GuardsFutureDates;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', Transaction::class);
@@ -38,7 +40,7 @@ class StoreTransactionRequest extends FormRequest
                     },
                 ],
                 'amount' => ['required', ...MoneyRules::positive()],
-                'date' => ['required', 'date'],
+                'date' => ['required', 'date', $this->futureDateGuard()],
                 'time' => ['nullable', 'date_format:H:i'],
                 'description' => ['nullable', 'string', 'max:255'],
                 'notes' => ['nullable', 'string', 'max:2000'],
@@ -50,7 +52,7 @@ class StoreTransactionRequest extends FormRequest
             'account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true)],
             'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id, (string) $this->input('type'))],
             'amount' => ['required', ...MoneyRules::positive()],
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date', $this->futureDateGuard()],
             'time' => ['nullable', 'date_format:H:i'],
             'description' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],

@@ -343,8 +343,8 @@ class MoneyMapInvariantTest extends TestCase
         $trip = $this->savings('Trip');
         $this->fund($trip, 200);
 
-        $this->record('expense', 120, ['date' => '2026-12-24']);
-        $this->record('expense', 80, ['date' => '2026-12-24', 'bucket_id' => $trip->id]);
+        $this->record('expense', 120, ['date' => '2026-12-24', 'confirm_future' => 1]);
+        $this->record('expense', 80, ['date' => '2026-12-24', 'bucket_id' => $trip->id, 'confirm_future' => 1]);
         $this->assertInvariant('500.00');
     }
 }
