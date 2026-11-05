@@ -55,6 +55,15 @@ const submit = () => {
 - Flash messages (`back()->with('success'|'error'|'warning', ...)`, plus `undo`) are shown as toasts by `ToastContainer`; pages do not read `page.props.flash` themselves.
 - Delete-dialog copy must match what happens: say the record can be restored from the Trash for soft-deleted models (transactions, accounts, categories, savings goals) and use `ui.common.cannot_be_undone` only for hard deletes.
 
+## Page header and width
+
+A page puts `<PageHeader>` in the layout's `#header` slot: `title`, optional `subtitle`, optional `back` (`{ href,
+label }`, a link above the title), an `#actions` slot (right-aligned, wraps under the title on phones) and a `#meta` row.
+`<AuthenticatedLayout width="wide">` (max-w-7xl: lists, tables, dashboards) or `width="narrow"` (max-w-3xl: forms and
+settings) makes the layout own the width: the header and the body share one container with the page padding, so the
+page body drops its own `mx-auto max-w-* px-*` wrapper. Without `width` a page still sizes its own body (older pages
+until they adopt it).
+
 ## Buttons
 
 Use the shared components, never a hand-styled `bg-primary-600` element:

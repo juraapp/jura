@@ -18,4 +18,6 @@ return [
     'edit' => 'Editar',
     'previous' => 'Anterior',
     'next' => 'Siguiente',
+    'back' => 'Volver',
+    'actions' => 'Acciones',
 ];

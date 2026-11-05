@@ -8,6 +8,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
 import Money from '@/Components/Money.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import ScenarioResult from '@/Components/ScenarioResult.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -302,12 +303,12 @@ const comparisonRows = computed(() => {
 <template>
     <Head :title="$t('ui.planner.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.planner.title') }}</h2>
+            <PageHeader :title="$t('ui.planner.title')" />
         </template>
 
-        <div class="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <EmptyState
                 v-if="items.length === 0"
                 icon="scale"
