@@ -69,11 +69,12 @@ class User extends Authenticatable implements HasLocalePreference
     }
 
     /**
-     * The language notifications are written in, also when they are sent from a job or a command.
+     * The language notifications are written in, also when they are sent from a job or a command: the saved
+     * language when the app has it (as SetUserLocale does for requests), English otherwise.
      */
     public function preferredLocale(): string
     {
-        return $this->locale ?? 'en';
+        return in_array($this->locale, ['en', 'es'], true) ? $this->locale : 'en';
     }
 
     /**

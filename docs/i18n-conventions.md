@@ -22,7 +22,7 @@ lang/es/   (mirrors lang/en/ exactly, same keys)
 - `insights.php` — every templated sentence `InsightService` produces.
 - `.env`: `APP_LOCALE=en`, `APP_FALLBACK_LOCALE=en` — English is the source of truth; Spanish is the translation, not the default.
 
-`APP_LOCALE` is the default for guests. For signed-in users the `SetUserLocale` middleware (Shared, registered before `HandleInertiaRequests`) calls `App::setLocale()` with the saved `locale` preference, so server strings and the shared `i18n` props follow it. Outside a request (jobs, commands, listeners they trigger) there is no middleware: `User` implements `HasLocalePreference`, so a notification is always written in its owner's language. Vue pages still use English literals (see below), so changing the language only affects server-side text until those are migrated to `$t()`.
+`APP_LOCALE` is the default for guests. For signed-in users the `SetUserLocale` middleware (Shared, registered before `HandleInertiaRequests`) calls `App::setLocale()` with the saved `locale` preference, so server strings and the shared `i18n` props follow it. Outside a request (jobs, commands, listeners they trigger) there is no middleware: `User` implements `HasLocalePreference`, so a notification is always written in its owner's language (`preferredLocale()` returns English for a saved language the app does not have, like the middleware ignores one). Vue pages still use English literals (see below), so changing the language only affects server-side text until those are migrated to `$t()`.
 
 ## Server → client bridge
 
