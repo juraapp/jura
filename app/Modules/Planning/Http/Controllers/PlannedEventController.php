@@ -67,12 +67,12 @@ class PlannedEventController extends Controller
         ])->values();
 
         $today = $request->user()->today();
-        $series = PlannedEventSeries::with(['account', 'counterAccount', 'category'])
+        $rules = PlannedEventSeries::with(['account', 'counterAccount', 'category'])
             ->orderByDesc('is_active')
             ->orderBy('description')
-            ->get()
-            ->map(fn (PlannedEventSeries $rule) => $presenter->series($rule, $service->nextDate($rule, $today)))
-            ->values();
+            ->get();
+        $nextDates = $service->nextDates($rules, $today);
+        $series = $rules->map(fn (PlannedEventSeries $rule) => $presenter->series($rule, $nextDates[$rule->id]))->values();
 
         return Inertia::render('CashFlow/Index', [
             'events' => $events->map(fn (PlannedEvent $event) => $presenter->event($event, $matches[$event->id] ?? null))->values(),
