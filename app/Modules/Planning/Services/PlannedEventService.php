@@ -584,14 +584,16 @@ class PlannedEventService
     }
 
     /**
-     * The transaction is gone for good: forget the link, and reopen a plan that was still marked realized.
+     * The transaction is gone for good: forget the link, and reopen a plan that was still marked realized. A plan
+     * left open no longer records itself (once the link is gone nothing else tells it was already recorded): it
+     * waits in needs review for the user.
      */
     public function transactionPurged(User $user, int $transactionId): void
     {
         PlannedEvent::forUser($user)
             ->where('realized_transaction_id', $transactionId)
-            ->where('status', PlannedEventStatus::Realized->value)
-            ->update(['status' => PlannedEventStatus::Planned->value]);
+            ->whereIn('status', [PlannedEventStatus::Realized->value, PlannedEventStatus::Planned->value])
+            ->update(['status' => PlannedEventStatus::Planned->value, 'auto_post' => false]);
 
         PlannedEvent::forUser($user)
             ->where('realized_transaction_id', $transactionId)
