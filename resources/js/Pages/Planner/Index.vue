@@ -155,6 +155,9 @@ const isPlannable = (row, inCurrency = currency.value) => row.wanted !== false &
 const scenarioHasPlannableLines = (scenario) => scenario.lines.some((line) => isPlannable(line, scenario.currency));
 const lineName = (row) => itemById(row.itemId)?.name ?? row.name ?? t('ui.planner.item_n', { id: row.itemId });
 const plannableRows = computed(() => order.value.filter((row) => isPlannable(row)));
+/* The incomes the last run counted (the same for every suggestion and the builder of this currency, view and horizon). */
+const coverage = computed(() => (result.value ?? suggestions.value[0])?.incomes ?? null);
+
 const viewLabel = (value) => props.views.find((candidate) => candidate.value === value)?.label ?? value;
 
 const useOrder = (ids) => {
@@ -321,8 +324,8 @@ const comparisonRows = computed(() => {
                     {{ $t('ui.planner.intro') }}
                 </p>
 
-                <div v-if="!hasFillRules" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-                    {{ $t('ui.planner.no_rules') }}
+                <div v-if="!hasFillRules" class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300">
+                    {{ $t('ui.planner.no_rules_info') }}
                     <Link :href="bucketsIndex.url()" class="font-semibold underline">{{ $t('ui.planner.add_rule') }}</Link>
                     {{ $t('ui.planner.add_rule_tail') }}
                 </div>
@@ -347,6 +350,12 @@ const comparisonRows = computed(() => {
                     </div>
                 </div>
 
+                <div v-if="coverage" class="space-y-0.5 text-xs text-gray-500 dark:text-gray-400" data-test="income-coverage">
+                    <p>{{ $t('ui.planner.counting_incomes', { counted: coverage.counted, total: coverage.total, amount: format.money(coverage.countedAmount, currency) }) }}</p>
+                    <p v-if="coverage.overdue > 0">{{ $t('ui.planner.overdue_counted', { count: coverage.overdue }, coverage.overdue) }}</p>
+                    <p v-if="coverage.offBudget > 0">{{ $t('ui.planner.off_budget_incomes', { count: coverage.offBudget, amount: format.money(coverage.offBudgetAmount, currency) }, coverage.offBudget) }}</p>
+                </div>
+
                 <p v-if="error" class="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400">{{ error }}</p>
 
                 <section class="space-y-3">
@@ -361,7 +370,7 @@ const comparisonRows = computed(() => {
                                     <span class="text-xs text-gray-400">
                                         <span class="tracking-widest text-primary-500" :title="$t('ui.planner.importance', { value: item.importance })">{{ importance(item.importance) }}</span>
                                         <template v-if="item.bucket"> &middot; {{ item.bucket.name }}</template>
-                                        <template v-else> &middot; {{ $t('ui.planner.default_bucket') }}</template>
+                                        <template v-else> &middot; {{ $t('ui.planner.from_ready_only') }}</template>
                                         <template v-if="item.desiredBy"> &middot; {{ $t('ui.planner.by', { date: formatDate(item.desiredBy) }) }}</template>
                                     </span>
                                 </span>
