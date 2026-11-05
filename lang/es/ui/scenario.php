@@ -13,6 +13,8 @@ return [
     'limited_cash' => 'Esperando efectivo: gastos planeados posteriores necesitan el dinero de tus cuentas',
     'cap_warning' => 'Su balde deja de llenarse por debajo del precio; el resto sale de lo disponible para asignar',
     'dips_warning' => 'Deja lo disponible para asignar en negativo el {date}',
+    'parked' => 'Movido al final: no se puede comprar a tiempo, así que ya no retrasa los artículos que siguen',
+    'parked_badge' => 'Aparcado',
     'not_in' => 'No en {count} meses',
     'needs' => 'necesita',
     'more' => 'más',

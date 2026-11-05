@@ -214,6 +214,24 @@ class PlannerTest extends TestCase
         $this->assertEquals(['date' => '2026-10-31', 'cash' => 200000, 'free' => 200000], $result['timeline'][0]);
     }
 
+    public function test_an_item_that_cannot_be_bought_in_time_is_parked_in_a_built_order_but_not_in_suggestions(): void
+    {
+        $yacht = WishlistItem::factory()->for($this->user)->create(['name' => 'Yacht', 'price' => 90000000, 'currency' => 'COP', 'bucket_id' => null]);
+
+        $result = $this->simulate(['lines' => [['item_id' => $yacht->id], ['item_id' => $this->bike->id]]]);
+
+        $this->assertSame([$this->bike->id, $yacht->id], array_column($result['lines'], 'itemId'));
+        $this->assertSame([false, true], array_column($result['lines'], 'parked'));
+        $this->assertSame('2026-12-01', $result['lines'][0]['purchaseDate']);
+
+        $suggestions = $this->postJson('/planning/planner/suggest', [
+            'currency' => 'COP', 'view' => 'expected', 'horizon_months' => 12, 'item_ids' => [$yacht->id, $this->bike->id],
+        ])->assertOk()->json('suggestions');
+        foreach ($suggestions as $suggestion) {
+            $this->assertNotContains(true, array_column($suggestion['lines'], 'parked'), $suggestion['strategy']);
+        }
+    }
+
     public function test_an_item_only_off_budget_accounts_can_pay_for_is_blocked(): void
     {
         $brokerage = Account::factory()->for($this->user)->offBudget()->create(['currency' => 'COP']);
