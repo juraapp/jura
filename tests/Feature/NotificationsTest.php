@@ -173,4 +173,10 @@ class NotificationsTest extends TestCase
         $this->assertSame('No se pudo registrar Gimnasio automáticamente: su cuenta está archivada o eliminada.', $note->data['message']);
         $this->assertSame('en', app()->getLocale());
     }
+
+    public function test_a_saved_language_the_app_does_not_have_falls_back_to_english_for_notifications(): void
+    {
+        $this->assertSame('en', User::factory()->make(['locale' => 'fr'])->preferredLocale());
+        $this->assertSame('es', User::factory()->make(['locale' => 'es'])->preferredLocale());
+    }
 }
