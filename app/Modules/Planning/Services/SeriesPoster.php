@@ -126,7 +126,8 @@ class SeriesPoster
     }
 
     /**
-     * Remembers why a plan could not be recorded, and tells its owner once per new reason.
+     * Remembers why a plan could not be recorded, and tells its owner once per new reason: once per repeating
+     * plan, not once for each of its blocked dates.
      */
     private function blocked(PlannedEvent $event, string $reason): void
     {
@@ -134,7 +135,17 @@ class SeriesPoster
             return;
         }
 
+        $alreadyTold = $event->series_id !== null && PlannedEvent::withoutGlobalScope('user')
+            ->where('series_id', $event->series_id)
+            ->whereKeyNot($event->id)
+            ->open()
+            ->where('post_error', $reason)
+            ->exists();
+
         $event->forceFill(['post_error' => $reason])->save();
-        PlannedPostingFailed::dispatch($event->user, $event->id, $reason);
+
+        if (! $alreadyTold) {
+            PlannedPostingFailed::dispatch($event->user, $event->id, $reason);
+        }
     }
 }
