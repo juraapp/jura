@@ -246,6 +246,26 @@ class AutoPostTest extends TestCase
         $this->assertSame(1, Transaction::count());
     }
 
+    public function test_a_plan_whose_transaction_was_deleted_for_good_is_not_posted_again(): void
+    {
+        Carbon::setTestNow('2026-11-10 09:00:00');
+        [$user, $account, $category] = $this->owner();
+        $plan = $this->plan($user, $account, $category, '2026-11-01');
+        $this->assertSame(1, $this->postDue());
+        $transactionId = Transaction::sole()->id;
+        $this->actingAs($user)->delete("/finances/transactions/{$transactionId}")->assertSessionHasNoErrors();
+        $this->actingAs($user)->post("/settings/trash/transactions/{$transactionId}/restore")->assertSessionHasNoErrors();
+        $this->actingAs($user)->delete("/finances/transactions/{$transactionId}")->assertSessionHasNoErrors();
+
+        $this->actingAs($user)->delete("/settings/trash/transactions/{$transactionId}")->assertSessionHasNoErrors();
+
+        $this->assertSame(0, $this->postDue());
+        $this->assertSame(0, Transaction::withTrashed()->count());
+        $this->assertSame(PlannedEventStatus::Planned, $plan->fresh()->status);
+        $this->assertNull($plan->fresh()->realized_transaction_id);
+        $this->assertFalse($plan->fresh()->auto_post);
+    }
+
     public function test_month_end_occurrences_post_on_the_last_day_of_each_month(): void
     {
         Carbon::setTestNow('2026-01-20 09:00:00');
