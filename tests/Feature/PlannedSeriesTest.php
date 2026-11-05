@@ -227,6 +227,19 @@ class PlannedSeriesTest extends TestCase
         return $series->events()->where('date', '>=', $from)->orderBy('date')->pluck('date')->map->toDateString()->all();
     }
 
+    public function test_a_projection_past_the_stored_year_continues_the_rhythm(): void
+    {
+        [$series] = $this->rent();
+
+        // From 2026-11-10 to 2028-11-10: the 15th of Nov 2026 .. Oct 2028, 12 stored and 12 virtual.
+        $items = app(PlannedOccurrences::class)->open($this->user, Carbon::parse('2028-11-10'));
+
+        $this->assertCount(24, $items);
+        $this->assertSame(12, $items->filter(fn (ProjectedItem $item) => $item->virtual)->count());
+        $this->assertSame('2027-11-15', $items->first(fn (ProjectedItem $item) => $item->virtual)->date->toDateString());
+        $this->assertSame('2028-10-15', $items->last()->date->toDateString());
+    }
+
     public function test_moving_the_last_stored_occurrence_earlier_does_not_bring_its_date_back(): void
     {
         [$series, $account, $category] = $this->rent();
