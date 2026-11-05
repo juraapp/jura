@@ -64,6 +64,12 @@ settings) makes the layout own the width: the header and the body share one cont
 page body drops its own `mx-auto max-w-* px-*` wrapper. Without `width` a page still sizes its own body (older pages
 until they adopt it).
 
+## Empty states
+
+`<EmptyState>` takes its main action as props: `action-label`, optional `action-icon`, and `action-href` (rendered as a
+`PrimaryButton` link) or, without a link, an `@action` event (a `PrimaryButton` click). Use the `#action` slot only
+for something a single primary button cannot express.
+
 ## Buttons
 
 Use the shared components, never a hand-styled `bg-primary-600` element:

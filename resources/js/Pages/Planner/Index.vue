@@ -314,11 +314,9 @@ const comparisonRows = computed(() => {
                 icon="scale"
                 :title="$t('ui.planner.empty_title')"
                 :description="$t('ui.planner.empty_hint')"
-            >
-                <template #action>
-                    <PrimaryButton :as="Link" :href="wishlistIndex.url()">{{ $t('ui.planner.go_wishlist') }}</PrimaryButton>
-                </template>
-            </EmptyState>
+                :action-label="$t('ui.planner.go_wishlist')"
+                :action-href="wishlistIndex.url()"
+            />
 
             <template v-else>
                 <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">
