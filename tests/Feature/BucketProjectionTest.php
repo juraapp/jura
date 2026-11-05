@@ -7,15 +7,16 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
+use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
-use App\Modules\Planning\Services\CycleProjector;
+use App\Modules\Planning\Services\BucketProjection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
-class CycleProjectionTest extends TestCase
+class BucketProjectionTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -54,7 +55,7 @@ class CycleProjectionTest extends TestCase
 
     private function projection(): array
     {
-        return app(CycleProjector::class)->project($this->user, 'COP');
+        return app(BucketProjection::class)->project($this->user, 'COP');
     }
 
     public function test_the_start_of_the_month_shows_groceries_and_savings_filled_provisionally(): void
@@ -139,5 +140,21 @@ class CycleProjectionTest extends TestCase
 
         $this->assertSame('0.00', $projection[$this->groceries->id]['provisional']->toDecimalString());
         $this->assertSame('0.00', $projection[$this->savings->id]['provisional']->toDecimalString());
+    }
+
+    public function test_earmarks_are_what_funded_envelopes_hold_at_the_end_of_each_day(): void
+    {
+        PlannedEvent::factory()->for($this->user)->create([
+            'type' => 'expense', 'amount' => 300, 'currency' => 'COP', 'date' => '2026-11-15', 'category_id' => $this->groceryCategory->id, 'certainty' => 'confirmed',
+        ]);
+
+        $earmarks = app(BucketProjection::class)->earmarksAt($this->user, 'COP', ForecastView::Expected, [
+            Carbon::parse('2026-11-14'), Carbon::parse('2026-11-30'), Carbon::parse('2026-12-01'),
+        ]);
+
+        // Nov 1: groceries 500 + emergency 500. Nov 15: groceries spends 300 (1,000 - 300). Nov 30: the 200 left
+        // overflows into emergency, which still counts as earmarked.
+        $this->assertSame(['2026-11-14' => '1000.00', '2026-11-30' => '700.00', '2026-12-01' => '700.00'],
+            array_map(fn ($money) => $money->toDecimalString(), $earmarks));
     }
 }
