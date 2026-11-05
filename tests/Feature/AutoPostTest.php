@@ -148,6 +148,25 @@ class AutoPostTest extends TestCase
         $this->assertNull($archived->fresh()->post_error);
     }
 
+    public function test_a_blocked_repeating_plan_notifies_once_for_all_its_overdue_dates(): void
+    {
+        Carbon::setTestNow('2026-11-10 09:00:00');
+        Event::fake([PlannedPostingFailed::class]);
+        [$user, $account, $category] = $this->owner();
+        $series = PlannedEventSeries::factory()->for($user)->create(['account_id' => $account->id, 'category_id' => $category->id, 'auto_post' => true]);
+        $plans = collect(['2026-09-01', '2026-10-01', '2026-11-01'])
+            ->map(fn (string $date) => $this->plan($user, $account, $category, $date, ['series_id' => $series->id]));
+        $oneOff = $this->plan($user, $account, $category, '2026-11-02');
+        $account->update(['is_active' => false]);
+
+        $this->assertSame(0, $this->postDue());
+
+        $this->assertSame(['account_inactive', 'account_inactive', 'account_inactive'], $plans->map(fn (PlannedEvent $plan) => $plan->fresh()->post_error)->all());
+        Event::assertDispatchedTimes(PlannedPostingFailed::class, 2);
+        Event::assertDispatched(PlannedPostingFailed::class, fn (PlannedPostingFailed $event) => $event->plannedEventId === $plans[0]->id);
+        Event::assertDispatched(PlannedPostingFailed::class, fn (PlannedPostingFailed $event) => $event->plannedEventId === $oneOff->id);
+    }
+
     public function test_a_failure_is_reported_and_the_batch_continues(): void
     {
         Carbon::setTestNow('2026-11-10 09:00:00');

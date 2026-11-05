@@ -527,7 +527,8 @@ The bell in the top bar collects alerts. Mark one or all as read from there.
   it will be **recorded automatically** or whether you need to **confirm it** once it is paid. Plans on an archived
   account are left out.
 - **Couldn't record automatically**: a plan set to record itself could not be recorded, with the reason (its account
-  is archived or deleted, its category was deleted). You are told once per reason; it is tried again every hour.
+  is archived or deleted, its category was deleted). You are told once per reason, and once for a whole repeating
+  plan rather than for each of its dates; it is tried again every hour.
 - **Low balance**: an account balance has dropped below about three days of your typical spending, or below zero.
 
 You are notified once per crossing; an unread alert is not repeated.
