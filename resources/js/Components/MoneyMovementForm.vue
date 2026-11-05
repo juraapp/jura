@@ -302,7 +302,7 @@ const fieldClass = 'mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-
                         <option value="">{{ $t('ui.transaction_modal.select_account') }}</option>
                         <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </select>
-                    <InputError class="mt-1" :message="form.errors.from_account_id" />
+                    <InputError class="mt-1" :message="form.errors.from_account_id || form.errors.account_id" />
                 </div>
                 <div>
                     <InputLabel for="to_account_id" :value="$t('ui.transaction_modal.to_account')" />
@@ -310,7 +310,7 @@ const fieldClass = 'mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-
                         <option value="">{{ $t('ui.transaction_modal.select_account') }}</option>
                         <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </select>
-                    <InputError class="mt-1" :message="form.errors.to_account_id" />
+                    <InputError class="mt-1" :message="form.errors.to_account_id || form.errors.counter_account_id" />
                 </div>
             </template>
 
