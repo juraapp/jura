@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Support\Forecast\EngineBucket;
 use App\Modules\Planning\Support\Forecast\EngineFlow;
@@ -118,5 +119,33 @@ class ScenarioSuggesterTest extends TestCase
     public function test_an_empty_selection_has_no_suggestions(): void
     {
         $this->assertSame([], $this->suggester()->suggest($this->input(0, null, []), []));
+    }
+
+    public function test_six_items_over_36_months_with_10_buckets_are_suggested_quickly(): void
+    {
+        $start = CarbonImmutable::parse('2026-10-01');
+        $buckets = [];
+        for ($id = 1; $id <= 10; $id++) {
+            $buckets[] = new EngineBucket(
+                id: $id, rule: $id % 2 ? FillRule::Fixed : FillRule::PercentOfRemaining, value: $id % 2 ? '100' : '20',
+                cap: Money::of(5000), isSavings: true, envelope: Money::of(100),
+                cycle: $id % 3 === 0 ? BudgetPeriodType::Monthly : null,
+            );
+        }
+        $flows = [];
+        for ($month = 0; $month < 36; $month++) {
+            $flows[] = new EngineFlow($start->addMonths($month)->addDays(14), $month * 3, FlowKind::Income, Money::of(2000));
+            $flows[] = new EngineFlow($start->addMonths($month)->addDays(19), $month * 3 + 1, FlowKind::Income, Money::of(700));
+            $flows[] = new EngineFlow($start->addMonths($month)->addDays(4), $month * 3 + 2, FlowKind::Expense, Money::of(900));
+        }
+        $input = new EngineInput($start, $start->addMonths(36), Money::of(3000), $buckets, $flows);
+        $items = array_map(fn (int $id) => $this->item($id, 1500 + 700 * $id, 1 + $id % 5), range(1, 6));
+
+        $began = microtime(true);
+        $suggestions = $this->suggester()->suggest($input, $items);
+        $elapsed = microtime(true) - $began;
+
+        $this->assertNotEmpty($suggestions);
+        $this->assertLessThan(1.5, $elapsed, sprintf('suggesting took %.2f s', $elapsed));
     }
 }

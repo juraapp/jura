@@ -43,7 +43,14 @@ final class EngineState
 
     public int $next = 0;
 
-    public CarbonImmutable $lastPurchase;
+    /** The day of the latest purchase (Y-m-d): later items wait until then. */
+    public string $lastPurchaseDay;
+
+    /** The day being simulated (Y-m-d). */
+    public string $day;
+
+    /** Whether some bucket received money since reached caps were last checked. */
+    private bool $grew = false;
 
     /** @var array<int, array{0: CarbonImmutable, 1: Money, 2: Money}> line index => [date, from bucket, from free] */
     public array $bought = [];
@@ -77,15 +84,23 @@ final class EngineState
     /**
      * @param  array<int, array{0: CarbonImmutable, 1: CarbonImmutable}>  $windows  bucket id => current window
      */
-    public function __construct(EngineInput $input, private readonly array $windows)
+    /** @var array<int, array{0: string, 1: string}> */
+    private array $windowDays = [];
+
+    public function __construct(EngineInput $input, private readonly array $windows, private readonly EngineCalendar $calendar)
     {
+        foreach ($windows as $id => [$start, $end]) {
+            $this->windowDays[$id] = [$start->format('Y-m-d'), $end->format('Y-m-d')];
+        }
+
         $this->cash = $input->startCash;
         $this->earmarked = Money::zero();
         $this->committed = Money::zero();
         $this->incomeAmount = Money::zero();
         $this->incomeAllocated = Money::zero();
         $this->incomeLeftFree = Money::zero();
-        $this->lastPurchase = $input->start;
+        $this->lastPurchaseDay = $input->start->format('Y-m-d');
+        $this->day = $this->lastPurchaseDay;
 
         foreach ($input->buckets as $bucket) {
             $this->buckets[$bucket->id] = $bucket;
@@ -137,6 +152,7 @@ final class EngineState
 
         $this->env[$bucketId] = $this->env[$bucketId]->add($amount);
         $this->earmarked = $this->earmarked->add($amount);
+        $this->grew = true;
     }
 
     /**
@@ -181,9 +197,8 @@ final class EngineState
             $this->provisional[$bucketId] = $this->provisional[$bucketId]->add($amount);
         }
 
-        $period = $this->buckets[$bucketId]->cyclePeriod();
-        if ($period !== null) {
-            $key = $period->startOf($date->toDateTimeImmutable())->format('Y-m-d');
+        $key = $this->calendar->cycleStart($this->buckets[$bucketId], $date);
+        if ($key !== null) {
             $this->received[$bucketId][$key] = ($this->received[$bucketId][$key] ?? Money::zero())->add($amount);
         }
     }
@@ -197,12 +212,12 @@ final class EngineState
 
     public function receivedOn(EngineBucket $bucket, CarbonImmutable $date): ?Money
     {
-        $period = $bucket->cyclePeriod();
-        if ($period === null) {
+        $key = $this->calendar->cycleStart($bucket, $date);
+        if ($key === null) {
             return null;
         }
 
-        return $this->received[$bucket->id][$period->startOf($date->toDateTimeImmutable())->format('Y-m-d')] ?? Money::zero();
+        return $this->received[$bucket->id][$key] ?? Money::zero();
     }
 
     /**
@@ -219,14 +234,25 @@ final class EngineState
             return $bucket->value;
         }
 
-        $period = $bucket->cyclePeriod();
-        $cutoff = $period !== null ? CarbonImmutable::instance($period->startOf($date->toDateTimeImmutable()))->subDay() : $date;
+        $cycleStart = $this->calendar->cycleStart($bucket, $date);
+        $cutoff = $cycleStart !== null ? CarbonImmutable::parse($cycleStart)->subDay() : $date;
 
         return $this->reached[$bucket->stepUpAfterBucketId]->lte($cutoff) ? $bucket->stepUpValue : $bucket->value;
     }
 
+    /**
+     * noteReached(), only when a bucket received money since the last check (nothing else can fill one).
+     */
+    public function noteReachedIfFunded(CarbonImmutable $date): void
+    {
+        if ($this->grew) {
+            $this->noteReached($date);
+        }
+    }
+
     public function noteReached(CarbonImmutable $date): void
     {
+        $this->grew = false;
         foreach ($this->buckets as $id => $bucket) {
             if (isset($this->reached[$id])) {
                 continue;
@@ -260,20 +286,14 @@ final class EngineState
 
     public function addPoint(CarbonImmutable $date): void
     {
-        $envelopes = [];
-        foreach ($this->env as $id => $envelope) {
-            if ($this->funded[$id]) {
-                $envelopes[$id] = $envelope;
-            }
-        }
-
-        $this->points[] = new TimelinePoint($date, $this->cash, $this->earmarked, $this->free(), $envelopes);
+        $this->points[] = new TimelinePoint($date, $this->cash, $this->earmarked, $this->free(), $this->env, $this->funded);
     }
 
     private function inWindow(int $bucketId, CarbonImmutable $date): bool
     {
-        [$start, $end] = $this->windows[$bucketId];
+        [$start, $end] = $this->windowDays[$bucketId];
+        $day = $date->format('Y-m-d');
 
-        return $date->gte($start) && $date->lte($end);
+        return $day >= $start && $day <= $end;
     }
 }

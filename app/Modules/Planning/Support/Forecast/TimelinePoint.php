@@ -12,13 +12,25 @@ use Carbon\CarbonImmutable;
 final readonly class TimelinePoint
 {
     /**
-     * @param  array<int, Money>  $envelopes  funded bucket id => envelope
+     * @param  array<int, Money>  $balances  bucket id => envelope (funded or not)
+     * @param  array<int, bool>  $funded  bucket id => whether its envelope is earmarked money
      */
     public function __construct(
         public CarbonImmutable $date,
         public Money $cash,
         public Money $earmarked,
         public Money $free,
-        public array $envelopes,
+        private array $balances = [],
+        private array $funded = [],
     ) {}
+
+    /**
+     * What every funded bucket holds.
+     *
+     * @return array<int, Money> bucket id => envelope
+     */
+    public function envelopes(): array
+    {
+        return array_filter($this->balances, fn (int $id) => $this->funded[$id] ?? false, ARRAY_FILTER_USE_KEY);
+    }
 }
