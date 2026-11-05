@@ -52,7 +52,7 @@ final class ForecastEngine
             }
 
             $buckets[$bucket->id] = $bucket;
-            $balances[$bucket->id] = $bucket->balance;
+            $balances[$bucket->id] = $bucket->envelope;
             if ($bucket->completedOn !== null) {
                 $this->completed[$bucket->id] = $bucket->completedOn;
             }
@@ -143,7 +143,7 @@ final class ForecastEngine
                 $bucket->id,
                 $bucket->rule,
                 $this->valueOn($bucket, $income->date),
-                $bucket->target,
+                $bucket->cap,
                 $bucket->rule === FillRule::FillToTarget || $bucket->isSavings,
                 $balances[$bucket->id],
                 $this->receivedOn($bucket, $income->date),
@@ -192,7 +192,7 @@ final class ForecastEngine
     private function noteReached(EngineInput $input, array $balances, CarbonImmutable $date): void
     {
         foreach ($input->buckets as $bucket) {
-            if (! isset($this->reached[$bucket->id]) && $bucket->target !== null && ! $balances[$bucket->id]->lessThan($bucket->target)) {
+            if (! isset($this->reached[$bucket->id]) && $bucket->cap !== null && ! $balances[$bucket->id]->lessThan($bucket->cap)) {
                 $this->reached[$bucket->id] = $date;
             }
         }

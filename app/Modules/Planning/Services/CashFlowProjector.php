@@ -34,6 +34,62 @@ class CashFlowProjector implements CashFlowForecast
         return $this->project($user, $view, $months);
     }
 
+    public function budgetMonthly(User $user, ForecastView $view, int $months): array
+    {
+        $today = CarbonImmutable::instance($user->today())->startOfDay();
+        $firstMonth = $today->startOfMonth();
+        $horizonEnd = $firstMonth->addMonthsNoOverflow($months)->subDay();
+
+        $accounts = $this->balances->budgetBalances($user);
+        $inBudget = $accounts->pluck('currency', 'id')->all();
+        $opening = [];
+        foreach ($accounts as $account) {
+            $opening[$account['currency']] = ($opening[$account['currency']] ?? Money::zero())->add($account['balance']);
+        }
+
+        $byMonth = [];
+        foreach ($this->occurrences->open($user, $horizonEnd) as $item) {
+            $month = $item->effectiveDate($today)->format('Y-m');
+            $row = &$byMonth[$item->currency][$month];
+            $row ??= ['income' => Money::zero(), 'expense' => Money::zero(), 'boundary' => Money::zero()];
+            $lands = $item->accountId === null || isset($inBudget[$item->accountId]);
+
+            if ($item->isIncome() && $lands && $view->includesIncome($item->certainty)) {
+                $row['income'] = $row['income']->add($item->amount);
+            } elseif ($item->isExpense() && $lands) {
+                $row['expense'] = $row['expense']->add($item->amount);
+            } elseif ($item->isTransfer()) {
+                $leaves = $item->accountId !== null && isset($inBudget[$item->accountId]);
+                $arrives = $item->counterAccountId !== null && isset($inBudget[$item->counterAccountId]);
+                if ($leaves && ! $arrives) {
+                    $row['boundary'] = $row['boundary']->subtract($item->amount);
+                } elseif ($arrives && ! $leaves) {
+                    $row['boundary'] = $row['boundary']->add($item->amount);
+                }
+            }
+            unset($row);
+        }
+
+        $currencies = array_unique([...array_keys($opening), ...array_keys($byMonth)]);
+        sort($currencies);
+
+        $result = [];
+        foreach ($currencies as $currency) {
+            $running = $opening[$currency] ?? Money::zero();
+            $series = [];
+            for ($i = 0; $i < $months; $i++) {
+                $month = $firstMonth->addMonthsNoOverflow($i)->format('Y-m');
+                $row = $byMonth[$currency][$month] ?? ['income' => Money::zero(), 'expense' => Money::zero(), 'boundary' => Money::zero()];
+                $running = $running->add($row['income'])->subtract($row['expense'])->add($row['boundary']);
+                $series[] = ['month' => $month] + $row + ['closing' => $running];
+            }
+
+            $result[$currency] = ['opening' => $opening[$currency] ?? Money::zero(), 'months' => $series];
+        }
+
+        return $result;
+    }
+
     public function window(User $user, ForecastView $view, CarbonInterface $from, CarbonInterface $to): array
     {
         $from = CarbonImmutable::instance($from)->startOfDay();
