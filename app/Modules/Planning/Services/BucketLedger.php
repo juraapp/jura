@@ -178,6 +178,14 @@ class BucketLedger
         ));
     }
 
+    /**
+     * fundedSince() from the bucket's loaded `funded_since` (no query), for code that already loaded many buckets.
+     */
+    public function loadedFundedSince(Bucket $bucket): ?Carbon
+    {
+        return $this->effectiveFrom($bucket, $bucket->funded_since);
+    }
+
     private function storedFundedSince(Bucket $bucket): ?Carbon
     {
         $stored = Bucket::forUser($bucket->user_id)->whereKey($bucket->id)->value('funded_since');
