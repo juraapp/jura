@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/vue3';
 import { useTransactionModal } from '@/composables/useTransactionModal';
 import { realize, skip, link } from '@/actions/App/Modules/Planning/Http/Controllers/PlannedEventController';
+import { confirmsInOneClick } from '@/moneyMovement';
 
 /**
  * What a planned row can do wherever it is listed (cash flow, the transactions bands, the review inbox).
@@ -8,10 +9,13 @@ import { realize, skip, link } from '@/actions/App/Modules/Planning/Http/Control
 export function usePlanActions() {
     const { openPlanned, openConfirm } = useTransactionModal();
 
-    /** One click when the plan already says where the money goes; otherwise the form asks for what is missing. */
+    /**
+     * One click when the plan already says where the money goes; otherwise, or when the one click is refused
+     * (an archived account, say), the form opens to show why and ask for what is missing.
+     */
     const confirm = (event) => {
-        if (event.account && event.category) {
-            router.post(realize.url(event.id), {}, { preserveScroll: true });
+        if (confirmsInOneClick(event)) {
+            router.post(realize.url(event.id), {}, { preserveScroll: true, onError: () => openConfirm(event) });
 
             return;
         }

@@ -94,6 +94,20 @@ export function confirmDate(plannedDate, today) {
 }
 
 /**
+ * Whether a plan can be confirmed with one click: it already says where the money goes (an account and a
+ * category, or both accounts for a transfer). Otherwise the form asks for what is missing.
+ *
+ * @param {{ type: string, account: object|null, category: object|null, counterAccount?: object|null }} event
+ */
+export function confirmsInOneClick(event) {
+    if (!event.account) {
+        return false;
+    }
+
+    return event.type === 'transfer_out' ? Boolean(event.counterAccount) : Boolean(event.category);
+}
+
+/**
  * Buckets an expense can be paid from: no tracked category, in the account's currency, on an on-budget
  * account. The bucket the expense is already linked to (`current`, from spend-options?include=) stays
  * offered even if it was completed or gained a category since, so editing never drops the link.

@@ -209,7 +209,7 @@ clears the note until the next try.
 
 **Needs review.** At the top of the page, plans whose date has passed and that are still open, and plans that could
 not be recorded automatically, wait for you: **Confirm** records them (one click when the plan has an account and a
-category), **Match** links a transaction you already recorded, **Adjust** confirms with other details, **Skip** says it
+category, or both accounts for a transfer; if it cannot be recorded, the form opens to show why), **Match** links a transaction you already recorded, **Adjust** confirms with other details, **Skip** says it
 did not happen. An overdue plan counts as happening today in every projection until you deal with it.
 
 **Planned transfers.** Choose **Transfer** to plan moving money between two of your accounts in the same currency
@@ -234,8 +234,9 @@ income, planned expenses and your projected balance, per currency. Today's balan
 
 **When the money really moves.**
 - Press the **check** button (*Mark as done*) to record the real transaction from the plan. When the plan has an
-  account and a category, one click records it on the planned date (today if the plan is dated later); otherwise
-  the form opens, prefilled, to ask for what is missing. Edit the transaction afterwards to change anything.
+  account and a category (both accounts for a transfer), one click records it on the planned date (today if the plan
+  is dated later); otherwise, or when it cannot be recorded (an archived account, for example), the form opens,
+  prefilled, to ask for what is missing. Edit the transaction afterwards to change anything.
 - If you already recorded a similar transaction yourself, the plan shows **Looks done: ...** with a **Yes, link
   it** button. Nothing is ever linked without your confirmation.
 - Press **Skip** for something that will not happen. A skipped plan stays in the list (dimmed) with **Reopen**

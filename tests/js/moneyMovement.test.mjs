@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
     canChooseWhen,
     confirmDate,
+    confirmsInOneClick,
     futurePrompt,
     initialWhen,
     keepBucket,
@@ -127,4 +128,13 @@ test('confirming a plan sends only what the transaction needs', () => {
         Object.keys(payload({ intent: 'confirmPlanned', when: 'happened', type: 'expense', account_id: 1, category_id: 2, amount: '5', date: '2026-11-10', description: 'd' })).sort(),
         ['account_id', 'amount', 'category_id', 'date', 'description'],
     );
+});
+
+test('a plan confirms in one click only when it says where the money goes', () => {
+    const account = { id: 1 };
+    assert.equal(confirmsInOneClick({ type: 'expense', account, category: { id: 2 } }), true);
+    assert.equal(confirmsInOneClick({ type: 'expense', account, category: null }), false);
+    assert.equal(confirmsInOneClick({ type: 'income', account: null, category: { id: 2 } }), false);
+    assert.equal(confirmsInOneClick({ type: 'transfer_out', account, category: null, counterAccount: { id: 3 } }), true);
+    assert.equal(confirmsInOneClick({ type: 'transfer_out', account, category: null, counterAccount: null }), false);
 });
