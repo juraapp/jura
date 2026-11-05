@@ -15,7 +15,7 @@ that build dates with `now()` fail between midnight UTC and the user's midnight.
 moment calls `$this->travelTo(...)` itself; assert expected dates as literal, hand-computed values.
 
 ## JavaScript unit tests
-`resources/js/format.js`, `resources/js/today.js` and `resources/js/moneyMovement.js` are covered by Node's built-in runner: `vendor/bin/sail npm run test:js` (files in
+`resources/js/format.js` (dates, numbers, money, and reading typed money amounts), `resources/js/today.js`, `resources/js/moneyMovement.js` and `resources/js/currencies.js` are covered by Node's built-in runner: `vendor/bin/sail npm run test:js` (files in
 `tests/js`). No extra dependency; keep browser-free logic in plain modules so it can be tested this way.
 
 ## Asserting Inertia responses

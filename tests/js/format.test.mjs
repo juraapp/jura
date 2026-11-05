@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createFormat } from '../../resources/js/format.js';
+import { createFormat, formatMoneyInput, parseMoneyInput } from '../../resources/js/format.js';
 
 test('dates follow the chosen style', () => {
     const cases = { iso: '2026-03-09', mdy: '03/09/2026', dmy: '09/03/2026', medium: '9 Mar 2026', auto: 'Mar 9, 2026' };
@@ -74,4 +74,54 @@ test('an empty value does not crash', () => {
 test('month names follow the language', () => {
     assert.match(createFormat({}, 'en').month('2026-03'), /March 2026/);
     assert.match(createFormat({}, 'es').month('2026-03'), /marzo (de )?2026/);
+});
+
+test('money input reads either separator into a plain decimal', () => {
+    const comma = { decimal: ',' };
+    const dot = { decimal: '.' };
+
+    assert.equal(parseMoneyInput('1.234,50', comma), '1234.50');
+    assert.equal(parseMoneyInput('1.234,50', dot), '1234.50', 'both separators: the last one is decimal');
+    assert.equal(parseMoneyInput('1,234.50', comma), '1234.50');
+    assert.equal(parseMoneyInput('1.234.567', dot), '1234567.00', 'a repeated separator groups thousands');
+    assert.equal(parseMoneyInput('1,5', dot), '1.50', 'one or two digits after a lone separator are decimals');
+    assert.equal(parseMoneyInput('0.05', comma), '0.05');
+    assert.equal(parseMoneyInput('.5', dot), '0.50');
+    assert.equal(parseMoneyInput('1234', comma), '1234.00');
+    assert.equal(parseMoneyInput('$ 3.000.000', comma), '3000000.00', 'symbols and spaces are ignored');
+});
+
+test('a lone separator before three digits follows the user decimal separator', () => {
+    assert.equal(parseMoneyInput('1.234', { decimal: ',' }), '1234.00');
+    assert.equal(parseMoneyInput('1,234', { decimal: '.' }), '1234.00');
+    assert.equal(parseMoneyInput('1.234', { decimal: '.' }), null, 'three decimals are not money');
+});
+
+test('money input keeps the sign, and blanks and junk are told apart', () => {
+    assert.equal(parseMoneyInput('-1.234,5', { decimal: ',' }), '-1234.50');
+    assert.equal(parseMoneyInput('(250)', { decimal: '.' }), '-250.00');
+    assert.equal(parseMoneyInput('-0', { decimal: '.' }), '0.00');
+    assert.equal(parseMoneyInput('', { decimal: '.' }), '');
+    assert.equal(parseMoneyInput('   ', { decimal: '.' }), '');
+    assert.equal(parseMoneyInput(null), '');
+    assert.equal(parseMoneyInput('abc'), null);
+    assert.equal(parseMoneyInput('1,2,3.4.5'), null, 'a decimal separator inside the whole part');
+    assert.equal(parseMoneyInput('12.345,678', { decimal: ',' }), null);
+    assert.equal(parseMoneyInput(12.5), '12.50');
+});
+
+test('money input shows grouped amounts with decimals only when there are cents', () => {
+    assert.equal(formatMoneyInput('1234.5', { decimal: ',', group: '.' }), '1.234,50');
+    assert.equal(formatMoneyInput('1234567', { decimal: '.', group: ',' }), '1,234,567');
+    assert.equal(formatMoneyInput(-3000000, { decimal: ',', group: '.' }), '-3.000.000');
+    assert.equal(formatMoneyInput('1234.5', { decimal: '.', group: '' }), '1234.50');
+    assert.equal(formatMoneyInput('', { decimal: '.', group: ',' }), '');
+    assert.equal(formatMoneyInput(null), '');
+});
+
+test('a user format reads and shows money with its own separators', () => {
+    const format = createFormat({ decimal_separator: ',', thousands_separator: '.' }, 'es');
+
+    assert.equal(format.parseMoney('2.500,75'), '2500.75');
+    assert.equal(format.formatMoney('2500.75'), '2.500,75');
 });

@@ -4,6 +4,7 @@ namespace App\Modules\Identity\Http\Controllers;
 
 use App\Modules\Identity\Http\Requests\Preferences\UpdatePreferencesRequest;
 use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Support\Currencies;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -16,17 +17,10 @@ class PreferenceController extends Controller
         'America/Santiago', 'America/Argentina/Buenos_Aires', 'UTC',
     ];
 
-    private const CURRENCIES = [
-        ['value' => 'COP', 'label' => 'COP — Colombian peso'],
-        ['value' => 'USD', 'label' => 'USD — US dollar'],
-        ['value' => 'EUR', 'label' => 'EUR — Euro'],
-        ['value' => 'MXN', 'label' => 'MXN — Mexican peso'],
-    ];
-
     public function edit(): Response
     {
         return Inertia::render('Preferences/Edit', [
-            'currencies' => self::CURRENCIES,
+            'currencies' => Currencies::options(),
             'timezones' => self::TIMEZONES,
         ]);
     }

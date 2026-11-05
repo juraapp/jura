@@ -36,6 +36,87 @@ function localeSeparators(locale) {
     };
 }
 
+/**
+ * Reads an amount typed by the user into a plain decimal string with two decimals ("1234.50"), the shape the server
+ * expects. Accepts either separator: with both, the last one is the decimal separator; a lone separator followed by
+ * one or two digits is decimal, one repeated or followed by exactly three digits is a thousands separator unless it is
+ * the user's decimal separator (so "1.234" is 1234 for a comma-decimal user and 1.234 is invalid for a dot-decimal one
+ * only when it has three decimals). Currency symbols, letters and spaces are ignored. Returns '' for a blank input and
+ * null when it cannot be read.
+ *
+ * @param {string|number|null|undefined} text
+ * @param {{ decimal?: string }} separators  the user's decimal separator ('.' or ',')
+ * @returns {string|null}
+ */
+export function parseMoneyInput(text, { decimal = '.' } = {}) {
+    if (text === null || text === undefined) return '';
+    if (typeof text === 'number') return Number.isFinite(text) ? text.toFixed(2) : null;
+
+    const trimmed = String(text).trim();
+    if (trimmed === '') return '';
+
+    const negative = /^[^\d]*-/.test(trimmed) || /^\(.*\)$/.test(trimmed);
+    const cleaned = trimmed.replace(/[^\d.,]/g, '');
+    if (!/\d/.test(cleaned)) return null;
+
+    const lastDot = cleaned.lastIndexOf('.');
+    const lastComma = cleaned.lastIndexOf(',');
+    let decimalMark = null;
+
+    if (lastDot !== -1 && lastComma !== -1) {
+        decimalMark = lastDot > lastComma ? '.' : ',';
+    } else if (lastDot !== -1 || lastComma !== -1) {
+        const mark = lastDot !== -1 ? '.' : ',';
+        const occurrences = cleaned.split(mark).length - 1;
+        const digitsAfter = cleaned.length - cleaned.lastIndexOf(mark) - 1;
+
+        if (occurrences === 1 && digitsAfter !== 3) {
+            decimalMark = mark;
+        } else if (occurrences === 1 && digitsAfter === 3) {
+            decimalMark = mark === decimal ? mark : null;
+        }
+    }
+
+    let whole = cleaned;
+    let fraction = '';
+    if (decimalMark !== null) {
+        const index = cleaned.lastIndexOf(decimalMark);
+        whole = cleaned.slice(0, index);
+        fraction = cleaned.slice(index + 1);
+    }
+
+    const group = decimalMark === ',' ? '.' : decimalMark === '.' ? ',' : null;
+    if (group !== null && whole.includes(decimalMark)) return null;
+    whole = whole.replace(/[.,]/g, '');
+    if (fraction.length > 2 || /[.,]/.test(fraction)) return null;
+    if (whole === '' && fraction === '') return null;
+
+    const integer = (whole.replace(/^0+(?=\d)/, '') || '0');
+    const value = `${integer}.${fraction.padEnd(2, '0')}`;
+
+    return negative && /[1-9]/.test(value) ? `-${value}` : value;
+}
+
+/**
+ * Shows an amount in a money field with the user's separators: grouped, and with decimals only when it has cents.
+ *
+ * @param {string|number|null|undefined} value  a plain decimal ("1234.5")
+ * @param {{ decimal?: string, group?: string }} separators
+ * @returns {string}
+ */
+export function formatMoneyInput(value, { decimal = '.', group = ',' } = {}) {
+    if (value === null || value === undefined || value === '') return '';
+
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return String(value);
+
+    const [whole, fraction] = Math.abs(numeric).toFixed(2).split('.');
+    const grouped = group === '' ? whole : whole.replace(/\B(?=(\d{3})+(?!\d))/g, group);
+    const sign = numeric < 0 && Number(Math.abs(numeric).toFixed(2)) !== 0 ? '-' : '';
+
+    return sign + grouped + (fraction === '00' ? '' : decimal + fraction);
+}
+
 export function createFormat(preferences = {}, locale = 'en') {
     const prefs = preferences ?? {};
     const language = localeTag(locale).slice(0, 2);
@@ -134,5 +215,9 @@ export function createFormat(preferences = {}, locale = 'en') {
         return sign + (before ? symbol + gap + body : body + gap + symbol);
     };
 
-    return { number, date, month, time, dateTime, money };
+    const separators = { decimal, group };
+    const parseMoney = (text) => parseMoneyInput(text, separators);
+    const formatMoney = (value) => formatMoneyInput(value, separators);
+
+    return { number, date, month, time, dateTime, money, separators, parseMoney, formatMoney };
 }
