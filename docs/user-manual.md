@@ -234,6 +234,13 @@ changes ready to assign.
 Planned expenses always count in full in every view. The chart and table show, month by month, the planned
 income, planned expenses and your projected balance, per currency. Today's balance is your real net worth.
 
+Two more columns look at your budget only:
+- **On-budget cash**: the projected balance of the accounts in your budget (off-budget accounts and projected
+  interest are left out; planned transfers to or from an off-budget account move money in or out of it).
+- **Ready to assign (projected)**: that cash minus what your buckets are projected to hold at the end of the month
+  (their planned income, planned spending in their category and their end-of-cycle moves included). A negative
+  number means your buckets would hold more than your accounts: plan less for the buckets or more income.
+
 **When the money really moves.**
 - Press the **check** button (*Mark as done*) to record the real transaction from the plan. When the plan has an
   account and a category (both accounts for a transfer), one click records it on the planned date (today if the plan
@@ -638,6 +645,5 @@ What it held is now simply ready to assign, and buckets that sent leftovers to i
   spending you have not planned is not predicted.
 - Something that already happened and repeats cannot be recorded and planned in one step yet: record it as a
   transaction, then add a repeating plan starting on the next date.
-- A planned transfer to or from an account outside your budget does not yet show its effect on ready to assign.
 - Items that share a bucket each compare themselves with the same pot, so their "funded" bars can overlap.
 - Screens, messages, labels, exports and PDFs follow your language preference (English or Spanish). Names you type yourself (accounts, categories, buckets) are shown as you wrote them.
