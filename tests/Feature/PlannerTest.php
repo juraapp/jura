@@ -127,6 +127,7 @@ class PlannerTest extends TestCase
 
     public function test_existing_bucket_balances_count_and_order_and_not_before_are_respected(): void
     {
+        Account::factory()->for($this->user)->create(['currency' => 'COP', 'initial_balance' => 300000]);
         Allocation::factory()->for($this->user)->for($this->bikeFund)->create(['amount' => 300000, 'currency' => 'COP']);
 
         $result = $this->simulate([

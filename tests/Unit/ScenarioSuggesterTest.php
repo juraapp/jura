@@ -2,12 +2,12 @@
 
 namespace Tests\Unit;
 
-use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Support\Forecast\EngineBucket;
-use App\Modules\Planning\Support\Forecast\EngineIncome;
+use App\Modules\Planning\Support\Forecast\EngineFlow;
 use App\Modules\Planning\Support\Forecast\EngineInput;
 use App\Modules\Planning\Support\Forecast\EngineLine;
+use App\Modules\Planning\Support\Forecast\FlowKind;
 use App\Modules\Planning\Support\Forecast\ForecastEngine;
 use App\Modules\Planning\Support\Forecast\ScenarioSuggester;
 use App\Modules\Shared\Support\Money;
@@ -21,15 +21,19 @@ class ScenarioSuggesterTest extends TestCase
         return new ScenarioSuggester(new ForecastEngine);
     }
 
+    /**
+     * One savings bucket holding $balance (all of the cash), filled by a fixed rule from each income.
+     */
     private function input(int $balance, ?string $fixed, array $incomes): EngineInput
     {
-        $bucket = new EngineBucket(1, $fixed !== null ? FillRule::Fixed : null, $fixed, null, true, Money::of($balance), null, null, CarryOverPolicy::Carry, null, true);
+        $bucket = new EngineBucket(1, $fixed !== null ? FillRule::Fixed : null, $fixed, null, true, Money::of($balance));
 
         return new EngineInput(
             CarbonImmutable::parse('2026-10-01'),
             CarbonImmutable::parse('2027-03-31'),
+            Money::of($balance),
             [$bucket],
-            array_map(fn (array $row) => new EngineIncome(CarbonImmutable::parse($row[0]), Money::of($row[1]), null), $incomes),
+            array_map(fn (array $row) => new EngineFlow(CarbonImmutable::parse($row[0]), 0, FlowKind::Income, Money::of($row[1])), $incomes),
         );
     }
 

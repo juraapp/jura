@@ -6,317 +6,323 @@ use App\Modules\Planning\Enums\BudgetPeriodType;
 use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Support\Forecast\EngineBucket;
-use App\Modules\Planning\Support\Forecast\EngineIncome;
+use App\Modules\Planning\Support\Forecast\EngineFlow;
 use App\Modules\Planning\Support\Forecast\EngineInput;
 use App\Modules\Planning\Support\Forecast\EngineLine;
+use App\Modules\Planning\Support\Forecast\EngineResult;
+use App\Modules\Planning\Support\Forecast\FlowKind;
 use App\Modules\Planning\Support\Forecast\ForecastEngine;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonImmutable;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Every expected number here is worked out by hand in the comments; free money = cash − funded envelopes.
+ */
 class ForecastEngineTest extends TestCase
 {
     private const START = '2026-10-01';
 
-    private function date(string $date): CarbonImmutable
+    private function day(string $date): CarbonImmutable
     {
         return CarbonImmutable::parse($date);
     }
 
-    private function bucket(
-        int $id,
-        string|int $balance = 0,
-        ?FillRule $rule = null,
-        string|int|null $value = null,
-        ?array $accounts = null,
-        string|int|null $target = null,
-        bool $savings = true,
-        ?BudgetPeriodType $cycle = null,
-        CarryOverPolicy $carry = CarryOverPolicy::Carry,
-        ?int $overflow = null,
-    ): EngineBucket {
-        return new EngineBucket(
-            $id, $rule, $value === null ? null : (string) $value, $target === null ? null : Money::of($target), $savings,
-            Money::of($balance), $accounts, $cycle, $carry, $overflow,
-        );
+    /**
+     * @param  array<string, mixed>  $options  EngineBucket named arguments
+     */
+    private function bucket(int $id, int|string $envelope = 0, array $options = []): EngineBucket
+    {
+        return new EngineBucket(...array_merge([
+            'id' => $id, 'rule' => null, 'value' => null, 'cap' => null, 'isSavings' => true, 'envelope' => Money::of($envelope),
+        ], $options));
     }
 
-    private function income(string $date, int $amount, ?int $account = null): EngineIncome
+    private function income(string $date, int $amount, array $overrides = [], ?int $account = null): EngineFlow
     {
-        return new EngineIncome($this->date($date), Money::of($amount), $account);
+        return new EngineFlow($this->day($date), 0, FlowKind::Income, Money::of($amount), $account, null, array_map(fn ($value) => Money::of($value), $overrides));
     }
 
-    private function line(int $id, int $price, ?int $bucket = null, ?string $notBefore = null, ?string $desiredBy = null, int $importance = 3, ?string $blocked = null): EngineLine
+    private function expense(string $date, int $amount, ?int $category = null): EngineFlow
     {
-        return new EngineLine(
-            $id, "Item {$id}", Money::of($price), $bucket,
-            $notBefore ? $this->date($notBefore) : null, $desiredBy ? $this->date($desiredBy) : null, $importance, $blocked,
-        );
+        return new EngineFlow($this->day($date), 1, FlowKind::Expense, Money::of($amount), null, $category);
     }
 
     /**
      * @param  list<EngineBucket>  $buckets
-     * @param  list<EngineIncome>  $incomes
-     * @param  list<EngineLine>  $lines
-     * @return array<int, array{date: ?string, delay: ?int, shortfall: string, late: bool}>
+     * @param  list<EngineFlow>  $flows
      */
-    private function simulate(array $buckets, array $incomes, array $lines, string $end = '2027-03-31', int $ready = 0): array
+    private function input(int $cash, array $buckets = [], array $flows = [], string $end = '2027-03-31'): EngineInput
     {
-        $result = (new ForecastEngine)->run(
-            new EngineInput($this->date(self::START), $this->date($end), $buckets, $incomes, Money::of($ready)),
-            $lines,
+        return new EngineInput($this->day(self::START), $this->day($end), Money::of($cash), $buckets, $flows);
+    }
+
+    private function line(int $id, int $price, ?int $bucketId = null, ?string $notBefore = null): EngineLine
+    {
+        return new EngineLine($id, "Item {$id}", Money::of($price), $bucketId, $notBefore ? $this->day($notBefore) : null, null, 3);
+    }
+
+    /**
+     * @param  list<EngineLine>  $lines
+     */
+    private function simulate(EngineInput $input, array $lines = []): EngineResult
+    {
+        return (new ForecastEngine)->run($input, $lines);
+    }
+
+    private function money(Money $money): string
+    {
+        return $money->toDecimalString();
+    }
+
+    public function test_without_buckets_an_income_makes_an_item_affordable_from_ready_to_assign(): void
+    {
+        // 100 in cash, the 500 item waits for the 500 income on the 15th.
+        $result = $this->simulate($this->input(100, [], [$this->income('2026-10-15', 500)]), [$this->line(1, 500)]);
+
+        $line = $result->lines[0];
+        $this->assertSame('2026-10-15', $line->purchaseDate->toDateString());
+        $this->assertSame(14, $line->delayDays);
+        $this->assertSame(['0.00', '500.00'], [$this->money($line->fromBucket), $this->money($line->fromFree)]);
+        $this->assertSame('100.00', $this->money($result->endReadyToAssign));
+        $this->assertSame('100.00', $this->money($result->endCash));
+    }
+
+    public function test_an_item_is_paid_from_its_bucket_first_and_the_rest_from_ready_to_assign(): void
+    {
+        // Cash 1,000, the bucket holds 300, so 700 is free. The 500 item takes 300 from the bucket and 200 from free.
+        $result = $this->simulate($this->input(1000, [$this->bucket(1, 300)]), [$this->line(1, 500, 1)]);
+
+        $line = $result->lines[0];
+        $this->assertSame(self::START, $line->purchaseDate->toDateString());
+        $this->assertSame(['300.00', '200.00'], [$this->money($line->fromBucket), $this->money($line->fromFree)]);
+        $this->assertSame('0.00', $this->money($result->endBalances[1]));
+        $this->assertSame('500.00', $this->money($result->endReadyToAssign));
+    }
+
+    public function test_a_bucket_capped_below_the_price_is_topped_up_from_ready_to_assign(): void
+    {
+        // The income of 1,000 fills the bucket to its 400 cap and leaves 600 free; the 600 item takes 400 + 200.
+        $bucket = $this->bucket(1, 0, ['rule' => FillRule::PercentOfRemaining, 'value' => '100', 'cap' => Money::of(400)]);
+
+        $result = $this->simulate($this->input(0, [$bucket], [$this->income('2026-10-15', 1000)]), [$this->line(1, 600, 1)]);
+
+        $line = $result->lines[0];
+        $this->assertSame('2026-10-15', $line->purchaseDate->toDateString());
+        $this->assertSame(['400.00', '200.00'], [$this->money($line->fromBucket), $this->money($line->fromFree)]);
+        $this->assertSame('400.00', $this->money($result->endReadyToAssign));
+    }
+
+    public function test_a_later_planned_expense_holds_a_purchase_back_until_the_cash_is_there(): void
+    {
+        // Cash 1,000 today, but 800 leaves on Nov 10: from today the lowest balance is 200, too little for 500.
+        // On Dec 1 the 1,000 income lifts every later balance to 1,200, so the item is bought then.
+        $result = $this->simulate(
+            $this->input(1000, [], [$this->expense('2026-11-10', 800), $this->income('2026-12-01', 1000)]),
+            [$this->line(1, 500)],
         );
 
-        $out = [];
-        foreach ($result->lines as $line) {
-            $out[$line->itemId] = [
-                'date' => $line->purchaseDate?->toDateString(),
-                'delay' => $line->delayDays,
-                'shortfall' => $line->shortfall->toDecimalString(),
-                'late' => $line->late,
-            ];
-        }
-
-        return $out;
+        $this->assertSame('2026-12-01', $result->lines[0]->purchaseDate->toDateString());
+        $this->assertSame('700.00', $this->money($result->endCash));
     }
 
-    public function test_an_item_the_bucket_can_already_afford_is_bought_today(): void
+    public function test_the_cash_guard_uses_the_lowest_balance_from_the_day_on_not_the_balance_that_day(): void
     {
-        $out = $this->simulate([$this->bucket(1, 1000)], [], [$this->line(1, 800, 1)]);
-
-        $this->assertSame(self::START, $out[1]['date']);
-        $this->assertSame(0, $out[1]['delay']);
-    }
-
-    public function test_an_item_waits_for_the_income_that_funds_it(): void
-    {
-        $out = $this->simulate(
-            [$this->bucket(1, 0, FillRule::Fixed, 500)],
-            [$this->income('2026-10-10', 500), $this->income('2026-11-10', 500)],
-            [$this->line(1, 900, 1)],
+        // Balances: Oct 1 1,000, Oct 20 3,000, Nov 5 500, Dec 1 800. On Oct 20 there are 3,000 but the lowest balance
+        // from then on is 500 (< 700), so the 700 item waits until Dec 1, when the lowest from then on is 800.
+        $result = $this->simulate(
+            $this->input(1000, [], [$this->income('2026-10-20', 2000), $this->expense('2026-11-05', 2500), $this->income('2026-12-01', 300)]),
+            [$this->line(1, 700)],
         );
 
-        $this->assertSame('2026-11-10', $out[1]['date'], '500 on Oct 10 is not enough, 1000 total on Nov 10 is');
-        $this->assertSame(40, $out[1]['delay']);
+        $this->assertSame('2026-12-01', $result->lines[0]->purchaseDate->toDateString());
     }
 
-    public function test_items_are_bought_strictly_in_the_given_order(): void
+    public function test_an_item_that_free_money_covers_but_cash_does_not_is_limited_by_cash(): void
     {
-        $buckets = [$this->bucket(1, 100, FillRule::Fixed, 500)];
-        $incomes = [$this->income('2026-10-20', 1000)];
+        // An overspent envelope (-300) is negative earmarked money: free = 1,000 + 300 = 1,300, but only 1,000 is cash.
+        $overspent = $this->bucket(1, -300, ['isSavings' => false, 'categoryId' => 7]);
 
-        $expensiveFirst = $this->simulate($buckets, $incomes, [$this->line(1, 500, 1), $this->line(2, 50, 1)]);
-        $this->assertSame('2026-10-20', $expensiveFirst[1]['date']);
-        $this->assertSame('2026-10-20', $expensiveFirst[2]['date'], 'the cheap item waits for the expensive one even though it was affordable today');
+        $result = $this->simulate($this->input(1000, [$overspent], [], '2026-12-31'), [$this->line(1, 1200)]);
 
-        $cheapFirst = $this->simulate($buckets, $incomes, [$this->line(2, 50, 1), $this->line(1, 500, 1)]);
-        $this->assertSame(self::START, $cheapFirst[2]['date']);
-        $this->assertSame('2026-10-20', $cheapFirst[1]['date']);
+        $line = $result->lines[0];
+        $this->assertNull($line->purchaseDate);
+        $this->assertSame('cash', $line->limitedBy);
+        $this->assertSame('200.00', $this->money($line->shortfall));
     }
 
-    public function test_not_before_delays_a_purchase_even_when_funds_exist(): void
+    public function test_an_item_waiting_for_free_money_says_so_and_shows_what_is_missing(): void
     {
-        $out = $this->simulate([$this->bucket(1, 1000)], [], [$this->line(1, 100, 1, notBefore: '2026-12-15')]);
+        // 300 is earmarked out of 1,000: 700 free, 200 short of the 900 item.
+        $result = $this->simulate($this->input(1000, [$this->bucket(1, 300)], [], '2026-12-31'), [$this->line(1, 900)]);
 
-        $this->assertSame('2026-12-15', $out[1]['date']);
+        $this->assertSame('free', $result->lines[0]->limitedBy);
+        $this->assertSame('200.00', $this->money($result->lines[0]->shortfall));
     }
 
-    public function test_an_item_that_cannot_be_afforded_before_the_horizon_reports_its_shortfall(): void
+    public function test_a_cycle_cap_override_changes_the_room_in_that_cycle_only(): void
     {
-        $out = $this->simulate([$this->bucket(1, 100)], [], [$this->line(1, 700, 1)]);
+        // October's cap is 500: the bucket takes 500. November's cap is 800: it takes 300 more. Free = 2,000 - 800.
+        $bucket = $this->bucket(1, 0, [
+            'rule' => FillRule::FillToTarget, 'cap' => Money::of(500), 'isSavings' => false, 'cycle' => BudgetPeriodType::Monthly,
+            'capOverrides' => ['2026-11-01' => Money::of(800)],
+        ]);
 
-        $this->assertNull($out[1]['date']);
-        $this->assertNull($out[1]['delay']);
-        $this->assertSame('600.00', $out[1]['shortfall']);
+        $result = $this->simulate($this->input(0, [$bucket], [$this->income('2026-10-15', 1000), $this->income('2026-11-15', 1000)], '2026-11-30'));
+
+        $this->assertSame('800.00', $this->money($result->endBalances[1]));
+        $this->assertSame('1200.00', $this->money($result->endReadyToAssign));
     }
 
-    public function test_items_sharing_a_bucket_spend_the_same_money(): void
+    public function test_a_planned_incomes_explicit_split_wins_over_the_rules(): void
     {
-        $out = $this->simulate(
-            [$this->bucket(1, 600, FillRule::Fixed, 300)],
-            [$this->income('2026-11-01', 300), $this->income('2026-12-01', 300)],
-            [$this->line(1, 500, 1), $this->line(2, 500, 1)],
-        );
+        $bucket = $this->bucket(1, 0, ['rule' => FillRule::Fixed, 'value' => '900']);
 
-        $this->assertSame(self::START, $out[1]['date']);
-        $this->assertSame('2026-12-01', $out[2]['date'], '100 left + 300 + 300 = 700 only by December');
+        $result = $this->simulate($this->input(0, [$bucket], [$this->income('2026-10-15', 1000, [1 => 250])], '2026-10-31'));
+
+        $this->assertSame('250.00', $this->money($result->endBalances[1]));
+        $this->assertSame('750.00', $this->money($result->endReadyToAssign));
+        $this->assertSame(['1', '1000.00', '250.00', '750.00'], [
+            (string) $result->incomes->counted, $this->money($result->incomes->amount), $this->money($result->incomes->allocated), $this->money($result->incomes->leftFree),
+        ]);
     }
 
-    public function test_an_item_without_a_bucket_is_paid_from_ready_to_assign(): void
+    public function test_a_planned_category_expense_comes_out_of_funded_buckets_not_limit_only_ones(): void
     {
-        $out = $this->simulate(
-            [$this->bucket(1, 0, FillRule::Fixed, 100)],
-            [$this->income('2026-10-12', 1000)],
-            [$this->line(1, 800)],
-            ready: 50,
-        );
+        // Funded Food envelope 300, limit-only Food bucket. Cash 1,000: free 700. A 100 Food expense takes 100 from
+        // the funded envelope and from cash: free stays 700.
+        $funded = $this->bucket(1, 300, ['isSavings' => false, 'categoryId' => 7]);
+        $limit = $this->bucket(2, 0, ['isSavings' => false, 'categoryId' => 7, 'isFunded' => false]);
 
-        $this->assertSame('2026-10-12', $out[1]['date'], '50 + 900 left over after the fixed 100');
+        $result = $this->simulate($this->input(1000, [$funded, $limit], [$this->expense('2026-10-10', 100, 7)], '2026-10-20'));
+
+        $this->assertSame('200.00', $this->money($result->endBalances[1]));
+        $this->assertSame('700.00', $this->money($result->endReadyToAssign));
+        $this->assertSame('900.00', $this->money($result->endCash));
+        $this->assertArrayNotHasKey(2, $result->timeline[0]->envelopes, 'a limit-only bucket holds no money');
     }
 
-    public function test_a_bucket_item_takes_the_bucket_first_and_the_rest_from_ready_to_assign(): void
+    public function test_a_limit_only_bucket_starts_its_envelope_from_zero_on_its_first_allocation(): void
     {
-        $result = (new ForecastEngine)->run(
-            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 300)], [], Money::of(500)),
-            [$this->line(1, 700, 1), $this->line(2, 200, 1)],
-        );
+        // Never funded, with 150 of spending behind it. The 500 income gives it 200 (its fixed rule): its envelope
+        // is 200, not 50. A later 50 Food expense leaves 150. Free = 1,500 - 200 = 1,300, and stays 1,300.
+        $bucket = $this->bucket(1, -150, ['isSavings' => false, 'categoryId' => 7, 'isFunded' => false, 'rule' => FillRule::Fixed, 'value' => '200']);
 
-        $this->assertSame(self::START, $result->lines[0]->purchaseDate?->toDateString());
-        $this->assertNull($result->lines[1]->purchaseDate, 'only 100 is left anywhere');
-        $this->assertSame('100.00', $result->lines[1]->shortfall->toDecimalString());
-        $this->assertSame('0.00', $result->endBalances[1]->toDecimalString());
-        $this->assertSame('100.00', $result->endReadyToAssign->toDecimalString());
+        $result = $this->simulate($this->input(1000, [$bucket], [$this->income('2026-10-10', 500), $this->expense('2026-10-12', 50, 7)], '2026-10-20'));
+
+        $this->assertSame('200.00', $this->money($result->pointAt($this->day('2026-10-10'))->envelopes[1]));
+        $this->assertSame('150.00', $this->money($result->endBalances[1]));
+        $this->assertSame('1300.00', $this->money($result->endReadyToAssign));
     }
 
-    public function test_buckets_restricted_to_other_accounts_do_not_receive_the_income(): void
+    public function test_cycle_ends_release_to_ready_to_assign_or_overflow_into_another_bucket(): void
     {
-        $result = (new ForecastEngine)->run(
-            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 0, FillRule::Percent, 100, accounts: [7])], [
-                $this->income('2026-10-12', 1000, account: 8),
-                $this->income('2026-10-20', 400, account: 7),
-            ]),
-            [],
-        );
+        // Groceries (400) overflows into Savings on Oct 31, Fun (100) returns to ready to assign.
+        $groceries = $this->bucket(1, 400, ['isSavings' => false, 'cycle' => BudgetPeriodType::Monthly, 'carryOver' => CarryOverPolicy::Overflow, 'overflowBucketId' => 3]);
+        $fun = $this->bucket(2, 100, ['isSavings' => false, 'cycle' => BudgetPeriodType::Monthly, 'carryOver' => CarryOverPolicy::Release]);
+        $savings = $this->bucket(3, 0);
 
-        $this->assertSame('400.00', $result->endBalances[1]->toDecimalString());
-        $this->assertSame('1000.00', $result->endReadyToAssign->toDecimalString());
+        $result = $this->simulate($this->input(1000, [$groceries, $fun, $savings], [], '2026-11-15'));
+
+        $this->assertSame(['0.00', '0.00', '400.00'], array_map(fn (Money $money) => $this->money($money), array_values($result->endBalances)));
+        $this->assertSame('600.00', $this->money($result->endReadyToAssign));
+        $this->assertSame('500.00', $this->money($result->pointAt($this->day('2026-10-30'))->free), 'before the cycle ends');
+
+        $cycle = $result->cycles[1];
+        $this->assertSame(['2026-10-01', '2026-10-31', '0.00', '400.00', '400.00', '0.00', '0.00'], [
+            $cycle->start->toDateString(), $cycle->end->toDateString(), $this->money($cycle->provisional), $this->money($cycle->projectedEnd),
+            $this->money($cycle->released), $this->money($cycle->receivedFromOthers), $this->money($cycle->close),
+        ]);
+        $this->assertSame(['0.00', '400.00', '400.00'], [
+            $this->money($result->cycles[3]->projectedEnd), $this->money($result->cycles[3]->receivedFromOthers), $this->money($result->cycles[3]->close),
+        ]);
     }
 
-    public function test_savings_buckets_stop_filling_at_their_target(): void
+    public function test_a_bucket_that_completes_on_purchase_closes_and_returns_what_is_left(): void
     {
-        $result = (new ForecastEngine)->run(
-            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 0, FillRule::Percent, 100, target: 300)], [
-                $this->income('2026-10-12', 1000),
-                $this->income('2026-11-12', 1000),
-            ]),
-            [],
-        );
+        // Bike holds 1,200 of 1,500 cash. The 1,000 bike is paid from it, the 200 left returns to ready to assign
+        // (free 500), and the closed bucket takes nothing from the later income: free ends at 900.
+        $bike = $this->bucket(1, 1200, ['completesOnPurchase' => true, 'rule' => FillRule::Fixed, 'value' => '400']);
 
-        $this->assertSame('300.00', $result->endBalances[1]->toDecimalString(), 'capped at 300');
-        $this->assertSame('1700.00', $result->endReadyToAssign->toDecimalString(), 'the rest stays ready to assign');
+        $result = $this->simulate($this->input(1500, [$bike], [$this->income('2026-10-10', 400)], '2026-10-31'), [$this->line(1, 1000, 1)]);
+
+        $this->assertSame(self::START, $result->lines[0]->purchaseDate->toDateString());
+        $this->assertSame('500.00', $this->money($result->pointAt($this->day(self::START))->free));
+        $this->assertSame('0.00', $this->money($result->endBalances[1]));
+        $this->assertSame('900.00', $this->money($result->endReadyToAssign));
+        $this->assertSame(self::START, $result->reached[1]->toDateString());
     }
 
-    public function test_income_fills_nothing_when_no_bucket_has_a_rule(): void
+    public function test_a_step_up_applies_from_the_cycle_after_the_bucket_it_waits_for_is_full(): void
     {
-        $result = (new ForecastEngine)->run(
-            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 0)], [$this->income('2026-10-12', 1000)]),
-            [],
-        );
+        // Emergency (cap 300) fills on Oct 5. Holiday takes 100 in October, then its step-up of 250 in Nov and Dec.
+        $emergency = $this->bucket(1, 0, ['rule' => FillRule::Fixed, 'value' => '300', 'cap' => Money::of(300)]);
+        $holiday = $this->bucket(2, 0, [
+            'rule' => FillRule::Fixed, 'value' => '100', 'cycle' => BudgetPeriodType::Monthly, 'stepUpValue' => '250', 'stepUpAfterBucketId' => 1,
+        ]);
+        $flows = [$this->income('2026-10-05', 1000), $this->income('2026-11-05', 1000), $this->income('2026-12-05', 1000)];
 
-        $this->assertSame('0.00', $result->endBalances[1]->toDecimalString());
-        $this->assertSame('1000.00', $result->endReadyToAssign->toDecimalString());
+        $result = $this->simulate($this->input(0, [$emergency, $holiday], $flows, '2026-12-31'));
+
+        $this->assertSame('2026-10-05', $result->reached[1]->toDateString());
+        $this->assertSame('600.00', $this->money($result->endBalances[2]));
+        $this->assertSame('2100.00', $this->money($result->endReadyToAssign));
     }
 
-    public function test_priority_order_decides_who_gets_a_short_income(): void
+    public function test_items_are_bought_strictly_in_order_and_never_before_their_not_before_date(): void
     {
-        $out = $this->simulate(
-            [$this->bucket(1, 0, FillRule::Fixed, 400), $this->bucket(2, 0, FillRule::Fixed, 400)],
-            [$this->income('2026-10-12', 500)],
-            [$this->line(1, 400, 1), $this->line(2, 400, 2)],
-        );
+        // Both are affordable today, but the first waits until Oct 20, and the second may not jump ahead of it.
+        $result = $this->simulate($this->input(1000), [$this->line(1, 800, null, '2026-10-20'), $this->line(2, 100)]);
 
-        $this->assertSame('2026-10-12', $out[1]['date']);
-        $this->assertNull($out[2]['date'], 'the second bucket only got the remaining 100');
+        $this->assertSame(['2026-10-20', '2026-10-20'], [$result->lines[0]->purchaseDate->toDateString(), $result->lines[1]->purchaseDate->toDateString()]);
     }
 
-    public function test_a_blocked_item_is_skipped_and_does_not_hold_up_the_others(): void
+    public function test_a_purchase_that_leaves_ready_to_assign_below_zero_later_is_flagged(): void
     {
-        $out = $this->simulate(
-            [$this->bucket(1, 1000)],
-            [],
-            [$this->line(1, 100, 1, blocked: 'accounts'), $this->line(2, 100, 1)],
-        );
+        // Cash 1,000, 500 earmarked: 500 free. The 400 item is bought today (the lowest cash later is 700). After the
+        // 300 expense on Nov 1 there is 300 cash for 500 earmarked: free is -200 from that day.
+        $result = $this->simulate($this->input(1000, [$this->bucket(1, 500)], [$this->expense('2026-11-01', 300)], '2026-12-31'), [$this->line(1, 400)]);
 
-        $this->assertNull($out[1]['date']);
-        $this->assertSame(self::START, $out[2]['date']);
+        $this->assertSame(self::START, $result->lines[0]->purchaseDate->toDateString());
+        $this->assertSame('2026-11-01', $result->lines[0]->freeDipsOn->toDateString());
+        $this->assertSame('-200.00', $this->money($result->endReadyToAssign));
     }
 
-    public function test_the_late_flag_marks_purchases_after_the_wanted_by_date(): void
+    public function test_ready_to_assign_at_the_start_is_cash_minus_every_funded_envelope(): void
     {
-        $out = $this->simulate(
-            [$this->bucket(1, 0, FillRule::Fixed, 1000)],
-            [$this->income('2026-12-10', 1000)],
-            [$this->line(1, 800, 1, desiredBy: '2026-11-30'), $this->line(2, 100, 1, desiredBy: '2027-02-01')],
-        );
+        // 1,000 - 300 - (-20); the never-funded bucket's -50 is a limit, not money.
+        $input = $this->input(1000, [
+            $this->bucket(1, 300),
+            $this->bucket(2, -50, ['isSavings' => false, 'categoryId' => 7, 'isFunded' => false]),
+            $this->bucket(3, -20, ['isSavings' => false, 'categoryId' => 8]),
+        ]);
 
-        $this->assertTrue($out[1]['late']);
-        $this->assertFalse($out[2]['late']);
+        $result = $this->simulate($input);
+
+        $this->assertSame('720.00', $this->money($input->startReadyToAssign()));
+        $this->assertSame('720.00', $this->money($result->timeline[0]->free));
+        $this->assertSame('280.00', $this->money($result->timeline[0]->earmarked));
     }
 
-    public function test_release_at_the_end_of_a_cycle_returns_leftovers_to_ready_to_assign(): void
+    public function test_an_income_from_an_account_a_bucket_does_not_accept_stays_free(): void
     {
-        $out = $this->simulate(
-            [$this->bucket(1, 300, cycle: BudgetPeriodType::Monthly, carry: CarryOverPolicy::Release)],
-            [],
-            [$this->line(1, 300)],
-        );
+        $bucket = $this->bucket(1, 0, ['rule' => FillRule::Fixed, 'value' => '300', 'allowedAccountIds' => [5]]);
 
-        $this->assertSame('2026-10-31', $out[1]['date'], 'the October leftover is ready to assign on the last day of the month');
+        $result = $this->simulate($this->input(0, [$bucket], [$this->income('2026-10-10', 1000, [], 6), $this->income('2026-10-12', 1000, [], 5)], '2026-10-31'));
+
+        $this->assertSame('300.00', $this->money($result->endBalances[1]));
+        $this->assertSame('1700.00', $this->money($result->endReadyToAssign));
     }
 
-    public function test_overflow_at_the_end_of_a_cycle_moves_leftovers_to_the_chosen_bucket(): void
+    public function test_a_blocked_item_is_never_bought_and_does_not_hold_back_the_next(): void
     {
-        $out = $this->simulate(
-            [
-                $this->bucket(1, 300, cycle: BudgetPeriodType::Monthly, carry: CarryOverPolicy::Overflow, overflow: 3),
-                $this->bucket(3, 0),
-            ],
-            [],
-            [$this->line(1, 300, 3)],
-        );
+        $blocked = new EngineLine(1, 'Blocked', Money::of(100), null, null, null, 3, 'accounts');
 
-        $this->assertSame('2026-10-31', $out[1]['date']);
-    }
+        $result = $this->simulate($this->input(1000), [$blocked, $this->line(2, 100)]);
 
-    public function test_the_result_reports_each_buckets_balance_at_the_end(): void
-    {
-        $result = (new ForecastEngine)->run(
-            new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 1000), $this->bucket(2, 5)], [], Money::of(70)),
-            [$this->line(1, 400, 1)],
-        );
-
-        $this->assertSame('600.00', $result->endBalances[1]->toDecimalString());
-        $this->assertSame('5.00', $result->endBalances[2]->toDecimalString());
-        $this->assertSame('70.00', $result->endReadyToAssign->toDecimalString());
-    }
-
-    public function test_a_fixed_fill_on_a_cycle_bucket_is_topped_up_once_per_cycle_in_the_simulation(): void
-    {
-        $result = (new ForecastEngine)->run(
-            new EngineInput($this->date(self::START), $this->date('2026-11-30'), [
-                $this->bucket(1, 0, FillRule::Fixed, 150, savings: false, cycle: BudgetPeriodType::Monthly),
-            ], [
-                $this->income('2026-10-02', 1000),
-                $this->income('2026-10-10', 1000),
-                $this->income('2026-11-02', 1000),
-            ]),
-            [],
-        );
-
-        $this->assertSame('300.00', $result->endBalances[1]->toDecimalString());
-    }
-
-    public function test_buying_from_a_completing_bucket_closes_it_and_steps_up_the_bucket_waiting_for_it(): void
-    {
-        $savings = new EngineBucket(1, FillRule::Fixed, '100', null, true, Money::zero(), null, BudgetPeriodType::Monthly, CarryOverPolicy::Carry, null,
-            stepUpValue: '300', stepUpAfterBucketId: 2);
-        $car = new EngineBucket(2, FillRule::Fixed, '500', Money::of(1000), true, Money::zero(), null, null, CarryOverPolicy::Overflow, 3,
-            completesOnPurchase: true);
-        $rest = new EngineBucket(3, FillRule::PercentOfRemaining, '100', null, true, Money::zero(), null, null, CarryOverPolicy::Carry, null);
-
-        $result = (new ForecastEngine)->run(
-            new EngineInput($this->date('2026-10-01'), $this->date('2026-12-31'), [$savings, $car, $rest], [
-                $this->income('2026-10-02', 2000),
-                $this->income('2026-11-02', 2000),
-                $this->income('2026-12-02', 2000),
-            ]),
-            [new EngineLine(1, 'Car', Money::of(1000), 2, null, null, 3, null)],
-        );
-
-        // Oct: savings 100, car 500. Nov: savings 100, car 500 -> bought for 1000 (the 1000 at its target), bucket closed.
-        // Dec: car no longer takes income, savings steps up to 300.
-        $this->assertSame('2026-11-02', $result->lines[0]->purchaseDate?->toDateString());
-        $this->assertSame('0.00', $result->endBalances[2]->toDecimalString());
-        $this->assertSame('500.00', $result->endBalances[1]->toDecimalString());
+        $this->assertNull($result->lines[0]->purchaseDate);
+        $this->assertSame('accounts', $result->lines[0]->blocked);
+        $this->assertSame('100.00', $this->money($result->lines[0]->shortfall));
+        $this->assertSame(self::START, $result->lines[1]->purchaseDate->toDateString());
     }
 }

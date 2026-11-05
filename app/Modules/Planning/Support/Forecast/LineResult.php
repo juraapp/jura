@@ -7,6 +7,18 @@ use Carbon\CarbonImmutable;
 
 final readonly class LineResult
 {
+    public Money $fromBucket;
+
+    public Money $fromFree;
+
+    /**
+     * @param  Money|null  $fromBucket  what its bucket pays (when bought)
+     * @param  Money|null  $fromFree  what ready to assign pays (when bought)
+     * @param  string|null  $limitedBy  why it is not bought: free (not enough ready to assign) | cash (a later planned expense needs the money)
+     * @param  bool  $parked  moved to the end because it could not be bought in time
+     * @param  CarbonImmutable|null  $freeDipsOn  the first later day ready to assign goes below zero after this purchase
+     * @param  list<string>  $warnings
+     */
     public function __construct(
         public int $itemId,
         public string $name,
@@ -17,5 +29,14 @@ final readonly class LineResult
         public ?string $blocked,
         public bool $late,
         public int $importance,
-    ) {}
+        ?Money $fromBucket = null,
+        ?Money $fromFree = null,
+        public ?string $limitedBy = null,
+        public bool $parked = false,
+        public ?CarbonImmutable $freeDipsOn = null,
+        public array $warnings = [],
+    ) {
+        $this->fromBucket = $fromBucket ?? Money::zero();
+        $this->fromFree = $fromFree ?? Money::zero();
+    }
 }
