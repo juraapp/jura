@@ -248,7 +248,8 @@ income, planned expenses and your projected balance, per currency. Today's balan
 
 **Changing repeating events.** Editing or deleting one occurrence asks whether it is **only this one** or **this
 and all future ones**. Earlier occurrences, and ones already done, are never touched. When you change "all future",
-the dates stay as they are; to move a date, edit that single occurrence.
+the dates stay as they are; to move a date, edit that single occurrence. Moving one occurrence never brings it back on
+its old date and never skips the dates around it.
 
 **Repeating plans.** The **Repeating plans** list shows each rule with its next date, frequency, end date and
 whether it records automatically (**Auto**) or is **Paused**.

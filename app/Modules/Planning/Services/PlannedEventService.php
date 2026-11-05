@@ -74,7 +74,9 @@ class PlannedEventService
     }
 
     /**
-     * Creates the missing occurrences of a series up to a date (or its end date).
+     * Creates the missing occurrences of a series up to a date (or its end date): the dates after the last
+     * one it created (materialized_until, not the latest stored occurrence, so moving one occurrence to
+     * another date never brings its old date back nor skips the dates in between).
      * Occurrences are computed from the series start, so deleted ones (remembered in
      * the series' excluded dates) are never recreated and month-end dates do not drift.
      * Occurrences before $from (the owner's today) are never created: a series that
@@ -86,14 +88,12 @@ class PlannedEventService
             return 0;
         }
 
-        $lastDate = PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date');
-
         $dates = Recurrence::occurrences(
             $series->frequency,
             CarbonImmutable::parse($series->starts_on->toDateString()),
             $series->ends_on !== null ? CarbonImmutable::parse($series->ends_on->toDateString()) : null,
             $series->excluded_dates ?? [],
-            $lastDate !== null ? CarbonImmutable::parse($lastDate) : null,
+            $this->materializedUntil($series),
             $from !== null ? CarbonImmutable::instance($from) : null,
             CarbonImmutable::instance($until),
             self::SERIES_MAX_OCCURRENCES,
@@ -119,7 +119,27 @@ class PlannedEventService
             $event->save();
         }
 
+        if ($dates !== []) {
+            $series->forceFill(['materialized_until' => end($dates)->toDateString()])->save();
+        }
+
         return count($dates);
+    }
+
+    private function materializedUntil(PlannedEventSeries $series): ?CarbonImmutable
+    {
+        return $series->materialized_until !== null ? CarbonImmutable::parse($series->materialized_until->toDateString()) : null;
+    }
+
+    /**
+     * Forgets that a series created its dates after a given day (its open occurrences after it were deleted),
+     * so a later top-up creates them again if the rule still gives them.
+     */
+    private function rewindTo(PlannedEventSeries $series, CarbonInterface $date): void
+    {
+        if ($series->materialized_until !== null && $series->materialized_until->gt($date)) {
+            $series->forceFill(['materialized_until' => $date->toDateString()])->save();
+        }
     }
 
     /**
@@ -159,14 +179,12 @@ class PlannedEventService
             return CarbonImmutable::parse($stored);
         }
 
-        $lastDate = PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date');
-
         return Recurrence::occurrences(
             $series->frequency,
             CarbonImmutable::parse($series->starts_on->toDateString()),
             $series->ends_on !== null ? CarbonImmutable::parse($series->ends_on->toDateString()) : null,
             $series->excluded_dates ?? [],
-            $lastDate !== null ? CarbonImmutable::parse($lastDate) : null,
+            $this->materializedUntil($series),
             $today,
             $today->addYears(2),
             1,
@@ -214,6 +232,7 @@ class PlannedEventService
 
             if ($rescheduled) {
                 $upcoming->delete();
+                $series->forceFill(['materialized_until' => PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date')])->save();
             } else {
                 $upcoming->get()->each(fn (PlannedEvent $occurrence) => $occurrence->update($attributes));
             }
@@ -224,6 +243,7 @@ class PlannedEventService
                     ->open()
                     ->where('date', '>', $series->ends_on->toDateString())
                     ->delete();
+                $this->rewindTo($series, $series->ends_on);
             }
 
             if (! $series->auto_post) {
@@ -248,6 +268,7 @@ class PlannedEventService
             $open = fn () => PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->open();
             $open()->where('date', '>=', $today->toDateString())->delete();
             $open()->update(['auto_post' => false]);
+            $series->forceFill(['materialized_until' => PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date')])->save();
         });
     }
 
@@ -335,6 +356,7 @@ class PlannedEventService
                     ->delete();
 
                 $series->update(['ends_on' => $event->date->copy()->subDay()->toDateString()]);
+                $this->rewindTo($series, $series->ends_on);
             });
 
             return;

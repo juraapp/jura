@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 
 /**
  * The single source of open planned money for every projection: the open stored plans up to a date, plus
- * the occurrences active repeating plans will create after the last one stored (series are only stored 12
+ * the occurrences active repeating plans will create after the last date they created (series are only stored 12
  * months ahead, a projection may look further). Always scoped to the given user, so it works in jobs too.
  */
 class PlannedOccurrences
@@ -59,7 +59,6 @@ class PlannedOccurrences
             ->where('is_active', true)
             ->when($currency !== null, fn ($query) => $query->where('currency', $currency))
             ->when($type !== null, fn ($query) => $query->where('type', $type->value))
-            ->withMax('events', 'date')
             ->get();
 
         $virtual = $series->flatMap(fn (PlannedEventSeries $rule) => array_map(
@@ -82,7 +81,7 @@ class PlannedOccurrences
                 CarbonImmutable::parse($rule->starts_on->toDateString()),
                 $rule->ends_on !== null ? CarbonImmutable::parse($rule->ends_on->toDateString()) : null,
                 $rule->excluded_dates ?? [],
-                $rule->events_max_date !== null ? CarbonImmutable::parse($rule->events_max_date) : null,
+                $rule->materialized_until !== null ? CarbonImmutable::parse($rule->materialized_until->toDateString()) : null,
                 $today,
                 $until,
                 self::MAX_VIRTUAL,
