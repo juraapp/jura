@@ -633,7 +633,9 @@ to assign.
 
 **Where did Recurring transactions go?** They became repeating plans on **Planning → Upcoming & cash flow**, under
 **Repeating plans**. Each one kept its account, category, amount and rhythm and records itself on its date
-(**Record it automatically on the date** is on), keeping the next date it was due on. If one was behind, every missed
+(**Record it automatically on the date** is on), keeping the next date it was due on (one on the 29th to 31st whose
+next date had slipped to the 28th, or to the 30th, went back to its own day in that month; this also happens if you
+had moved that next date to the 28th to 30th yourself, so check it under **Repeating plans**). If one was behind, every missed
 date became a plan that is recorded on its own date the next time the app records plans. One that could no longer
 record itself because its account was archived or deleted, or its category deleted, was not caught up: it is listed
 as **Paused** with no dates; point it at an active account and category and resume it. A paused or ended one is also
