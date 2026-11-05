@@ -8,6 +8,12 @@ vendor/bin/sail artisan test --compact tests/Feature/BucketsTest.php # one file
 vendor/bin/sail artisan test --compact --filter=test_user_can_create_a_budget
 ```
 
+## The clock
+`Tests\TestCase::setUp()` starts every test at midday UTC of the current date, so the server's date and a
+user's date (`$user->today()`) are the same day in every timezone between UTC-11 and UTC+11. Without it, tests
+that build dates with `now()` fail between midnight UTC and the user's midnight. A test that needs another
+moment calls `$this->travelTo(...)` itself; assert expected dates as literal, hand-computed values.
+
 ## JavaScript unit tests
 `resources/js/format.js`, `resources/js/today.js` and `resources/js/moneyMovement.js` are covered by Node's built-in runner: `vendor/bin/sail npm run test:js` (files in
 `tests/js`). No extra dependency; keep browser-free logic in plain modules so it can be tested this way.
