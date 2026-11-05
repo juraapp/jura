@@ -10,7 +10,6 @@ use App\Modules\Planning\Support\Forecast\EngineInput;
 use App\Modules\Planning\Support\Forecast\EngineLine;
 use App\Modules\Planning\Support\Forecast\ForecastEngine;
 use App\Modules\Planning\Support\Forecast\ScenarioSuggester;
-use App\Modules\Planning\Support\Waterfall;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonImmutable;
 use PHPUnit\Framework\TestCase;
@@ -19,7 +18,7 @@ class ScenarioSuggesterTest extends TestCase
 {
     private function suggester(): ScenarioSuggester
     {
-        return new ScenarioSuggester(new ForecastEngine(new Waterfall));
+        return new ScenarioSuggester(new ForecastEngine);
     }
 
     private function input(int $balance, ?string $fixed, array $incomes): EngineInput
@@ -105,7 +104,7 @@ class ScenarioSuggesterTest extends TestCase
         $input = $this->input(0, '500', [['2026-10-11', 1000]]);
         $suggester = $this->suggester();
 
-        $engine = new ForecastEngine(new Waterfall);
+        $engine = new ForecastEngine;
         $bought = $suggester->score($input, $engine->run($input, [$this->item(1, 500, 3)]));
         $never = $suggester->score($input, $engine->run($input, [$this->item(1, 5000, 3)]));
 

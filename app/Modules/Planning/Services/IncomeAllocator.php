@@ -11,8 +11,8 @@ use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
-use App\Modules\Planning\Support\Waterfall;
-use App\Modules\Planning\Support\WaterfallBucket;
+use App\Modules\Planning\Support\IncomeStep;
+use App\Modules\Planning\Support\IncomeStepBucket;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonInterface;
 use Closure;
@@ -32,7 +32,7 @@ class IncomeAllocator
 
     public function __construct(
         private readonly BucketLedger $funds,
-        private readonly Waterfall $waterfall,
+        private readonly IncomeStep $step,
         private readonly LedgerQuery $ledger,
     ) {}
 
@@ -74,22 +74,23 @@ class IncomeAllocator
         }
 
         DB::transaction(function () use ($user, $transactionId, $accountId, $amount, $date, $buckets, $planned) {
-            $eligible = $buckets->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($accountId) && ! $bucket->isCompletedOn($date));
-            $overrides = array_intersect_key($planned, $eligible->pluck('id', 'id')->all());
-
-            $inputs = $eligible
-                ->map(fn (Bucket $bucket) => new WaterfallBucket(
+            $inputs = $buckets
+                ->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($accountId) && ! $bucket->isCompletedOn($date))
+                ->map(fn (Bucket $bucket) => new IncomeStepBucket(
                     $bucket->id,
                     $bucket->fill_rule,
                     $this->funds->fillValueFor($bucket, $date),
-                    $this->room($bucket, $date),
+                    $bucket->effectiveCap($date),
+                    $bucket->fill_rule === FillRule::FillToTarget || $bucket->kind === BucketKind::Savings,
+                    $this->funds->available($bucket),
                     $this->funds->receivedInCycle($bucket, $date),
+                    true,
                 ))
                 ->values()
                 ->all();
 
             $covered = $this->takeBackCover($user, $transactionId);
-            $result = $this->waterfall->distribute($amount, $inputs, $overrides);
+            $result = $this->step->split($amount, $inputs, $planned);
             $source = $planned !== [] ? AllocationSource::Planned : AllocationSource::Income;
 
             foreach ($result['allocations'] as $bucketId => $money) {
@@ -212,26 +213,5 @@ class IncomeAllocator
             ->whereIn('source', [AllocationSource::Income->value, AllocationSource::Planned->value])
             ->where('source_id', $transactionId)
             ->exists();
-    }
-
-    /**
-     * How much more the bucket can take: up to its target for savings buckets and
-     * fill-to-target rules. Spending limits are not funding targets.
-     */
-    private function room(Bucket $bucket, CarbonInterface $date): ?Money
-    {
-        $cap = $bucket->effectiveCap($date);
-
-        if ($cap === null) {
-            return null;
-        }
-
-        if ($bucket->fill_rule !== FillRule::FillToTarget && $bucket->kind !== BucketKind::Savings) {
-            return null;
-        }
-
-        $missing = $cap->subtract($this->funds->available($bucket));
-
-        return $missing->isPositive() ? $missing : Money::zero();
     }
 }
