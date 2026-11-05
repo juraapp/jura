@@ -255,9 +255,11 @@ its old date and never skips the dates around it.
 whether it records automatically (**Auto**) or is **Paused**.
 - **Edit** changes the whole plan from today on: dates before today that are still open (overdue) keep what they
   were. Changing the frequency or the **Next date** moves every upcoming date to the new rhythm; an earlier end date
-  removes the dates after it.
+  removes the dates after it. A date you already confirmed early or skipped counts for the new date closest to it,
+  so that payment is not planned twice, and every other new date is kept.
 - **Pause** removes its upcoming dates; overdue ones stay as reminders and no longer record automatically.
-  **Resume** starts again from today and never records dates missed while paused.
+  **Resume** starts again from today and never records dates missed while paused; dates you already confirmed or
+  skipped are not planned again.
 - **Delete** removes the plan and its open dates; dates already recorded or skipped stay in your history.
 
 **Interest.** Accounts with an interest rate add a projected interest line to each month (planned incomes and

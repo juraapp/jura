@@ -126,6 +126,51 @@ class PlannedEventService
         return count($dates);
     }
 
+    /**
+     * Prepares a series whose open occurrences from today on are gone (a new rhythm, or a resume) to be created
+     * again from today: every date its rule gives from today comes back, except one for each occurrence already
+     * confirmed or skipped from today on, which uses up the rule's date nearest to it (the earlier on a tie).
+     * So a payment confirmed early or a skipped month is not planned twice, and no other date is lost. Those
+     * dates join the series' excluded dates, so later top-ups never create them either.
+     */
+    private function rebuildFromToday(PlannedEventSeries $series, CarbonInterface $today): void
+    {
+        $today = CarbonImmutable::instance($today)->startOfDay();
+        $excluded = $series->excluded_dates ?? [];
+        $closed = PlannedEvent::forUser($series->user_id)
+            ->where('series_id', $series->id)
+            ->where('status', '!=', PlannedEventStatus::Planned->value)
+            ->where('date', '>=', $today->toDateString())
+            ->orderBy('date')
+            ->pluck('date')
+            ->map(fn ($date) => CarbonImmutable::parse($date)->startOfDay());
+
+        if ($closed->isNotEmpty()) {
+            $candidates = Recurrence::occurrences(
+                $series->frequency,
+                CarbonImmutable::parse($series->starts_on->toDateString()),
+                $series->ends_on !== null ? CarbonImmutable::parse($series->ends_on->toDateString()) : null,
+                $excluded,
+                null,
+                $today,
+                $closed->last()->addYear(),
+                1000,
+            );
+
+            foreach ($closed as $date) {
+                $nearest = collect($candidates)->sortBy(fn (CarbonImmutable $candidate) => [abs($candidate->diffInDays($date)), $candidate->timestamp])->first();
+                if ($nearest !== null) {
+                    $excluded[] = $nearest->toDateString();
+                }
+            }
+        }
+
+        $series->forceFill([
+            'excluded_dates' => collect($excluded)->unique()->sort()->values()->all(),
+            'materialized_until' => $today->subDay()->toDateString(),
+        ])->save();
+    }
+
     private function materializedUntil(PlannedEventSeries $series): ?CarbonImmutable
     {
         return $series->materialized_until !== null ? CarbonImmutable::parse($series->materialized_until->toDateString()) : null;
@@ -194,8 +239,8 @@ class PlannedEventService
     /**
      * Edits a whole repeating plan from the owner's today on. Overdue occurrences (before today) and closed
      * ones keep what they were. A new frequency or next date rebuilds the open occurrences from today, with
-     * the next date as the new rhythm anchor; a stricter end date removes open occurrences after it.
-     * A realized occurrence dated today or later stays, and occurrences up to its date are not created again.
+     * the next date as the new rhythm anchor (see rebuildFromToday); a stricter end date removes open
+     * occurrences after it.
      *
      * @param  array<string, mixed>  $data  plan fields plus frequency, next_date and optional ends_on
      */
@@ -232,7 +277,7 @@ class PlannedEventService
 
             if ($rescheduled) {
                 $upcoming->delete();
-                $series->forceFill(['materialized_until' => PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date')])->save();
+                $this->rebuildFromToday($series, $today);
             } else {
                 $upcoming->get()->each(fn (PlannedEvent $occurrence) => $occurrence->update($attributes));
             }
@@ -268,13 +313,13 @@ class PlannedEventService
             $open = fn () => PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->open();
             $open()->where('date', '>=', $today->toDateString())->delete();
             $open()->update(['auto_post' => false]);
-            $series->forceFill(['materialized_until' => PlannedEvent::forUser($series->user_id)->where('series_id', $series->id)->max('date')])->save();
+            $this->rewindTo($series, $today->subDay());
         });
     }
 
     /**
      * Starts a paused plan again from today. Dates missed while it was paused are never created, so nothing
-     * is recorded for the past.
+     * is recorded for the past, and a date already confirmed or skipped is not planned again.
      */
     public function resumeSeries(PlannedEventSeries $series): void
     {
@@ -282,6 +327,7 @@ class PlannedEventService
 
         DB::transaction(function () use ($series, $today) {
             $series->update(['is_active' => true]);
+            $this->rebuildFromToday($series, $today);
             $this->materialize($series, $today->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS), $today);
         });
     }

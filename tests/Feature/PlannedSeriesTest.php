@@ -258,6 +258,59 @@ class PlannedSeriesTest extends TestCase
         $this->assertSame(['2027-11-15', '2027-12-01', '2027-12-15', '2028-01-15'], $projected);
     }
 
+    /**
+     * @return list<string>
+     */
+    private function openDateList(PlannedEventSeries $series, int $count): array
+    {
+        return array_slice(array_keys($this->openDates($series)), 0, $count);
+    }
+
+    private function moveSeriesTo(PlannedEventSeries $series, Account $account, Category $category, string $nextDate): void
+    {
+        $this->actingAs($this->user)->patch("/planning/series/{$series->id}", [
+            'description' => 'Rent', 'amount' => 100, 'certainty' => 'confirmed', 'frequency' => 'monthly',
+            'account_id' => $account->id, 'category_id' => $category->id, 'next_date' => $nextDate, 'auto_post' => true,
+        ])->assertSessionHasNoErrors();
+    }
+
+    public function test_a_new_rhythm_keeps_dates_before_a_later_skipped_occurrence(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->actingAs($this->user)->post("/planning/cash-flow/{$series->events()->where('date', '2026-12-15')->sole()->id}/skip")->assertSessionHas('success');
+
+        $this->moveSeriesTo($series, $account, $category, '2026-11-20');
+
+        // The skipped December 15 uses up December 20, the new date nearest to it; November 20 stays.
+        $this->assertSame(['2026-11-20', '2027-01-20', '2027-02-20'], $this->openDateList($series, 3));
+        $this->assertSame('2027-10-20', array_key_last($this->openDates($series)));
+    }
+
+    public function test_a_new_rhythm_does_not_plan_again_a_payment_confirmed_early(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->actingAs($this->user)->post("/planning/cash-flow/{$series->events()->where('date', '2026-11-15')->sole()->id}/realize")->assertSessionHasNoErrors();
+
+        $this->moveSeriesTo($series, $account, $category, '2026-11-20');
+
+        $this->assertSame(['2026-12-20', '2027-01-20'], $this->openDateList($series, 2));
+        $this->assertSame(1, Transaction::count());
+    }
+
+    public function test_resuming_keeps_dates_before_a_skipped_one_and_never_plans_a_confirmed_one_twice(): void
+    {
+        [$series] = $this->rent();
+        $this->actingAs($this->user)->post("/planning/cash-flow/{$series->events()->where('date', '2026-11-15')->sole()->id}/realize")->assertSessionHasNoErrors();
+        $this->actingAs($this->user)->post("/planning/cash-flow/{$series->events()->where('date', '2027-01-15')->sole()->id}/skip")->assertSessionHas('success');
+
+        $this->actingAs($this->user)->post("/planning/series/{$series->id}/pause");
+        $this->actingAs($this->user)->post("/planning/series/{$series->id}/resume");
+
+        $this->assertSame(['2026-12-15', '2027-02-15', '2027-03-15'], $this->openDateList($series, 3));
+        $this->assertCount(10, $this->openDates($series), 'Dec 2026 to Oct 2027 without January');
+        $this->assertSame(1, Transaction::count());
+    }
+
     public function test_the_migration_backfills_the_last_created_date_from_stored_occurrences(): void
     {
         $series = $this->series();
