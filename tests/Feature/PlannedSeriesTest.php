@@ -10,8 +10,12 @@ use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Enums\RecurringFrequency;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
+use App\Modules\Planning\Services\PlannedEventService;
+use App\Modules\Planning\Services\PlannedOccurrences;
+use App\Modules\Planning\Support\ProjectedItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -42,6 +46,7 @@ class PlannedSeriesTest extends TestCase
             'currency' => 'COP',
             'starts_on' => '2026-09-05',
             'frequency' => RecurringFrequency::Monthly,
+            'materialized_until' => '2027-01-05',
         ]);
 
         $make = fn (string $date, PlannedEventStatus $status = PlannedEventStatus::Planned) => PlannedEvent::factory()->for($this->user)->status($status)->create([
@@ -185,6 +190,84 @@ class PlannedSeriesTest extends TestCase
         $this->assertTrue($series->fresh()->is_active);
         $this->assertSame(['2026-10-05', '2026-11-05', '2027-03-05'], array_slice($dates, 0, 3));
         $this->assertSame(0, Transaction::count());
+    }
+
+    /**
+     * Monthly rent on the 15th, created on 2026-11-10 through the form: stored 2026-11-15 .. 2027-10-15.
+     *
+     * @return array{0: PlannedEventSeries, 1: Account, 2: Category}
+     */
+    private function rent(): array
+    {
+        $account = Account::factory()->for($this->user)->create(['currency' => 'USD']);
+        $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
+        $this->actingAs($this->user)->post('/planning/cash-flow', [
+            'type' => 'expense', 'description' => 'Rent', 'amount' => 100, 'certainty' => 'confirmed',
+            'account_id' => $account->id, 'category_id' => $category->id,
+            'date' => '2026-11-15', 'frequency' => 'monthly', 'auto_post' => true,
+        ])->assertSessionHasNoErrors();
+
+        return [PlannedEventSeries::sole(), $account, $category];
+    }
+
+    private function moveOnly(PlannedEvent $event, Account $account, Category $category, string $date): void
+    {
+        $this->actingAs($this->user)->patch("/planning/cash-flow/{$event->id}", [
+            'type' => 'expense', 'description' => 'Rent', 'amount' => 100, 'certainty' => 'confirmed',
+            'account_id' => $account->id, 'category_id' => $category->id,
+            'date' => $date, 'scope' => 'this', 'auto_post' => true,
+        ])->assertSessionHasNoErrors();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function storedDatesFrom(PlannedEventSeries $series, string $from): array
+    {
+        return $series->events()->where('date', '>=', $from)->orderBy('date')->pluck('date')->map->toDateString()->all();
+    }
+
+    public function test_moving_the_last_stored_occurrence_earlier_does_not_bring_its_date_back(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->assertSame('2027-10-15', $series->fresh()->materialized_until->toDateString());
+        $this->moveOnly($series->events()->where('date', '2027-10-15')->sole(), $account, $category, '2027-10-01');
+
+        $october = app(PlannedOccurrences::class)->open($this->user, Carbon::parse('2027-10-31'))
+            ->filter(fn (ProjectedItem $item) => $item->date->format('Y-m') === '2027-10')
+            ->map(fn (ProjectedItem $item) => $item->date->toDateString())->values()->all();
+        $this->assertSame(['2027-10-01'], $october);
+
+        Carbon::setTestNow('2026-12-10 09:00:00');
+        app(PlannedEventService::class)->extendAllSeries();
+        $this->assertSame(['2027-10-01', '2027-11-15'], $this->storedDatesFrom($series, '2027-10-01'));
+    }
+
+    public function test_moving_the_last_stored_occurrence_later_keeps_the_dates_in_between(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->moveOnly($series->events()->where('date', '2027-10-15')->sole(), $account, $category, '2027-12-01');
+
+        Carbon::setTestNow('2026-12-10 09:00:00');
+        app(PlannedEventService::class)->extendAllSeries();
+        $this->assertSame(['2027-11-15', '2027-12-01'], $this->storedDatesFrom($series, '2027-10-01'));
+
+        $projected = app(PlannedOccurrences::class)->open($this->user, Carbon::parse('2028-01-31'))
+            ->filter(fn (ProjectedItem $item) => $item->date->toDateString() >= '2027-10-01')
+            ->map(fn (ProjectedItem $item) => $item->date->toDateString())->values()->all();
+        $this->assertSame(['2027-11-15', '2027-12-01', '2027-12-15', '2028-01-15'], $projected);
+    }
+
+    public function test_the_migration_backfills_the_last_created_date_from_stored_occurrences(): void
+    {
+        $series = $this->series();
+        $empty = PlannedEventSeries::factory()->for($this->user)->create();
+        Schema::table('planned_event_series', fn ($table) => $table->dropColumn('materialized_until'));
+
+        (require database_path('migrations/2026_11_05_005024_add_materialized_until_to_planned_event_series.php'))->up();
+
+        $this->assertSame('2027-01-05', $series->fresh()->materialized_until->toDateString());
+        $this->assertNull($empty->fresh()->materialized_until);
     }
 
     public function test_deleting_a_series_keeps_its_history(): void

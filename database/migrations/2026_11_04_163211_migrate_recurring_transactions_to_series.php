@@ -125,6 +125,11 @@ return new class extends Migration
         foreach (array_chunk($occurrences, 100) as $batch) {
             DB::table('planned_events')->insert($batch);
         }
+
+        // Set here when this runs after the column exists (a fresh database); otherwise its migration backfills it.
+        if ($occurrences !== [] && Schema::hasColumn('planned_event_series', 'materialized_until')) {
+            DB::table('planned_event_series')->where('id', $seriesId)->update(['materialized_until' => end($occurrences)['date']]);
+        }
     }
 
     /**

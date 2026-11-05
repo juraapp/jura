@@ -36,6 +36,7 @@ class PlannedEventSeries extends Model
             'starts_on' => 'date',
             'ends_on' => 'date',
             'excluded_dates' => 'array',
+            'materialized_until' => 'date',
             'auto_post' => 'boolean',
             'is_active' => 'boolean',
             'allocation_overrides' => 'array',

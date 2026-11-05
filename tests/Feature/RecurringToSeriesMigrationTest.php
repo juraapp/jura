@@ -175,6 +175,7 @@ class RecurringToSeriesMigrationTest extends TestCase
         $rent = PlannedEventSeries::where('description', 'Rent')->sole();
         $this->assertSame('2026-11-15', $rent->starts_on->toDateString());
         $this->assertSame(['2026-11-15', '2026-12-15', '2027-01-15'], array_slice($this->openDates($rent), 0, 3));
+        $this->assertSame('2027-10-15', $rent->materialized_until->toDateString());
 
         $year = PlannedEventSeries::where('description', 'Yearly')->sole();
         $this->assertSame('2026-12-01', $year->starts_on->toDateString());
