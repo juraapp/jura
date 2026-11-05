@@ -13,6 +13,15 @@ chart helpers in `chartPalette.js` already do. The rules live in `resources/js/f
 server by `App\Modules\Shared\Support\UserFormat` (PDFs, notifications); change both together. `format.js` has no
 framework imports and is tested with `npm run test:js` (`node --test`).
 
+## Money and currency fields
+Money fields use `<MoneyInput v-model="form.amount" :currency="form.currency" />`, never `type="number"`: it shows a
+currency prefix and `inputmode="decimal"`, accepts either separator and always emits a plain decimal string
+(`"1234.50"`, `''` when blank, the raw text when it cannot be read so the server's validation message shows). The
+parsing and display rules are `parseMoneyInput`/`formatMoneyInput` in `format.js` (also `useFormat().parseMoney` /
+`formatMoney` with the user's separators). Currency pickers use `<CurrencySelect>`: the user's default first, then
+`account-currencies`, then the common ISO list from `resources/js/currencies.js` (kept in step with
+`Shared/Support/Currencies.php`), optionally `restrict-to` a few codes.
+
 ## Default dates
 Never default a date field with `new Date().toISOString().slice(0, 10)`: that is the UTC date, already tomorrow in the
 evening west of Greenwich. Use `const todayDate = useToday()` (`composables/useToday.js`) and call `todayDate()` when a

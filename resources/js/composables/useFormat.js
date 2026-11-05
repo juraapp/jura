@@ -17,5 +17,8 @@ export function useFormat() {
         time: (...args) => current.value.time(...args),
         dateTime: (...args) => current.value.dateTime(...args),
         money: (...args) => current.value.money(...args),
+        parseMoney: (...args) => current.value.parseMoney(...args),
+        formatMoney: (...args) => current.value.formatMoney(...args),
+        separators: () => current.value.separators,
     };
 }
