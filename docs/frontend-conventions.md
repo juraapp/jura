@@ -86,7 +86,8 @@ Use the shared components, never a hand-styled `bg-primary-600` element:
 - `PrimaryButton` (main action), `SecondaryButton` (outlined, secondary or cancel), `DangerButton` (destructive). They share the brand look: `rounded-lg`, sentence case, `text-sm font-medium`, a `focus:ring-4` ring and distinct `disabled:` styles in light and dark mode. Their content is spaced with `gap-1.5`, so an icon needs no margin (`<DynamicIcon name="plus" class="h-4 w-4" />`).
 - `PrimaryButton` and `DangerButton` default to `type="submit"` (the HTML default the auth and profile forms rely on), `SecondaryButton` to `type="button"`. Pass `type="button"` for a click handler that is not a form submit.
 - For navigation or downloads, render the same look as a link with `as`: `<PrimaryButton :as="Link" :href="...">` for Inertia pages, `<PrimaryButton as="a" :href="pdfUrl" target="_blank">` for files. Never nest a button inside a `Link`.
-- Icon-only buttons need both `:title` and `:aria-label` (translated).
+- Icon-only buttons are `<IconButton icon="trash" :label="$t('ui.common.delete')" variant="danger" @click="..." />`: the required `label` becomes both the tooltip and the accessible name. Variants: `ghost` (default), `danger`, `primary`; `as` renders a link.
+- Text fields, selects, textareas and checkboxes share one look (`rounded-lg`, primary focus ring, dark `gray-700` fill): `TextInput` (v-model string or number), `SelectInput`, `Textarea`, `Checkbox`.
 
 ## Plain fetch() calls
 

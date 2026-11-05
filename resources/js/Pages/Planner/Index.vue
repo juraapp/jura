@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
+import IconButton from '@/Components/IconButton.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
 import Money from '@/Components/Money.vue';
@@ -422,15 +423,9 @@ const comparisonRows = computed(() => {
                                 <div class="flex items-center gap-2">
                                     <span class="w-5 text-xs font-semibold text-gray-400">{{ index + 1 }}.</span>
                                     <span class="min-w-0 flex-1 truncate text-sm font-medium" :class="isPlannable(row) ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through dark:text-gray-500'">{{ lineName(row) }}</span>
-                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="index === 0" :title="$t('ui.planner.buy_earlier')" :aria-label="$t('ui.planner.buy_earlier')" @click="move(index, -1)">
-                                        <DynamicIcon name="chevron-down" class="h-4 w-4 rotate-180" />
-                                    </button>
-                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="index === order.length - 1" :title="$t('ui.planner.buy_later')" :aria-label="$t('ui.planner.buy_later')" @click="move(index, 1)">
-                                        <DynamicIcon name="chevron-down" class="h-4 w-4" />
-                                    </button>
-                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.planner.remove')" :aria-label="$t('ui.planner.remove')" @click="removeLine(index)">
-                                        <DynamicIcon name="x-mark" class="h-4 w-4" />
-                                    </button>
+                                    <IconButton icon="chevron-down" icon-class="h-4 w-4 rotate-180" :label="$t('ui.planner.buy_earlier')" :disabled="index === 0" @click="move(index, -1)" />
+                                    <IconButton icon="chevron-down" :label="$t('ui.planner.buy_later')" :disabled="index === order.length - 1" @click="move(index, 1)" />
+                                    <IconButton icon="x-mark" variant="danger" :label="$t('ui.planner.remove')" @click="removeLine(index)" />
                                 </div>
                                 <p v-if="!isPlannable(row)" class="mt-1 pl-7 text-xs text-amber-600 dark:text-amber-400">{{ $t('ui.planner.left_out') }}</p>
                                 <div v-else class="mt-1.5 flex items-center gap-2 pl-7 text-xs text-gray-500 dark:text-gray-400">
@@ -472,9 +467,7 @@ const comparisonRows = computed(() => {
                             </label>
                             <p v-if="compareIds.has(scenario.id) && !scenarioHasPlannableLines(scenario)" class="order-last w-full pl-7 text-xs text-amber-600 dark:text-amber-400">{{ $t('ui.planner.nothing_plannable') }}</p>
                             <button type="button" class="text-xs font-medium text-primary-600 hover:underline dark:text-primary-400" @click="loadScenario(scenario)">{{ $t('ui.planner.open') }}</button>
-                            <button type="button" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="deleteScenario(scenario)">
-                                <DynamicIcon name="trash" class="h-4 w-4" />
-                            </button>
+                            <IconButton icon="trash" variant="danger" :label="$t('ui.common.delete')" @click="deleteScenario(scenario)" />
                         </li>
                     </ul>
                     <p class="text-xs text-gray-400">{{ $t('ui.planner.compare_hint') }}</p>
