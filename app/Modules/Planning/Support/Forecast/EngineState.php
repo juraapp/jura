@@ -207,10 +207,14 @@ final class EngineState
 
     /**
      * The fill value on a date: the step-up value once the bucket it waits for has held its cap (or closed),
-     * counted from the start of the current cycle.
+     * counted from the start of the current cycle; one that already applies when the forecast starts keeps applying.
      */
     public function valueOn(EngineBucket $bucket, CarbonImmutable $date): ?string
     {
+        if ($bucket->stepUpValue !== null && $bucket->stepUpActive) {
+            return $bucket->stepUpValue;
+        }
+
         if ($bucket->stepUpValue === null || $bucket->stepUpAfterBucketId === null || ! isset($this->reached[$bucket->stepUpAfterBucketId])) {
             return $bucket->value;
         }

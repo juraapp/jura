@@ -172,6 +172,7 @@ class ForecastInputBuilder
                     ARRAY_FILTER_USE_KEY,
                 ),
                 trackingStartedOn: $this->date($bucket->tracking_started_on),
+                stepUpActive: $bucket->step_up_value !== null && $this->funds->fillValueFor($bucket, $start) === (string) $bucket->step_up_value,
             );
         }
 
