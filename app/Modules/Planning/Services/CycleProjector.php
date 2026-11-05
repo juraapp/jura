@@ -12,9 +12,9 @@ use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Support\CyclePeriod;
+use App\Modules\Planning\Support\IncomeStep;
+use App\Modules\Planning\Support\IncomeStepBucket;
 use App\Modules\Planning\Support\ProjectedItem;
-use App\Modules\Planning\Support\Waterfall;
-use App\Modules\Planning\Support\WaterfallBucket;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -30,7 +30,7 @@ class CycleProjector
 {
     public function __construct(
         private readonly BucketLedger $funds,
-        private readonly Waterfall $waterfall,
+        private readonly IncomeStep $step,
         private readonly PlannedOccurrences $occurrences,
         private readonly LedgerQuery $ledger,
     ) {}
@@ -82,18 +82,19 @@ class CycleProjector
                 continue;
             }
 
-            $eligible = $buckets->filter(fn (Bucket $bucket) => $bucket->acceptsAccount($event->accountId) && ! $bucket->isCompletedOn($date));
-            $overrides = array_intersect_key($overrides, $eligible->pluck('id', 'id')->all());
-            $inputs = $eligible
-                ->map(fn (Bucket $bucket) => new WaterfallBucket(
+            $inputs = $buckets
+                ->map(fn (Bucket $bucket) => new IncomeStepBucket(
                     $bucket->id,
                     $bucket->fill_rule,
                     $this->funds->fillValueFor($bucket, $date),
-                    $this->room($bucket, $balances[$bucket->id], $date),
+                    $bucket->effectiveCap($date),
+                    $bucket->fill_rule === FillRule::FillToTarget || $bucket->kind === BucketKind::Savings,
+                    $balances[$bucket->id],
                     $this->receivedOn($bucket, $received, $date),
+                    $bucket->acceptsAccount($event->accountId) && ! $bucket->isCompletedOn($date),
                 ))->values()->all();
 
-            $result = $this->waterfall->distribute($event->amount, $inputs, $overrides);
+            $result = $this->step->split($event->amount, $inputs, $overrides);
             $allocations = $result['allocations'];
 
             foreach ($allocations as $bucketId => $amount) {
@@ -149,22 +150,6 @@ class CycleProjector
         }
 
         return $projection;
-    }
-
-    /**
-     * How much more a bucket can take: up to its limit/target for savings and fill-to-target rules.
-     */
-    private function room(Bucket $bucket, Money $available, CarbonInterface $date): ?Money
-    {
-        $cap = $bucket->effectiveCap($date);
-
-        if ($cap === null || ($bucket->fill_rule !== FillRule::FillToTarget && $bucket->kind !== BucketKind::Savings)) {
-            return null;
-        }
-
-        $missing = $cap->subtract($available);
-
-        return $missing->isPositive() ? $missing : Money::zero();
     }
 
     /**

@@ -10,7 +10,6 @@ use App\Modules\Planning\Support\Forecast\EngineIncome;
 use App\Modules\Planning\Support\Forecast\EngineInput;
 use App\Modules\Planning\Support\Forecast\EngineLine;
 use App\Modules\Planning\Support\Forecast\ForecastEngine;
-use App\Modules\Planning\Support\Waterfall;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonImmutable;
 use PHPUnit\Framework\TestCase;
@@ -63,7 +62,7 @@ class ForecastEngineTest extends TestCase
      */
     private function simulate(array $buckets, array $incomes, array $lines, string $end = '2027-03-31', int $ready = 0): array
     {
-        $result = (new ForecastEngine(new Waterfall))->run(
+        $result = (new ForecastEngine)->run(
             new EngineInput($this->date(self::START), $this->date($end), $buckets, $incomes, Money::of($ready)),
             $lines,
         );
@@ -157,7 +156,7 @@ class ForecastEngineTest extends TestCase
 
     public function test_a_bucket_item_takes_the_bucket_first_and_the_rest_from_ready_to_assign(): void
     {
-        $result = (new ForecastEngine(new Waterfall))->run(
+        $result = (new ForecastEngine)->run(
             new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 300)], [], Money::of(500)),
             [$this->line(1, 700, 1), $this->line(2, 200, 1)],
         );
@@ -171,7 +170,7 @@ class ForecastEngineTest extends TestCase
 
     public function test_buckets_restricted_to_other_accounts_do_not_receive_the_income(): void
     {
-        $result = (new ForecastEngine(new Waterfall))->run(
+        $result = (new ForecastEngine)->run(
             new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 0, FillRule::Percent, 100, accounts: [7])], [
                 $this->income('2026-10-12', 1000, account: 8),
                 $this->income('2026-10-20', 400, account: 7),
@@ -185,7 +184,7 @@ class ForecastEngineTest extends TestCase
 
     public function test_savings_buckets_stop_filling_at_their_target(): void
     {
-        $result = (new ForecastEngine(new Waterfall))->run(
+        $result = (new ForecastEngine)->run(
             new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 0, FillRule::Percent, 100, target: 300)], [
                 $this->income('2026-10-12', 1000),
                 $this->income('2026-11-12', 1000),
@@ -199,7 +198,7 @@ class ForecastEngineTest extends TestCase
 
     public function test_income_fills_nothing_when_no_bucket_has_a_rule(): void
     {
-        $result = (new ForecastEngine(new Waterfall))->run(
+        $result = (new ForecastEngine)->run(
             new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 0)], [$this->income('2026-10-12', 1000)]),
             [],
         );
@@ -271,7 +270,7 @@ class ForecastEngineTest extends TestCase
 
     public function test_the_result_reports_each_buckets_balance_at_the_end(): void
     {
-        $result = (new ForecastEngine(new Waterfall))->run(
+        $result = (new ForecastEngine)->run(
             new EngineInput($this->date(self::START), $this->date('2026-12-31'), [$this->bucket(1, 1000), $this->bucket(2, 5)], [], Money::of(70)),
             [$this->line(1, 400, 1)],
         );
@@ -283,7 +282,7 @@ class ForecastEngineTest extends TestCase
 
     public function test_a_fixed_fill_on_a_cycle_bucket_is_topped_up_once_per_cycle_in_the_simulation(): void
     {
-        $result = (new ForecastEngine(new Waterfall))->run(
+        $result = (new ForecastEngine)->run(
             new EngineInput($this->date(self::START), $this->date('2026-11-30'), [
                 $this->bucket(1, 0, FillRule::Fixed, 150, savings: false, cycle: BudgetPeriodType::Monthly),
             ], [
@@ -305,7 +304,7 @@ class ForecastEngineTest extends TestCase
             completesOnPurchase: true);
         $rest = new EngineBucket(3, FillRule::PercentOfRemaining, '100', null, true, Money::zero(), null, null, CarryOverPolicy::Carry, null);
 
-        $result = (new ForecastEngine(new Waterfall))->run(
+        $result = (new ForecastEngine)->run(
             new EngineInput($this->date('2026-10-01'), $this->date('2026-12-31'), [$savings, $car, $rest], [
                 $this->income('2026-10-02', 2000),
                 $this->income('2026-11-02', 2000),

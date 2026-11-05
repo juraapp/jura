@@ -3,9 +3,10 @@
 namespace App\Modules\Planning\Support\Forecast;
 
 use App\Modules\Planning\Enums\CarryOverPolicy;
+use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Support\CyclePeriod;
-use App\Modules\Planning\Support\Waterfall;
-use App\Modules\Planning\Support\WaterfallBucket;
+use App\Modules\Planning\Support\IncomeStep;
+use App\Modules\Planning\Support\IncomeStepBucket;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonImmutable;
 
@@ -31,7 +32,7 @@ final class ForecastEngine
     /** Money in the accounts no bucket holds, as the simulation goes. */
     private Money $ready;
 
-    public function __construct(private readonly Waterfall $waterfall) {}
+    public function __construct(private readonly IncomeStep $step = new IncomeStep) {}
 
     /**
      * @param  list<EngineLine>  $lines  the scenario, in purchase order
@@ -136,25 +137,21 @@ final class ForecastEngine
      */
     private function applyIncome(EngineInput $input, array $buckets, array &$balances, EngineIncome $income): void
     {
-        $anyRule = false;
-        foreach ($buckets as $bucket) {
-            $anyRule = $anyRule || $bucket->rule !== null;
-        }
-
-        if (! $anyRule) {
-            $this->ready = $this->ready->add($income->amount);
-
-            return;
-        }
-
         $inputs = [];
         foreach ($input->buckets as $bucket) {
-            if ($bucket->acceptsAccount($income->accountId) && ! $this->isCompleted($bucket->id, $income->date)) {
-                $inputs[] = new WaterfallBucket($bucket->id, $bucket->rule, $this->valueOn($bucket, $income->date), $bucket->room($balances[$bucket->id]), $this->receivedOn($bucket, $income->date));
-            }
+            $inputs[] = new IncomeStepBucket(
+                $bucket->id,
+                $bucket->rule,
+                $this->valueOn($bucket, $income->date),
+                $bucket->target,
+                $bucket->rule === FillRule::FillToTarget || $bucket->isSavings,
+                $balances[$bucket->id],
+                $this->receivedOn($bucket, $income->date),
+                $bucket->acceptsAccount($income->accountId) && ! $this->isCompleted($bucket->id, $income->date),
+            );
         }
 
-        $result = $this->waterfall->distribute($income->amount, $inputs);
+        $result = $this->step->split($income->amount, $inputs);
 
         foreach ($result['allocations'] as $bucketId => $amount) {
             $balances[$bucketId] = $balances[$bucketId]->add($amount);
