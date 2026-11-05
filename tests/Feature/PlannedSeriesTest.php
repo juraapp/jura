@@ -279,12 +279,28 @@ class PlannedSeriesTest extends TestCase
         return array_slice(array_keys($this->openDates($series)), 0, $count);
     }
 
-    private function moveSeriesTo(PlannedEventSeries $series, Account $account, Category $category, string $nextDate): void
+    private function moveSeriesTo(PlannedEventSeries $series, Account $account, Category $category, string $nextDate, string $frequency = 'monthly', ?string $endsOn = null): void
     {
         $this->actingAs($this->user)->patch("/planning/series/{$series->id}", [
-            'description' => 'Rent', 'amount' => 100, 'certainty' => 'confirmed', 'frequency' => 'monthly',
-            'account_id' => $account->id, 'category_id' => $category->id, 'next_date' => $nextDate, 'auto_post' => true,
+            'description' => 'Rent', 'amount' => 100, 'certainty' => 'confirmed', 'frequency' => $frequency,
+            'account_id' => $account->id, 'category_id' => $category->id, 'next_date' => $nextDate, 'ends_on' => $endsOn, 'auto_post' => true,
         ])->assertSessionHasNoErrors();
+    }
+
+    private function skipOn(PlannedEventSeries $series, string $date): void
+    {
+        $this->actingAs($this->user)->post("/planning/cash-flow/{$series->events()->where('date', $date)->sole()->id}/skip")->assertSessionHas('success');
+    }
+
+    private function confirmOn(PlannedEventSeries $series, string $date): void
+    {
+        $this->actingAs($this->user)->post("/planning/cash-flow/{$series->events()->where('date', $date)->sole()->id}/realize")->assertSessionHasNoErrors();
+    }
+
+    private function pauseAndResume(PlannedEventSeries $series): void
+    {
+        $this->actingAs($this->user)->post("/planning/series/{$series->id}/pause")->assertSessionHas('success');
+        $this->actingAs($this->user)->post("/planning/series/{$series->id}/resume")->assertSessionHas('success');
     }
 
     public function test_a_new_rhythm_keeps_dates_before_a_later_skipped_occurrence(): void
@@ -294,7 +310,7 @@ class PlannedSeriesTest extends TestCase
 
         $this->moveSeriesTo($series, $account, $category, '2026-11-20');
 
-        // The skipped December 15 uses up December 20, the new date nearest to it; November 20 stays.
+        // The skipped December 15 uses up December 20, 5 days away; November 20 (25 days away, and typed) stays.
         $this->assertSame(['2026-11-20', '2027-01-20', '2027-02-20'], $this->openDateList($series, 3));
         $this->assertSame('2027-10-20', array_key_last($this->openDates($series)));
     }
@@ -302,12 +318,66 @@ class PlannedSeriesTest extends TestCase
     public function test_a_new_rhythm_does_not_plan_again_a_payment_confirmed_early(): void
     {
         [$series, $account, $category] = $this->rent();
-        $this->actingAs($this->user)->post("/planning/cash-flow/{$series->events()->where('date', '2026-11-15')->sole()->id}/realize")->assertSessionHasNoErrors();
+        $this->confirmOn($series, '2026-12-15');
 
         $this->moveSeriesTo($series, $account, $category, '2026-11-20');
 
-        $this->assertSame(['2026-12-20', '2027-01-20'], $this->openDateList($series, 2));
+        $this->assertSame(['2026-11-20', '2027-01-20'], $this->openDateList($series, 2));
         $this->assertSame(1, Transaction::count());
+    }
+
+    public function test_the_next_date_the_user_types_is_kept_even_next_to_a_confirmed_occurrence(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->confirmOn($series, '2026-11-15');
+
+        // November 15 is 5 days from the typed November 20, but only an occurrence for exactly that day takes it.
+        $this->moveSeriesTo($series, $account, $category, '2026-11-20');
+
+        $this->assertSame(['2026-11-20', '2026-12-20'], $this->openDateList($series, 2));
+        $this->assertSame([], $series->fresh()->excluded_dates);
+    }
+
+    public function test_a_closed_occurrence_only_uses_up_a_new_date_within_half_a_period(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->skipOn($series, '2026-11-15');
+
+        // November 15 is 106 days from March 1 2027, far beyond the 15 days of half a month.
+        $this->moveSeriesTo($series, $account, $category, '2027-03-01');
+
+        $this->assertSame(['2027-03-01', '2027-04-01', '2027-05-01'], $this->openDateList($series, 3));
+        $this->assertSame([], $series->fresh()->excluded_dates);
+    }
+
+    public function test_a_monthly_plan_turned_yearly_keeps_its_first_yearly_date_after_a_skipped_month(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->skipOn($series, '2026-12-15');
+
+        // December 15 is 168 days from June 1 2027: within half a year, but not within 15 days (the shorter period).
+        $this->moveSeriesTo($series, $account, $category, '2027-06-01', 'yearly');
+
+        $this->assertSame(['2027-06-01'], array_keys($this->openDates($series)));
+    }
+
+    public function test_on_a_tie_a_closed_occurrence_uses_up_the_later_date(): void
+    {
+        $account = Account::factory()->for($this->user)->create(['currency' => 'USD']);
+        $category = Category::factory()->expense()->create(['user_id' => $this->user->id]);
+        $this->actingAs($this->user)->post('/planning/cash-flow', [
+            'type' => 'expense', 'description' => 'Rent', 'amount' => 100, 'certainty' => 'confirmed',
+            'account_id' => $account->id, 'category_id' => $category->id,
+            'date' => '2026-11-15', 'frequency' => 'biweekly', 'auto_post' => true,
+        ])->assertSessionHasNoErrors();
+        $series = PlannedEventSeries::sole();
+        $this->skipOn($series, '2026-12-13');
+
+        // New rhythm 11-22, 12-06, 12-20, 2027-01-03: the skipped 12-13 is 7 days from both 12-06 and 12-20.
+        $this->moveSeriesTo($series, $account, $category, '2026-11-22', 'biweekly');
+
+        $this->assertSame(['2026-11-22', '2026-12-06', '2027-01-03'], $this->openDateList($series, 3));
+        $this->assertSame(['2026-12-20'], $series->fresh()->excluded_dates);
     }
 
     public function test_resuming_keeps_dates_before_a_skipped_one_and_never_plans_a_confirmed_one_twice(): void
@@ -322,6 +392,64 @@ class PlannedSeriesTest extends TestCase
         $this->assertSame(['2026-12-15', '2027-02-15', '2027-03-15'], $this->openDateList($series, 3));
         $this->assertCount(10, $this->openDates($series), 'Dec 2026 to Oct 2027 without January');
         $this->assertSame(1, Transaction::count());
+    }
+
+    public function test_resuming_again_and_again_changes_nothing(): void
+    {
+        [$series] = $this->rent();
+        $this->skipOn($series, '2026-12-15');
+
+        foreach ([1, 2] as $round) {
+            $this->pauseAndResume($series);
+
+            $this->assertSame(['2026-11-15', '2027-01-15', '2027-02-15'], $this->openDateList($series, 3), "round {$round}");
+            $this->assertSame(['2026-12-15'], $series->fresh()->excluded_dates, "round {$round}");
+        }
+    }
+
+    public function test_an_occurrence_moved_to_another_month_and_confirmed_stands_for_its_own_month_on_resume(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $december = $series->events()->where('date', '2026-12-15')->sole();
+        $this->moveOnly($december, $account, $category, '2026-11-30');
+        $this->assertSame('2026-12-15', $december->fresh()->series_date->toDateString(), 'moving one occurrence keeps its series date');
+        $this->confirmOn($series, '2026-11-30');
+
+        $this->pauseAndResume($series);
+
+        $this->assertSame(['2026-11-15', '2027-01-15'], $this->openDateList($series, 2));
+        $this->assertSame(['2026-12-15'], $series->fresh()->excluded_dates);
+    }
+
+    public function test_deleting_a_moved_occurrence_keeps_its_own_date_from_coming_back_on_resume(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $december = $series->events()->where('date', '2026-12-15')->sole();
+        $this->moveOnly($december, $account, $category, '2026-12-28');
+        $this->actingAs($this->user)->delete("/planning/cash-flow/{$december->id}", ['scope' => 'this'])->assertSessionHasNoErrors();
+
+        $this->pauseAndResume($series);
+
+        $this->assertSame(['2026-11-15', '2027-01-15'], $this->openDateList($series, 2));
+    }
+
+    public function test_the_migration_backfills_each_occurrences_series_date(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->moveOnly($series->events()->where('date', '2026-12-15')->sole(), $account, $category, '2026-11-30');
+        $this->moveOnly($series->events()->where('date', '2027-04-15')->sole(), $account, $category, '2027-05-10');
+        $oneOff = PlannedEvent::factory()->for($this->user)->create(['date' => '2026-12-01']);
+        Schema::table('planned_events', fn ($table) => $table->dropColumn('series_date'));
+
+        (require database_path('migrations/2026_11_05_020355_add_series_date_to_planned_events_table.php'))->up();
+
+        $seriesDates = $series->events()->orderBy('date')->get()
+            ->mapWithKeys(fn (PlannedEvent $event) => [$event->date->toDateString() => $event->series_date->toDateString()])->all();
+        $this->assertSame('2026-11-15', $seriesDates['2026-11-15'], 'on the rule: its own date');
+        $this->assertSame('2026-12-15', $seriesDates['2026-11-30'], 'moved: the free rule date 15 days away');
+        $this->assertSame('2027-05-10', $seriesDates['2027-05-10'], 'no free rule date within 15 days (May 15 is taken, April 15 is 25 days away): its own date');
+        $this->assertSame('2027-10-15', $seriesDates['2027-10-15']);
+        $this->assertNull($oneOff->fresh()->series_date);
     }
 
     public function test_the_migration_backfills_the_last_created_date_from_stored_occurrences(): void

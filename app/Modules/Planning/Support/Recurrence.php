@@ -63,6 +63,47 @@ final class Recurrence
     }
 
     /**
+     * The dates of a rule that occurrences already confirmed or skipped stand for, so they are not planned again.
+     * Each closed occurrence takes the unclaimed candidate closest to its series date, only within $window days
+     * (the later one on a tie). The date the user just typed ($typed) is only taken by an occurrence whose
+     * series date is exactly that day.
+     *
+     * @param  list<CarbonImmutable>  $candidates  the rule's dates, in order
+     * @param  list<string>  $seriesDates  Y-m-d series dates of the confirmed or skipped occurrences
+     * @return list<string> the claimed Y-m-d dates
+     */
+    public static function claimed(array $candidates, array $seriesDates, int $window, ?CarbonImmutable $typed = null): array
+    {
+        sort($seriesDates);
+        $claimed = [];
+
+        foreach ($seriesDates as $seriesDate) {
+            $seriesDate = CarbonImmutable::parse($seriesDate)->startOfDay();
+            $closest = null;
+            $closestDistance = null;
+
+            foreach ($candidates as $candidate) {
+                $distance = abs((int) round($candidate->startOfDay()->diffInDays($seriesDate)));
+                $isTyped = $typed !== null && $candidate->isSameDay($typed);
+                if ($distance > $window || isset($claimed[$candidate->toDateString()]) || ($isTyped && $distance !== 0)) {
+                    continue;
+                }
+
+                if ($closestDistance === null || $distance <= $closestDistance) {
+                    $closest = $candidate;
+                    $closestDistance = $distance;
+                }
+            }
+
+            if ($closest !== null) {
+                $claimed[$closest->toDateString()] = true;
+            }
+        }
+
+        return array_keys($claimed);
+    }
+
+    /**
      * The date of the Nth occurrence after a start date.
      */
     public static function nth(RecurringFrequency $frequency, CarbonImmutable $start, int $steps): CarbonImmutable

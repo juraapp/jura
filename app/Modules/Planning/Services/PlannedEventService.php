@@ -7,6 +7,7 @@ use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Enums\PlannedEventStatus;
+use App\Modules\Planning\Enums\RecurringFrequency;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
 use App\Modules\Planning\Support\Recurrence;
@@ -107,6 +108,7 @@ class PlannedEventService
                 'amount' => $series->amount,
                 'currency' => $series->currency,
                 'date' => $date->toDateString(),
+                'series_date' => $date->toDateString(),
                 'account_id' => $series->account_id,
                 'counter_account_id' => $series->counter_account_id,
                 'category_id' => $series->category_id,
@@ -128,45 +130,43 @@ class PlannedEventService
 
     /**
      * Prepares a series whose open occurrences from today on are gone (a new rhythm, or a resume) to be created
-     * again from today: every date its rule gives from today comes back, except one for each occurrence already
-     * confirmed or skipped from today on, which uses up the rule's date nearest to it (the earlier on a tie).
-     * So a payment confirmed early or a skipped month is not planned twice, and no other date is lost. Those
-     * dates join the series' excluded dates, so later top-ups never create them either.
+     * again from today: every date its rule gives from today comes back, except the ones occurrences already
+     * confirmed or skipped stand for (Recurrence::claimed: the rule date closest to each one's series date, within
+     * half of the shorter of the old and new periods). So a payment confirmed early or a skipped month is not
+     * planned twice, and no other date is lost; the next date the user just typed always stays unless a closed
+     * occurrence was for exactly that day. Claimed dates join the series' excluded dates, so later top-ups never
+     * create them either. The candidates ignore the excluded dates, so running it again changes nothing.
      */
-    private function rebuildFromToday(PlannedEventSeries $series, CarbonInterface $today): void
+    private function rebuildFromToday(PlannedEventSeries $series, CarbonInterface $today, RecurringFrequency $previousFrequency, ?CarbonInterface $typedNextDate = null): void
     {
         $today = CarbonImmutable::instance($today)->startOfDay();
-        $excluded = $series->excluded_dates ?? [];
+        $window = min($previousFrequency->halfPeriodDays(), $series->frequency->halfPeriodDays());
         $closed = PlannedEvent::forUser($series->user_id)
             ->where('series_id', $series->id)
             ->where('status', '!=', PlannedEventStatus::Planned->value)
-            ->where('date', '>=', $today->toDateString())
-            ->orderBy('date')
-            ->pluck('date')
-            ->map(fn ($date) => CarbonImmutable::parse($date)->startOfDay());
+            ->where(fn ($query) => $query->where('date', '>=', $today->toDateString())->orWhere('series_date', '>=', $today->toDateString()))
+            ->get(['date', 'series_date'])
+            ->map(fn (PlannedEvent $event) => ($event->series_date ?? $event->date)->toDateString())
+            ->sort()
+            ->values();
 
+        $claimed = [];
         if ($closed->isNotEmpty()) {
             $candidates = Recurrence::occurrences(
                 $series->frequency,
                 CarbonImmutable::parse($series->starts_on->toDateString()),
                 $series->ends_on !== null ? CarbonImmutable::parse($series->ends_on->toDateString()) : null,
-                $excluded,
+                [],
                 null,
                 $today,
-                $closed->last()->addYear(),
+                CarbonImmutable::parse($closed->last())->addDays($window),
                 1000,
             );
-
-            foreach ($closed as $date) {
-                $nearest = collect($candidates)->sortBy(fn (CarbonImmutable $candidate) => [abs($candidate->diffInDays($date)), $candidate->timestamp])->first();
-                if ($nearest !== null) {
-                    $excluded[] = $nearest->toDateString();
-                }
-            }
+            $claimed = Recurrence::claimed($candidates, $closed->all(), $window, $typedNextDate !== null ? CarbonImmutable::instance($typedNextDate) : null);
         }
 
         $series->forceFill([
-            'excluded_dates' => collect($excluded)->unique()->sort()->values()->all(),
+            'excluded_dates' => collect($series->excluded_dates ?? [])->merge($claimed)->unique()->sort()->values()->all(),
             'materialized_until' => $today->subDay()->toDateString(),
         ])->save();
     }
@@ -267,12 +267,13 @@ class PlannedEventService
         $today = $user->today();
         $nextDate = CarbonImmutable::parse($data['next_date']);
         $current = $this->nextDate($series, $today);
+        $previousFrequency = $series->frequency;
         $rescheduled = $data['frequency'] !== $series->frequency->value
             || $current === null
             || ! $nextDate->isSameDay($current);
         $attributes = $this->attributes($user, ['type' => $series->type->value] + $data) + $this->extras($data);
 
-        DB::transaction(function () use ($series, $data, $today, $nextDate, $rescheduled, $attributes) {
+        DB::transaction(function () use ($series, $data, $today, $nextDate, $rescheduled, $attributes, $previousFrequency) {
             $series->fill($attributes + [
                 'frequency' => $data['frequency'],
                 'ends_on' => $data['ends_on'] ?? null,
@@ -294,7 +295,7 @@ class PlannedEventService
 
             if ($rescheduled) {
                 $upcoming->delete();
-                $this->rebuildFromToday($series, $today);
+                $this->rebuildFromToday($series, $today, $previousFrequency, $nextDate);
             } else {
                 $upcoming->get()->each(fn (PlannedEvent $occurrence) => $occurrence->update($attributes + ['post_error' => null]));
             }
@@ -344,7 +345,7 @@ class PlannedEventService
 
         DB::transaction(function () use ($series, $today) {
             $series->update(['is_active' => true]);
-            $this->rebuildFromToday($series, $today);
+            $this->rebuildFromToday($series, $today, $series->frequency);
             $this->materialize($series, $today->addMonthsNoOverflow(self::SERIES_HORIZON_MONTHS), $today);
         });
     }
@@ -427,8 +428,9 @@ class PlannedEventService
             return;
         }
 
+        // The date the rule gave it, also when it was moved: that is the date that must not come back.
         DB::transaction(function () use ($event, $series) {
-            $date = $event->date->toDateString();
+            $date = ($event->series_date ?? $event->date)->toDateString();
             $series->update(['excluded_dates' => collect($series->excluded_dates ?? [])->push($date)->unique()->sort()->values()->all()]);
             $event->delete();
         });
