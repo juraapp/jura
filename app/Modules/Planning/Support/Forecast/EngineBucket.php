@@ -22,6 +22,7 @@ final readonly class EngineBucket
      * @param  CarbonImmutable|null  $fundedSince  from when its category's spending comes out of its envelope
      * @param  list<int>|null  $allowedAccountIds  null or empty = income from any account may fill it
      * @param  array<string, Money>  $capOverrides  cycle start (Y-m-d) => that cycle's cap
+     * @param  bool  $stepUpActive  whether its step-up value already applies at the start of the forecast
      */
     public function __construct(
         public int $id,
@@ -47,6 +48,7 @@ final readonly class EngineBucket
         public array $capOverrides = [],
         public ?CarbonImmutable $targetDate = null,
         public ?CarbonImmutable $trackingStartedOn = null,
+        public bool $stepUpActive = false,
     ) {}
 
     public function cyclePeriod(): ?CyclePeriod

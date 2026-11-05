@@ -269,6 +269,18 @@ class ForecastEngineTest extends TestCase
         $this->assertSame('2100.00', $this->money($result->endReadyToAssign));
     }
 
+    public function test_a_step_up_that_already_applies_at_the_start_keeps_applying(): void
+    {
+        // The real ledger says Holiday's step-up already applies (Emergency filled last month): 250 from the first income.
+        $holiday = $this->bucket(1, 0, ['rule' => FillRule::Fixed, 'value' => '100', 'cycle' => BudgetPeriodType::Monthly,
+            'stepUpValue' => '250', 'stepUpAfterBucketId' => 2, 'stepUpActive' => true]);
+        $emergency = $this->bucket(2, 300, ['cap' => Money::of(300)]);
+
+        $result = $this->simulate($this->input(300, [$holiday, $emergency], [$this->income('2026-10-05', 1000)], '2026-10-31'));
+
+        $this->assertSame('250.00', $this->money($result->endBalances[1]));
+    }
+
     public function test_items_are_bought_strictly_in_order_and_never_before_their_not_before_date(): void
     {
         // Both are affordable today, but the first waits until Oct 20, and the second may not jump ahead of it.
