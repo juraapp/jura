@@ -461,8 +461,24 @@ per cycle, *share of what is left*, step-ups, and buckets that close when their 
    - **Best overall** balances how much you want each item against how long it waits.
    - **Most wanted first**, **Cheapest first**, **Soonest needed first** (by your "want it by" dates) and **Quickest
      to afford first** are simple alternatives for comparison.
-3. For each order you see, item by item, the date you can buy it (or *Not in N months* with how much is still
-   missing), how long that is from today, and whether it lands later than you wanted.
+3. For each order you see, item by item, the date you can buy it, how long that is from today, how it is paid (how
+   much comes from its bucket and how much from ready to assign) and whether it lands later than you wanted. An item
+   that cannot be bought in time shows *Not in N months*, how much is still missing and why it waits:
+   - *Waiting for ready to assign*: not enough money is free (not in a bucket);
+   - *Waiting for cash*: ready to assign would cover it, but planned expenses later on need the money in your
+     accounts.
+   Under each order you see ready to assign now and the projected ready to assign at the end of the look-ahead.
+4. Above the results the planner says how many of your planned incomes it counts (for example *Counting 11 of 12
+   planned incomes*): the ones the chosen *How sure* view trusts. Overdue incomes count as arriving today; incomes
+   planned into an off-budget account are listed as left out.
+
+**Warnings on an item.**
+- *Its bucket stops filling below the price*: the item's savings bucket has a cap lower than the price, so the rest
+  will come from ready to assign.
+- *Leaves ready to assign short on a date*: buying it is fine on the day, but a later planned expense takes ready to
+  assign below zero. It is a warning, not a block: move some money out of a bucket or plan the purchase later.
+- *Blocked*: the item can only be paid with accounts its bucket never receives income from, or only with off-budget
+  accounts.
 
 **Building your own order.** Press **Build my own order** (or **Adjust this order** on a suggestion). Use the arrows to
 move items earlier or later. Items are bought **strictly in the order shown**: moving something earlier makes the others
@@ -490,7 +506,9 @@ shows it struck through and leaves it out of the calculation.
   ready to assign covers it today, because a bill later in the month needs that money.
 - Projected interest is never counted.
 - An item that can only be bought with certain accounts, while its bucket only receives income from other accounts,
-  shows as **Blocked**.
+  shows as **Blocked**, and so does one that only off-budget accounts can pay for.
+- If none of your buckets has a fill rule, the planner says so: planned income then stays in ready to assign, which
+  still pays for your items.
 
 ## Savings goals
 

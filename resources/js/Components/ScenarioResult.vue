@@ -47,24 +47,35 @@ const lastDate = computed(() => {
                             <span class="mr-1.5 text-xs font-semibold text-gray-400">{{ index + 1 }}.</span>{{ line.name }}
                         </p>
                         <p class="mt-0.5 text-xs text-gray-400"><Money :amount="line.price" :currency="currency" /></p>
+                        <p v-if="line.purchaseDate && line.fromBucket > 0" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                            {{ $t('ui.scenario.from_bucket', { amount: format.money(line.fromBucket, currency) }) }}<template v-if="line.fromFree > 0"> &middot; {{ $t('ui.scenario.from_ready', { amount: format.money(line.fromFree, currency) }) }}</template>
+                        </p>
+                        <p v-else-if="line.purchaseDate" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.scenario.from_ready', { amount: format.money(line.fromFree, currency) }) }}</p>
                     </div>
                     <div class="shrink-0 text-right">
                         <template v-if="line.purchaseDate">
                             <p class="text-sm font-semibold text-green-600 dark:text-green-400">{{ formatDate(line.purchaseDate) }}</p>
                             <p class="text-xs text-gray-400">{{ waiting(line.delayDays) }}</p>
                         </template>
-                        <template v-else-if="line.blocked === 'accounts'">
+                        <template v-else-if="line.blocked">
                             <p class="text-sm font-semibold text-red-600 dark:text-red-400">{{ $t('ui.scenario.blocked') }}</p>
-                            <p class="text-xs text-gray-400">{{ $t('ui.scenario.blocked_hint') }}</p>
+                            <p class="text-xs text-gray-400">{{ line.blocked === 'off_budget' ? $t('ui.scenario.blocked_off_budget') : $t('ui.scenario.blocked_hint') }}</p>
                         </template>
                         <template v-else>
                             <p class="text-sm font-semibold text-amber-600 dark:text-amber-400">{{ $t('ui.scenario.not_in', { count: horizonMonths }) }}</p>
-                            <p class="text-xs text-gray-400">{{ $t('ui.scenario.needs') }} <Money :amount="line.shortfall" :currency="currency" /> {{ $t('ui.scenario.more') }}</p>
+                            <p v-if="line.shortfall > 0" class="text-xs text-gray-400">{{ $t('ui.scenario.needs') }} <Money :amount="line.shortfall" :currency="currency" /> {{ $t('ui.scenario.more') }}</p>
+                            <p v-if="line.limitedBy" class="text-xs text-gray-400">{{ $t(`ui.scenario.limited_${line.limitedBy}`) }}</p>
                         </template>
                     </div>
                 </div>
                 <p v-if="line.late" class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">
                     <DynamicIcon name="exclamation-triangle" class="mr-1 inline h-3.5 w-3.5" />{{ $t('ui.scenario.late') }}
+                </p>
+                <p v-if="line.freeDipsOn" class="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    <DynamicIcon name="exclamation-triangle" class="mr-1 inline h-3.5 w-3.5" />{{ $t('ui.scenario.dips_warning', { date: formatDate(line.freeDipsOn) }) }}
+                </p>
+                <p v-if="(line.warnings ?? []).includes('cap_below_price')" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <DynamicIcon name="information-circle" class="mr-1 inline h-3.5 w-3.5" />{{ $t('ui.scenario.cap_warning') }}
                 </p>
             </li>
         </ol>
@@ -73,6 +84,17 @@ const lastDate = computed(() => {
             <template v-if="boughtCount === result.lines.length">{{ $t('ui.scenario.all_bought', { date: formatDate(lastDate) }) }}</template>
             <template v-else>{{ $t('ui.scenario.some_bought', { bought: boughtCount, total: result.lines.length, months: horizonMonths }) }}</template>
         </p>
+
+        <dl v-if="result.readyToAssign" class="mt-2 grid grid-cols-1 gap-1 text-xs text-gray-500 sm:grid-cols-2 dark:text-gray-400">
+            <div class="flex justify-between gap-2 sm:block">
+                <dt>{{ $t('ui.planner.ready_now') }}</dt>
+                <dd class="font-medium tabular-nums text-gray-700 dark:text-gray-200"><Money :amount="result.readyToAssign.start" :currency="currency" signed /></dd>
+            </div>
+            <div class="flex justify-between gap-2 sm:block">
+                <dt>{{ $t('ui.planner.ready_end') }}</dt>
+                <dd class="font-medium tabular-nums text-gray-700 dark:text-gray-200"><Money :amount="result.readyToAssign.end" :currency="currency" signed /></dd>
+            </div>
+        </dl>
 
         <details v-if="result.buckets.length" class="mt-2 text-xs">
             <summary class="cursor-pointer font-medium text-gray-500 dark:text-gray-400">{{ $t('ui.scenario.left') }}</summary>

@@ -160,6 +160,68 @@ class PlannerTest extends TestCase
         $this->assertNull($result['lines'][0]['purchaseDate']);
     }
 
+    public function test_the_result_says_which_incomes_count_and_how_each_item_is_paid(): void
+    {
+        $brokerage = Account::factory()->for($this->user)->offBudget()->create(['currency' => 'COP', 'initial_balance' => 0]);
+        $this->plan(300000, '2026-11-15', Certainty::Confirmed, ['account_id' => $brokerage->id]);
+        $this->plan(100000, '2026-11-20', Certainty::Speculative);
+        $this->plan(50000, '2026-10-01', Certainty::Expected);
+
+        $result = $this->simulate();
+
+        // Counted: Oct 1 (overdue, so today) 50,000 + Nov 1 + Dec 1 = 1,050,000 of the three expected or confirmed incomes
+        // into the budget; the speculative one is not counted, the brokerage one is off budget.
+        $this->assertEquals([
+            'view' => 'expected', 'counted' => 3, 'total' => 4, 'countedAmount' => 1050000, 'totalAmount' => 1150000,
+            'overdue' => 1, 'offBudget' => 1, 'offBudgetAmount' => 300000, 'allocated' => 1050000, 'leftFree' => 0,
+        ], $result['incomes']);
+        // The fund has no cycle, so its fixed 500,000 applies to each income: 50,000 today, 500,000 on Nov 1 (550,000,
+        // short of the bike) and 500,000 on Dec 1 (1,050,000): it pays the whole bike then.
+        $this->assertSame('2026-12-01', $result['lines'][0]['purchaseDate']);
+        $this->assertEquals([1000000, 0], [$result['lines'][0]['fromBucket'], $result['lines'][0]['fromFree']]);
+        $this->assertSame([], $result['lines'][0]['warnings']);
+    }
+
+    public function test_a_bucket_capped_below_the_price_is_flagged_and_ready_to_assign_pays_the_rest(): void
+    {
+        $this->bikeFund->update(['cap_amount' => 600000]);
+
+        $result = $this->simulate();
+
+        // Nov 1: the fund takes 500,000 (room 600,000). Dec 1: it takes the 100,000 left of its room, 400,000 stays free.
+        $line = $result['lines'][0];
+        $this->assertSame(['cap_below_price'], $line['warnings']);
+        $this->assertSame('2026-12-01', $line['purchaseDate']);
+        $this->assertEquals([600000, 400000], [$line['fromBucket'], $line['fromFree']]);
+        $this->assertEquals(['start' => 0, 'end' => 0], $result['readyToAssign']);
+    }
+
+    public function test_an_item_waiting_for_ready_to_assign_says_why_and_how_much_is_missing(): void
+    {
+        PlannedEvent::query()->delete();
+        $checking = Account::factory()->for($this->user)->create(['currency' => 'COP', 'initial_balance' => 1000000]);
+        PlannedEvent::factory()->for($this->user)->expense()->create(['amount' => 800000, 'currency' => 'COP', 'date' => '2026-10-20', 'account_id' => $checking->id]);
+        $desk = WishlistItem::factory()->for($this->user)->create(['name' => 'Desk', 'price' => 900000, 'currency' => 'COP', 'bucket_id' => null]);
+
+        $result = $this->simulate(['lines' => [['item_id' => $desk->id]]]);
+
+        // 1,000,000 today, but 800,000 leaves on Oct 20: 200,000 is all that stays.
+        $line = $result['lines'][0];
+        $this->assertNull($line['purchaseDate']);
+        $this->assertSame('free', $line['limitedBy']);
+        $this->assertEquals(700000, $line['shortfall']);
+        $this->assertEquals(['start' => 1000000, 'end' => 200000], $result['readyToAssign']);
+        $this->assertEquals(['date' => '2026-10-31', 'cash' => 200000, 'free' => 200000], $result['timeline'][0]);
+    }
+
+    public function test_an_item_only_off_budget_accounts_can_pay_for_is_blocked(): void
+    {
+        $brokerage = Account::factory()->for($this->user)->offBudget()->create(['currency' => 'COP']);
+        $this->bike->update(['allowed_account_ids' => [$brokerage->id]]);
+
+        $this->assertSame('off_budget', $this->simulate()['lines'][0]['blocked']);
+    }
+
     public function test_simulation_validates_its_input(): void
     {
         $foreign = WishlistItem::factory()->create(['currency' => 'COP']);

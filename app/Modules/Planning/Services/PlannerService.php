@@ -3,6 +3,7 @@
 namespace App\Modules\Planning\Services;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Enums\WishlistStatus;
 use App\Modules\Planning\Models\WishlistItem;
@@ -23,6 +24,7 @@ class PlannerService
         private readonly ForecastInputBuilder $builder,
         private readonly ForecastEngine $engine,
         private readonly ScenarioSuggester $suggester,
+        private readonly LedgerQuery $ledger,
     ) {}
 
     public function context(User $user, string $currency, ForecastView $view, int $horizonMonths): PlannerContext
@@ -78,6 +80,18 @@ class PlannerService
             if (! empty($item->allowed_account_ids) && $bucket !== null && ! empty($bucket->allowedAccountIds)
                 && array_intersect($item->allowed_account_ids, $bucket->allowedAccountIds) === []) {
                 $blocked = 'accounts';
+            } elseif (! empty($item->allowed_account_ids)
+                && collect($item->allowed_account_ids)->every(fn ($accountId) => ! $this->ledger->isOnBudget($user->id, (int) $accountId))) {
+                $blocked = 'off_budget';
+            }
+
+            $warnings = [];
+            if ($bucket !== null && $bucket->roomApplies()) {
+                $cap = $bucket->capOn($context->input->start);
+                $most = $cap !== null && $cap->greaterThan($bucket->envelope) ? $cap : $bucket->envelope;
+                if ($cap !== null && $most->lessThan($item->price)) {
+                    $warnings[] = 'cap_below_price';
+                }
             }
 
             $lines[] = new EngineLine(
@@ -89,6 +103,7 @@ class PlannerService
                 $item->desired_by ? CarbonImmutable::parse($item->desired_by->toDateString()) : null,
                 $item->importance,
                 $blocked,
+                warnings: $warnings,
             );
         }
 
@@ -138,6 +153,12 @@ class PlannerService
                 'blocked' => $line->blocked,
                 'late' => $line->late,
                 'importance' => $line->importance,
+                'fromBucket' => $line->fromBucket->toFloat(),
+                'fromFree' => $line->fromFree->toFloat(),
+                'limitedBy' => $line->limitedBy,
+                'parked' => $line->parked,
+                'freeDipsOn' => $line->freeDipsOn?->toDateString(),
+                'warnings' => $line->warnings,
             ], $result->lines),
             'buckets' => collect($context->bucketNames)->map(fn (string $name, int $id) => [
                 'id' => $id,
@@ -149,8 +170,44 @@ class PlannerService
                 'start' => $context->startReadyToAssign->toFloat(),
                 'end' => $result->endReadyToAssign->toFloat(),
             ],
+            'timeline' => $this->monthEnds($context, $result),
+            'incomes' => [
+                'view' => $context->coverage->view,
+                'counted' => $context->coverage->incomesCounted,
+                'total' => $context->coverage->incomesTotal,
+                'countedAmount' => $context->coverage->countedAmount->toFloat(),
+                'totalAmount' => $context->coverage->totalAmount->toFloat(),
+                'overdue' => $context->coverage->overdueCounted,
+                'offBudget' => $context->coverage->offBudgetIncomes,
+                'offBudgetAmount' => $context->coverage->offBudgetAmount->toFloat(),
+                'allocated' => $result->incomes->allocated->toFloat(),
+                'leftFree' => $result->incomes->leftFree->toFloat(),
+            ],
             'score' => round($score, 1),
             'hasFillRules' => $context->hasFillRules,
         ];
+    }
+
+    /**
+     * Cash and ready to assign at the end of every month of the horizon (the last point: the horizon's end).
+     *
+     * @return list<array{date: string, cash: float, free: float}>
+     */
+    private function monthEnds(PlannerContext $context, EngineResult $result): array
+    {
+        $points = [];
+        $end = $context->input->end;
+        for ($month = $context->input->start->endOfMonth()->startOfDay(); ; $month = $month->addDay()->endOfMonth()->startOfDay()) {
+            $date = $month->gt($end) ? $end : $month;
+            $point = $result->pointAt($date);
+            if ($point !== null) {
+                $points[] = ['date' => $date->toDateString(), 'cash' => $point->cash->toFloat(), 'free' => $point->free->toFloat()];
+            }
+            if ($month->gte($end)) {
+                break;
+            }
+        }
+
+        return $points;
     }
 }
