@@ -8,19 +8,20 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Recurring transactions become repeating plans that record themselves (auto_post). Each template becomes a
- * confirmed series anchored on its real rhythm (a monthly template that drifted to the 28th after February
- * goes back to its day, such as the 31st); an active one gets its open occurrences from its next due date up
+ * confirmed series starting on its next due date; only a rhythm the old generator bent is re-anchored (a
+ * monthly template that drifted to the 28th after February goes back to its day, such as the 31st, and a
+ * 29 February goes back to the leap day). An active one gets its open occurrences from its next due date up
  * to 12 months after its owner's today, so a template that was behind leaves past occurrences that the
- * poster records on their own dates. Then transactions.recurring_transaction_id and the table are dropped;
- * transactions keep is_recurring_generated ("auto-posted").
+ * poster records on their own dates. A template the old generator could not post (its account archived or
+ * deleted, or its category deleted) becomes a paused series without occurrences instead of a pile of
+ * overdue plans. Then transactions.recurring_transaction_id and the table are dropped; transactions keep
+ * is_recurring_generated ("auto-posted").
  *
  * Irreversible. Drain the queue before deploying, so no recurring job runs against the dropped table.
  */
 return new class extends Migration
 {
     private const HORIZON_MONTHS = 12;
-
-    private const MAX_OCCURRENCES = 120;
 
     public function up(): void
     {
@@ -33,7 +34,11 @@ return new class extends Migration
                 ->join('accounts', 'accounts.id', '=', 'recurring_transactions.account_id')
                 ->join('users', 'users.id', '=', 'recurring_transactions.user_id')
                 ->leftJoin('categories', 'categories.id', '=', 'recurring_transactions.category_id')
-                ->select('recurring_transactions.*', 'accounts.currency', 'users.timezone', 'categories.name as category_name')
+                ->select(
+                    'recurring_transactions.*', 'accounts.currency', 'users.timezone', 'categories.name as category_name',
+                    'accounts.is_active as account_active', 'accounts.deleted_at as account_deleted_at',
+                    'categories.id as category_exists', 'categories.deleted_at as category_deleted_at',
+                )
                 ->orderBy('recurring_transactions.id')
                 ->chunk(100, function ($rows) {
                     foreach ($rows as $row) {
@@ -62,7 +67,9 @@ return new class extends Migration
         $firstDate = DB::table('transactions')->where('recurring_transaction_id', $row->id)->min('date');
         $first = $firstDate !== null ? CarbonImmutable::parse($firstDate) : null;
         $startsOn = $this->anchor($row->frequency, $nextDue, $first, $row->day_of_month !== null ? (int) $row->day_of_month : null);
-        $active = (bool) $row->is_active && ($endsOn === null || $endsOn->gte($nextDue));
+        $postable = (bool) $row->account_active && $row->account_deleted_at === null
+            && $row->category_exists !== null && $row->category_deleted_at === null;
+        $active = (bool) $row->is_active && $postable && ($endsOn === null || $endsOn->gte($nextDue));
         $now = now();
 
         $attributes = [
@@ -96,7 +103,7 @@ return new class extends Migration
         }
 
         $occurrences = [];
-        for ($step = 0; $step < 10000 && count($occurrences) < self::MAX_OCCURRENCES; $step++) {
+        for ($step = 0; $step < 10000; $step++) {
             $date = $this->nth($row->frequency, $startsOn, $step);
             if ($date->gt($until)) {
                 break;
@@ -121,32 +128,40 @@ return new class extends Migration
     }
 
     /**
-     * The date the rhythm is counted from. Weekly rhythms keep the next due date. A monthly one keeps the day
-     * of the month the template was set to (or that its first transaction fell on) in the next due date's
-     * month, or the closest earlier month that has that day. A yearly one keeps the first transaction's month
-     * and day in the latest year up to the next due date's year that has it (a 29 February needs a leap year).
+     * The date the rhythm is counted from: the next due date, unless the old generator bent the rhythm. It
+     * chained dates with "no overflow", so a monthly template on the 29th-31st sank to the 28th after February
+     * for good, and a yearly one on 29 February stayed on the 28th. Only then is the rhythm re-anchored on its
+     * day (the template's day of month or its first transaction's day), and always so that the first
+     * occurrence still falls in the next due date's own month. A next due date the user moved stays as it is.
      */
     private function anchor(string $frequency, CarbonImmutable $nextDue, ?CarbonImmutable $first, ?int $dayOfMonth): CarbonImmutable
     {
         if ($frequency === 'monthly') {
             $day = $dayOfMonth ?? $first?->day ?? $nextDue->day;
+            if ($day <= $nextDue->day || $nextDue->day < 28) {
+                return $nextDue;
+            }
+
+            if ($nextDue->daysInMonth >= $day) {
+                return $nextDue->setDay($day);
+            }
+
+            // Counted from the closest earlier month that has the day, it clamps back to this month's last day.
             $month = $nextDue->startOfMonth();
             for ($i = 0; $i < 12 && $month->daysInMonth < $day; $i++) {
                 $month = $month->subMonthNoOverflow();
             }
 
-            return $month->setDay(min($day, $month->daysInMonth));
+            return $month->setDay($day);
         }
 
-        if ($frequency === 'yearly') {
-            $source = $first ?? $nextDue;
+        if ($frequency === 'yearly' && $first !== null && $first->month === 2 && $first->day === 29
+            && $nextDue->month === 2 && $nextDue->day === 28) {
             for ($year = $nextDue->year; $year > $nextDue->year - 8; $year--) {
-                if (checkdate($source->month, $source->day, $year)) {
-                    return CarbonImmutable::create($year, $source->month, $source->day)->startOfDay();
+                if (checkdate(2, 29, $year)) {
+                    return CarbonImmutable::create($year, 2, 29)->startOfDay();
                 }
             }
-
-            return $nextDue;
         }
 
         return $nextDue;

@@ -6,6 +6,7 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Events\PlannedPostingFailed;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
 use App\Modules\Planning\Services\SeriesPoster;
@@ -13,6 +14,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -159,6 +161,58 @@ class RecurringToSeriesMigrationTest extends TestCase
         $this->assertSame('2027-02-15', $ending->ends_on->toDateString());
         $this->assertSame(['2026-12-01', '2027-01-01', '2027-02-01'], $this->openDates($ending));
         $this->assertSame(3, PlannedEvent::count());
+    }
+
+    public function test_a_next_due_date_the_user_moved_keeps_its_rhythm(): void
+    {
+        $monthly = $this->template(['next_due_date' => '2026-11-15']);
+        $this->generated($monthly, '2026-01-31');
+        $yearly = $this->template(['description' => 'Yearly', 'frequency' => 'yearly', 'next_due_date' => '2026-12-01']);
+        $this->generated($yearly, '2023-06-10');
+
+        $this->migrate();
+
+        $rent = PlannedEventSeries::where('description', 'Rent')->sole();
+        $this->assertSame('2026-11-15', $rent->starts_on->toDateString());
+        $this->assertSame(['2026-11-15', '2026-12-15', '2027-01-15'], array_slice($this->openDates($rent), 0, 3));
+
+        $year = PlannedEventSeries::where('description', 'Yearly')->sole();
+        $this->assertSame('2026-12-01', $year->starts_on->toDateString());
+        $this->assertSame(['2026-12-01'], $this->openDates($year));
+    }
+
+    public function test_a_template_its_account_or_category_kept_from_posting_becomes_paused_without_occurrences(): void
+    {
+        $this->account->update(['is_active' => false]);
+        $this->template(['description' => 'Archived', 'next_due_date' => '2026-05-01']);
+        $active = Account::factory()->for($this->user)->create(['currency' => 'USD']);
+        $deletedCategory = Category::factory()->expense()->create(['user_id' => $this->user->id]);
+        $this->template(['description' => 'No category', 'account_id' => $active->id, 'category_id' => $deletedCategory->id, 'next_due_date' => '2026-06-01']);
+        $deletedCategory->delete();
+
+        $this->migrate();
+
+        $this->assertFalse(PlannedEventSeries::where('description', 'Archived')->sole()->is_active);
+        $this->assertFalse(PlannedEventSeries::where('description', 'No category')->sole()->is_active);
+        $this->assertSame(0, PlannedEvent::count());
+
+        Event::fake([PlannedPostingFailed::class]);
+        $this->assertSame(0, app(SeriesPoster::class)->postDue());
+        Event::assertNotDispatched(PlannedPostingFailed::class);
+    }
+
+    public function test_a_weekly_template_far_behind_gets_every_date_up_to_the_horizon(): void
+    {
+        // 2024-01-04 + 7k <= 2027-11-10 (today + 12 months) for k = 0..200: 201 Thursdays.
+        $this->template(['frequency' => 'weekly', 'next_due_date' => '2024-01-04']);
+
+        $this->migrate();
+
+        $dates = $this->openDates(PlannedEventSeries::sole());
+        $this->assertCount(201, $dates);
+        $this->assertSame('2024-01-04', $dates[0]);
+        $this->assertContains('2026-11-05', $dates);
+        $this->assertSame('2027-11-04', end($dates));
     }
 
     public function test_weekly_and_yearly_rhythms(): void

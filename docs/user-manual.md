@@ -581,8 +581,11 @@ to assign.
 
 **Where did Recurring transactions go?** They became repeating plans on **Planning → Upcoming & cash flow**, under
 **Repeating plans**. Each one kept its account, category, amount and rhythm and records itself on its date
-(**Record it automatically on the date** is on). If one was behind, the missed dates were recorded on their own dates.
-A paused or ended one is listed as **Paused**. Transactions it created before are still marked as recorded
+(**Record it automatically on the date** is on), keeping the next date it was due on. If one was behind, every missed
+date became a plan that is recorded on its own date the next time the app records plans. One that could no longer
+record itself because its account was archived or deleted, or its category deleted, was not caught up: it is listed
+as **Paused** with no dates; point it at an active account and category and resume it. A paused or ended one is also
+listed as **Paused**. Transactions it created before are still marked as recorded
 automatically, and the old menu link takes you to the new list.
 
 **Where did my "Unallocated" bucket go?** It was replaced by ready to assign, which is calculated instead of stored.
