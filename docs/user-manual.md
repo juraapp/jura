@@ -229,6 +229,8 @@ changes ready to assign.
 - **Expected**: confirmed and expected income count.
 - **Optimistic**: all planned income counts.
 
+*Expected* is the default on every page that projects the future (cash flow, planner, buckets, reports).
+
 Planned expenses always count in full in every view. The chart and table show, month by month, the planned
 income, planned expenses and your projected balance, per currency. Today's balance is your real net worth.
 
@@ -451,8 +453,8 @@ per cycle, *share of what is left*, step-ups, and buckets that close when their 
 
 **How to use it.**
 1. Choose **how sure the income should be**: *Conservative* (only confirmed income), *Expected* (confirmed and
-   expected) or *Optimistic* (everything). Conservative is the default, so the planner never promises money that may
-   not arrive. Choose how far ahead to look (12, 24 or 36 months).
+   expected) or *Optimistic* (everything). *Expected* is the default, as everywhere else; pick *Conservative* when you
+   only want to count money that is certain. Choose how far ahead to look (12, 24 or 36 months).
 2. Tick the items you want to buy and press **Suggest the best order**. The planner proposes several orders and marks
    one as **Recommended**:
    - **Best overall** balances how much you want each item against how long it waits.

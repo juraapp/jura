@@ -28,12 +28,13 @@ const props = defineProps({
     currencies: { type: Array, required: true },
     scenarios: { type: Array, required: true },
     views: { type: Array, required: true },
+    defaultView: { type: String, default: 'expected' },
     horizons: { type: Array, required: true },
     hasFillRules: { type: Boolean, required: true },
 });
 
 const currency = ref(props.currencies[0] ?? 'COP');
-const view = ref('conservative');
+const view = ref(props.defaultView);
 const horizon = ref(12);
 
 const viewHints = computed(() => ({

@@ -39,8 +39,9 @@ class CycleProjector
      * @return array<int, array{start: Carbon, end: Carbon, available: Money, provisional: Money, projectedEnd: Money, projectedRelease: Money, projectedIn: Money, projectedClose: Money}>
      *                                                                                                                                                                                      keyed by bucket id
      */
-    public function project(User $user, string $currency, ForecastView $view = ForecastView::Conservative, ?CarbonInterface $today = null): array
+    public function project(User $user, string $currency, ?ForecastView $view = null, ?CarbonInterface $today = null): array
     {
+        $view ??= ForecastView::default();
         $today = Carbon::instance($today ?? $user->today())->startOfDay();
         $buckets = Bucket::forUser($user)->where('currency', $currency)->inPriorityOrder()->get();
 

@@ -13,7 +13,7 @@ class BucketsReportController extends Controller
 {
     public function __invoke(Request $request, PlanningReportService $reports): Response
     {
-        $view = ForecastView::tryFrom((string) $request->query('view')) ?? ForecastView::Expected;
+        $view = ForecastView::fromRequest($request->query('view'));
 
         return Inertia::render('Reports/Buckets', [
             'currencies' => $reports->buckets($request->user(), $view),

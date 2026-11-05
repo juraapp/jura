@@ -43,13 +43,13 @@ class PlanningReportService
         }
 
         $currencies = $actual->keys()
-            ->merge($projections[ForecastView::Expected->value]->keys())
+            ->merge($projections[ForecastView::default()->value]->keys())
             ->unique()
             ->sort()
             ->values();
 
         return $currencies->map(function (string $currency) use ($actual, $projections) {
-            $expected = $projections[ForecastView::Expected->value]->get($currency);
+            $expected = $projections[ForecastView::default()->value]->get($currency);
 
             return [
                 'currency' => $currency,
@@ -118,7 +118,7 @@ class PlanningReportService
     public function upcoming(User $user, int $days = 30): array
     {
         $today = Carbon::instance($user->today());
-        $window = $this->forecast->window($user, ForecastView::Expected, $today, $today->copy()->addDays($days));
+        $window = $this->forecast->window($user, ForecastView::default(), $today, $today->copy()->addDays($days));
 
         return collect($window)->map(fn (array $totals, string $currency) => [
             'currency' => $currency,
