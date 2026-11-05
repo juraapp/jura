@@ -51,6 +51,7 @@ class PlannerController extends Controller
                 ])->values(),
             ])->values(),
             'views' => collect(ForecastView::cases())->map(fn (ForecastView $view) => ['value' => $view->value, 'label' => $view->label()]),
+            'defaultView' => ForecastView::default()->value,
             'horizons' => [12, 24, 36],
             'hasFillRules' => Bucket::whereNotNull('fill_rule')->exists(),
         ]);

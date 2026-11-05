@@ -82,6 +82,7 @@ class PlannerTest extends TestCase
             ->where('scenarios.0.name', 'Bike first')
             ->where('scenarios.0.lines.0.itemId', $this->bike->id)
             ->where('hasFillRules', true)
+            ->where('defaultView', 'expected')
         );
     }
 

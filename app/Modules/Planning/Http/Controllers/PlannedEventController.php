@@ -36,7 +36,7 @@ class PlannedEventController extends Controller
     {
         $this->authorize('viewAny', PlannedEvent::class);
 
-        $view = ForecastView::tryFrom((string) $request->query('view')) ?? ForecastView::Expected;
+        $view = ForecastView::fromRequest($request->query('view'));
         $months = max(3, min(12, (int) $request->query('months', 6)));
         $monthStart = Carbon::instance($request->user()->today())->startOfMonth();
         $horizonEnd = $monthStart->copy()->addMonthsNoOverflow($months)->subDay();

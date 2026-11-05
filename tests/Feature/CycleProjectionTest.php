@@ -99,10 +99,12 @@ class CycleProjectionTest extends TestCase
         $this->assertSame('100.00', $this->projection()[$this->groceries->id]['projectedRelease']->toDecimalString());
     }
 
-    public function test_income_that_is_only_expected_is_ignored_by_the_conservative_view(): void
+    public function test_by_default_expected_income_counts_and_speculative_income_does_not(): void
     {
-        PlannedEvent::query()->update(['certainty' => 'speculative']);
+        PlannedEvent::query()->update(['certainty' => 'expected']);
+        $this->assertSame('500.00', $this->projection()[$this->groceries->id]['provisional']->toDecimalString());
 
+        PlannedEvent::query()->update(['certainty' => 'speculative']);
         $this->assertSame('0.00', $this->projection()[$this->groceries->id]['provisional']->toDecimalString());
     }
 
