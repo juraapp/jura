@@ -21,8 +21,8 @@ use App\Modules\Planning\Services\AssignGuard;
 use App\Modules\Planning\Services\BucketCycleService;
 use App\Modules\Planning\Services\BucketLedger;
 use App\Modules\Planning\Services\BucketManager;
+use App\Modules\Planning\Services\BucketProjection;
 use App\Modules\Planning\Services\BucketService;
-use App\Modules\Planning\Services\CycleProjector;
 use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Http\Requests\BulkIdsRequest;
@@ -38,7 +38,7 @@ use Inertia\Response;
 
 class BucketController extends Controller
 {
-    public function index(BucketService $limits, BucketLedger $funds, PlannedEventService $planned, LedgerQuery $ledger, CycleProjector $projector): Response
+    public function index(BucketService $limits, BucketLedger $funds, PlannedEventService $planned, LedgerQuery $ledger, BucketProjection $projector): Response
     {
         $this->authorize('viewAny', Bucket::class);
 
@@ -311,7 +311,7 @@ class BucketController extends Controller
         return $figures['filled']->add($figures['moved_in'])->toFloat();
     }
 
-    public function history(Bucket $bucket, BucketLedger $funds, BucketCycleService $cycles, CycleProjector $projector): Response
+    public function history(Bucket $bucket, BucketLedger $funds, BucketCycleService $cycles, BucketProjection $projector): Response
     {
         $this->authorize('view', $bucket);
 

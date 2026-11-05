@@ -23,7 +23,8 @@ use Carbon\CarbonInterface;
  * accounts), every bucket's envelope, and the open planned money (PlannedOccurrences) that moves on-budget cash.
  * Incomes count when the view trusts them and they land in the budget (an on-budget account, or no account);
  * expenses count when they leave the budget (or have no account); a planned transfer counts only when it crosses
- * the budget's edge. Projected interest is left out. Memoized per instance (one request).
+ * the budget's edge. Projected interest is left out. Memoized per instance: a service holding one builds once per
+ * request (the container hands every service its own instance, so data saved in between is never served stale).
  */
 class ForecastInputBuilder
 {

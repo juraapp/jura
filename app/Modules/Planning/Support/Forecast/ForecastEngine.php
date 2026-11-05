@@ -17,7 +17,8 @@ use WeakMap;
  * Cycles close with their carry-over. The scenario's items are bought strictly in order at the earliest day they
  * can be paid: from their bucket first, the rest from free money, and only when the cash left after every later
  * planned flow (the lowest end-of-day balance from that day on) still covers them. A later dip of ready to assign
- * below zero only warns. Same-day order: flows, then cycle closes, then purchases. Pure: no I/O.
+ * below zero only warns. Same-day order: flows (incomes, then transfers, then expenses), then cycle closes, then
+ * purchases. Pure: no I/O.
  */
 final class ForecastEngine
 {
@@ -85,7 +86,8 @@ final class ForecastEngine
         $dates = [$start->format('Y-m-d')];
 
         $flows = $input->flows;
-        usort($flows, fn (EngineFlow $a, EngineFlow $b) => [$a->date->format('Y-m-d'), $a->seq] <=> [$b->date->format('Y-m-d'), $b->seq]);
+        $rank = [FlowKind::Income->value => 0, FlowKind::Boundary->value => 1, FlowKind::Expense->value => 2];
+        usort($flows, fn (EngineFlow $a, EngineFlow $b) => [$a->date->format('Y-m-d'), $rank[$a->kind->value], $a->seq] <=> [$b->date->format('Y-m-d'), $rank[$b->kind->value], $b->seq]);
         foreach ($flows as $flow) {
             $date = $flow->date->lt($start) ? $start : $flow->date->startOfDay();
             if ($date->gt($end)) {

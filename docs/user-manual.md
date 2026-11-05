@@ -373,7 +373,9 @@ for every finished cycle. The bucket's overall target is unchanged: money carrie
 current cycle (for example a holiday month). Clear it to go back to the usual limit.
 
 **End of the cycle (advanced).** Choose what happens to what is left: **keep it** in the bucket, **return it to ready
-to assign**, or **move it** to another bucket (the overflow bucket).
+to assign**, or **move it** to another bucket (the overflow bucket). The card and the history page show what the
+current cycle is expected to end with: the planned income still to come (in the *Expected* view), minus the planned
+spending in its category, and what would then return or move.
 
 **Only from certain accounts (advanced).** Tick accounts to make a bucket fill only from income that lands there, for
 example a "Physical money" stash. Income in other accounts skips it. Only accounts in the bucket's currency are listed.
@@ -632,8 +634,8 @@ What it held is now simply ready to assign, and buckets that sent leftovers to i
   bank pays it. A bucket's fill amount cannot differ in just the first month, and a step-up always starts at the
   next cycle.
 - Jura never converts between currencies. Each currency is planned, projected and reported on its own.
-- Planned expenses reduce your projected account balance but do not take money out of buckets, and spending in a
-  category is not predicted when the planner looks ahead.
+- Only planned expenses are projected: a planned expense in a category comes out of the buckets that track it, but
+  spending you have not planned is not predicted.
 - Something that already happened and repeats cannot be recorded and planned in one step yet: record it as a
   transaction, then add a repeating plan starting on the next date.
 - A planned transfer to or from an account outside your budget does not yet show its effect on ready to assign.
