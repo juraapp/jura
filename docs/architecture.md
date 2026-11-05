@@ -50,7 +50,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
    - `Ledger\Contracts\LedgerQuery`: expense totals (open-ended and on-budget-only for bucket envelopes), on-budget account checks, account/category option lists, account currency and similar-transaction lookups. Every method takes the user id explicitly, so it stays scoped in jobs and console commands.
    - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record` and `recordTransfer`, which returns the outgoing leg's id); `autoPosted: true` marks a transaction the app recorded by itself (`is_recurring_generated`).
    - `Planning\Contracts\BucketProgress`: spending-bucket spent/remaining/status.
-   - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances and planned money in a date window.
+   - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances, projected on-budget cash (`budgetMonthly`) and planned money in a date window.
    - `Planning\Contracts\MoneyMap`: per currency, money in on-budget accounts, in funded bucket envelopes, and ready to assign (computed, never stored).
    - `Planning\Contracts\UpcomingPlans`: open plans for other modules' pages: overdue and upcoming bands (`listBands`, 10 rows each plus a count, filterable by account, category and type), which transactions came from a plan (`provenance`), and the needs-review inbox (`needsReview`, `needsReviewCount`: overdue plans and ones that could not auto-post). Ledger may consume Planning contracts like any other module.
    - `Planning\Contracts\PlanningOverview`: bucket balances, allocation history, projected bucket balances and project summaries for reports.
