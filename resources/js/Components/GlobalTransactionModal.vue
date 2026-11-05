@@ -12,7 +12,8 @@ import { formOptions as plannedFormOptions } from '@/actions/App/Modules/Plannin
 
 /**
  * The modal around the one money-movement form. It loads the account and category lists once, and the
- * plan options (frequencies, certainties, buckets) the first time a plan is shown.
+ * plan options (frequencies, certainties, buckets) the first time a plan is shown each time it opens, so a
+ * bucket added since shows up.
  */
 const { t } = useI18n();
 const { isOpen, intent, editingTransaction, plannedEvent, seriesId, defaultType, defaultWhen, openCount, openSeries, close } = useTransactionModal();
@@ -66,6 +67,7 @@ const failed = () => {
 
 const prepare = async () => {
     ready.value = false;
+    plannedOptions = null;
     try {
         await loadOptions();
         ready.value = true;
