@@ -289,6 +289,32 @@ class ForecastEngineTest extends TestCase
         $this->assertSame(['2026-10-20', '2026-10-20'], [$result->lines[0]->purchaseDate->toDateString(), $result->lines[1]->purchaseDate->toDateString()]);
     }
 
+    public function test_an_item_that_cannot_be_bought_in_time_is_parked_at_the_end_when_asked(): void
+    {
+        // 1,000 free and no income: the 5,000 TV can never be bought, so in strict order it blocks the 300 lamp and the
+        // 200 rug. Parked, it moves to the end and the other two are bought today.
+        $lines = [$this->line(1, 5000), $this->line(2, 300), $this->line(3, 200)];
+
+        $strict = $this->simulate($this->input(1000, [], [], '2026-12-31'), $lines);
+        $this->assertNull($strict->lines[1]->purchaseDate);
+
+        $parked = (new ForecastEngine)->run($this->input(1000, [], [], '2026-12-31'), $lines, parkUnaffordable: true);
+
+        $this->assertSame([2, 3, 1], array_map(fn ($line) => $line->itemId, $parked->lines));
+        $this->assertSame([self::START, self::START, null], array_map(fn ($line) => $line->purchaseDate?->toDateString(), $parked->lines));
+        $this->assertSame([false, false, true], array_map(fn ($line) => $line->parked, $parked->lines));
+        $this->assertSame('4500.00', $this->money($parked->lines[2]->shortfall), '5,000 - the 500 left after the lamp and the rug');
+    }
+
+    public function test_parking_stops_once_only_parked_items_follow(): void
+    {
+        // Both are out of reach: the first is parked once, then the second is first and only a parked item follows it.
+        $parked = (new ForecastEngine)->run($this->input(100, [], [], '2026-12-31'), [$this->line(1, 5000), $this->line(2, 6000)], parkUnaffordable: true);
+
+        $this->assertSame([2, 1], array_map(fn ($line) => $line->itemId, $parked->lines));
+        $this->assertSame([false, true], array_map(fn ($line) => $line->parked, $parked->lines));
+    }
+
     public function test_a_purchase_that_leaves_ready_to_assign_below_zero_later_is_flagged(): void
     {
         // Cash 1,000, 500 earmarked: 500 free. The 400 item is bought today (the lowest cash later is 700). After the

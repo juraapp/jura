@@ -45,6 +45,7 @@ const lastDate = computed(() => {
                     <div class="min-w-0">
                         <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
                             <span class="mr-1.5 text-xs font-semibold text-gray-400">{{ index + 1 }}.</span>{{ line.name }}
+                            <span v-if="line.parked" class="ml-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ $t('ui.scenario.parked_badge') }}</span>
                         </p>
                         <p class="mt-0.5 text-xs text-gray-400"><Money :amount="line.price" :currency="currency" /></p>
                         <p v-if="line.purchaseDate && line.fromBucket > 0" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
@@ -71,6 +72,7 @@ const lastDate = computed(() => {
                 <p v-if="line.late" class="mt-1 text-xs font-medium text-red-600 dark:text-red-400">
                     <DynamicIcon name="exclamation-triangle" class="mr-1 inline h-3.5 w-3.5" />{{ $t('ui.scenario.late') }}
                 </p>
+                <p v-if="line.parked" class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.scenario.parked') }}</p>
                 <p v-if="line.freeDipsOn" class="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
                     <DynamicIcon name="exclamation-triangle" class="mr-1 inline h-3.5 w-3.5" />{{ $t('ui.scenario.dips_warning', { date: formatDate(line.freeDipsOn) }) }}
                 </p>

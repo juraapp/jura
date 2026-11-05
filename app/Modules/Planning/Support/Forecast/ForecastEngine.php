@@ -32,8 +32,56 @@ final class ForecastEngine
 
     /**
      * @param  list<EngineLine>  $lines  the scenario, in purchase order
+     * @param  bool  $parkUnaffordable  move an item that cannot be bought within the horizon to the end (marked parked),
+     *                                  so it does not hold back the items after it; at most once per item
      */
-    public function run(EngineInput $input, array $lines): EngineResult
+    public function run(EngineInput $input, array $lines, bool $parkUnaffordable = false): EngineResult
+    {
+        $result = $this->runOrder($input, $lines);
+        if (! $parkUnaffordable) {
+            return $result;
+        }
+
+        $parked = 0;
+        for ($attempt = 0; $attempt < count($lines) - 1; $attempt++) {
+            $first = null;
+            foreach ($result->lines as $index => $line) {
+                if ($line->purchaseDate === null && $line->blocked === null) {
+                    $first = $index;
+                    break;
+                }
+            }
+
+            // Nothing waits, or only parked items follow it: moving it to the end changes nothing.
+            if ($first === null || $first >= count($lines) - $parked - 1) {
+                break;
+            }
+
+            $moved = $lines[$first];
+            array_splice($lines, $first, 1);
+            $lines[] = $moved;
+            $parked++;
+            $result = $this->runOrder($input, $lines);
+        }
+
+        if ($parked === 0) {
+            return $result;
+        }
+
+        $count = count($result->lines);
+        $marked = array_map(
+            fn (LineResult $line, int $index) => $index >= $count - $parked ? $line->parked() : $line,
+            $result->lines,
+            array_keys($result->lines),
+        );
+
+        return new EngineResult($marked, $result->endBalances, $result->endCash, $result->endReadyToAssign, $result->timeline, $result->cycles, $result->reached, $result->incomes);
+    }
+
+    /**
+     * @param  list<EngineLine>  $lines
+     */
+    private function runOrder(EngineInput $input, array $lines): EngineResult
     {
         $schedule = $this->schedules[$input] ??= $this->schedule($input);
 

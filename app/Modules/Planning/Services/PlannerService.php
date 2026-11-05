@@ -111,12 +111,15 @@ class PlannerService
     }
 
     /**
+     * Plays a user-built order. An item that cannot be bought in time is parked at the end so it does not hold back
+     * the ones after it (suggestions never need this: they already put such items last).
+     *
      * @param  list<EngineLine>  $lines
      * @return array<string, mixed>
      */
     public function simulate(PlannerContext $context, array $lines): array
     {
-        $result = $this->engine->run($context->input, $lines);
+        $result = $this->engine->run($context->input, $lines, parkUnaffordable: true);
 
         return $this->present($context, $result, $this->suggester->score($context->input, $result));
     }

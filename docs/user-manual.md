@@ -491,7 +491,9 @@ per cycle, *share of what is left*, step-ups, and buckets that close when their 
 
 **Building your own order.** Press **Build my own order** (or **Adjust this order** on a suggestion). Use the arrows to
 move items earlier or later. Items are bought **strictly in the order shown**: moving something earlier makes the others
-wait. An optional **Not before** date holds an item back. The result updates as you change things.
+wait. An optional **Not before** date holds an item back. The result updates as you change things. An item that cannot
+be bought within the look-ahead would hold back everything after it, so the planner **parks** it: it moves to the end
+of the result with a *Parked* badge and the items after it are planned as if it were not there.
 
 **Saving and comparing.** Save any order as a plan. Tick two or more saved plans to compare them side by side: for
 each item you see when it would be bought in each plan, plus an overall score (lower is better). Changing *How sure*

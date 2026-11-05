@@ -39,4 +39,15 @@ final readonly class LineResult
         $this->fromBucket = $fromBucket ?? Money::zero();
         $this->fromFree = $fromFree ?? Money::zero();
     }
+
+    /**
+     * The same result, marked as moved to the end of the order.
+     */
+    public function parked(): self
+    {
+        return new self(
+            $this->itemId, $this->name, $this->price, $this->purchaseDate, $this->delayDays, $this->shortfall, $this->blocked,
+            $this->late, $this->importance, $this->fromBucket, $this->fromFree, $this->limitedBy, true, $this->freeDipsOn, $this->warnings,
+        );
+    }
 }

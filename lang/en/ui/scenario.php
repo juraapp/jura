@@ -13,6 +13,8 @@ return [
     'limited_cash' => 'Waiting for cash: later planned expenses need the money in your accounts',
     'cap_warning' => 'Its bucket stops filling below the price; the rest comes from ready to assign',
     'dips_warning' => 'Leaves ready to assign short on {date}',
+    'parked' => 'Moved to the end: it cannot be bought in time, so it no longer holds back the items after it',
+    'parked_badge' => 'Parked',
     'not_in' => 'Not in {count} months',
     'needs' => 'needs',
     'more' => 'more',
