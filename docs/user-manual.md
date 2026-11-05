@@ -540,7 +540,8 @@ You are notified once per crossing; an unread alert is not repeated.
 ## Preferences, profile and appearance
 
 - **Settings → Preferences**: default **currency**, **language** (English or Spanish) and **time zone**. These
-  control how amounts, dates and text appear everywhere. Changing the language applies right after you save, with no reload.
+  control how amounts, dates and text appear everywhere. Changing the language applies right after you save, with no reload. Notifications are written in your language too,
+  also the ones sent while you are away.
   The time zone decides what "today" is: new transactions and plans default to today's date where you live, plans
   become overdue, plans that record themselves are recorded and bucket cycles close when the day changes there, and the
   dashboard and reports open on your current month.
