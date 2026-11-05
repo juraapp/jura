@@ -100,7 +100,7 @@ composable's shape rather than reaching for `provide`/`inject` or a state librar
 The shell fetches reference data **on demand** via plain `fetch()` against small non-Inertia JSON endpoints rather than
 shared Inertia props: `TransactionController@formOptions` once (accounts with `id`, `name`, `currency`, `on_budget`, and
 categories), `PlannedEventController@formOptions` (`planned-events.form-options`: frequencies, certainties, buckets) the
-first time a plan is shown, and on every open the form fetches `editData`, `planned-series.edit-data` and the bucket
+first time a plan is shown in each open (so a new bucket appears), and on every open the form fetches `editData`, `planned-series.edit-data` and the bucket
 `spend-options`. These `fetch()` calls need a manual CSRF header (`resources/js/csrf.js`'s `withCsrfHeader()`, reading
 the `XSRF-TOKEN` cookie) when they are not GETs, since they bypass Inertia's router. The CSV import wizard
 (`Pages/Transactions/Import.vue`) uses the same `fetch()` + `withCsrfHeader()` pattern against its own `parse`/`store`
