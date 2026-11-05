@@ -21,7 +21,8 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * Every projection reads the same open planned money (PlannedOccurrences), to any horizon.
+ * Every projection reads the same open planned money (PlannedOccurrences), to any horizon. Expected figures
+ * are worked out by hand from the plans in setUp.
  */
 class ProjectionConsistencyTest extends TestCase
 {
@@ -63,23 +64,20 @@ class ProjectionConsistencyTest extends TestCase
         return $total->toDecimalString();
     }
 
-    public function test_cash_flow_income_equals_the_open_occurrences_for_the_same_window_and_currency(): void
+    /**
+     * Today is 2026-11-10; the window is Nov 2026 to Oct 2028 (24 months). Income: salary 24 x 1000 = 24000,
+     * rent 24 x 300 = 7200, the bonus 500 and the overdue 40 (counted this month) = 31740. Paused and ended
+     * series add nothing. Expense: the 20 on 2026-12-03.
+     */
+    public function test_cash_flow_counts_every_open_occurrence_to_any_horizon(): void
     {
-        $months = 24;
-        $end = Carbon::parse('2026-11-01')->addMonthsNoOverflow($months)->subDay();
-        $items = app(PlannedOccurrences::class)->open($this->user, $end, 'COP');
+        $projection = app(CashFlowProjector::class)->project($this->user, ForecastView::Optimistic, 24)->get('COP');
 
-        $projection = app(CashFlowProjector::class)->project($this->user, ForecastView::Optimistic, $months)->get('COP');
-
-        $this->assertSame(
-            $this->sum($items->filter(fn (ProjectedItem $item) => $item->isIncome())->pluck('amount')),
-            $this->sum(collect($projection['months'])->pluck('income')),
-        );
-        $this->assertSame(
-            $this->sum($items->filter(fn (ProjectedItem $item) => $item->isExpense())->pluck('amount')),
-            $this->sum(collect($projection['months'])->pluck('expense')),
-        );
-        $this->assertSame('40.00', $projection['months'][0]['income']->subtract(Money::of(1300))->toDecimalString(), 'the overdue income counts this month');
+        $this->assertSame('31740.00', $this->sum(collect($projection['months'])->pluck('income')));
+        $this->assertSame('20.00', $this->sum(collect($projection['months'])->pluck('expense')));
+        $this->assertSame('1340.00', $projection['months'][0]['income']->toDecimalString(), 'salary, rent and the overdue income');
+        $this->assertSame('20.00', $projection['months'][1]['expense']->toDecimalString());
+        $this->assertSame('1800.00', $projection['months'][7]['income']->toDecimalString(), 'June 2027 adds the bonus');
     }
 
     public function test_paused_and_ended_series_add_nothing_beyond_what_is_stored(): void
@@ -90,13 +88,17 @@ class ProjectionConsistencyTest extends TestCase
         $this->assertSame(0, $items->filter(fn (ProjectedItem $item) => $item->amount->toDecimalString() === '50.00')->count());
     }
 
+    /**
+     * The planner looks 24 months ahead from 2026-11-10 (to 2028-11-10): salary on the 25th and rent on the
+     * 15th from Nov 2026 to Oct 2028 (24 each; the November 2028 dates are after the horizon), plus the bonus
+     * and the overdue 40: 24000 + 7200 + 500 + 40 = 31740 over 50 incomes.
+     */
     public function test_the_planner_sees_the_same_incomes(): void
     {
         $context = app(PlannerService::class)->context($this->user, 'COP', ForecastView::Optimistic, 24);
-        $end = Carbon::instance($this->user->today())->addMonthsNoOverflow(24);
-        $items = app(PlannedOccurrences::class)->open($this->user, $end, 'COP', TransactionType::Income);
 
-        $this->assertSame($this->sum($items->pluck('amount')), $this->sum(array_map(fn (EngineIncome $income) => $income->amount, $context->input->incomes)));
+        $this->assertCount(50, $context->input->incomes);
+        $this->assertSame('31740.00', $this->sum(array_map(fn (EngineIncome $income) => $income->amount, $context->input->incomes)));
     }
 
     public function test_a_24_month_horizon_includes_months_13_to_24(): void
