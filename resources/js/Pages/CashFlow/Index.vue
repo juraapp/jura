@@ -109,6 +109,8 @@ const chartOptions = (currency) => ({
     legend: { labels: { colors: [palette().text, palette().text, palette().text], useSeriesColors: false } },
     tooltip: { y: { formatter: (v) => formatMoney(v, currency.currency, locale()) } },
 });
+/* On-budget cash and projected ready to assign exist only for currencies with accounts in the budget or buckets. */
+const hasBudget = (currency) => currency.months.some((m) => m.onBudget !== null && m.onBudget !== undefined);
 const hasInterest = (currency) => currency.months.some((m) => m.interest > 0);
 const chartSeries = (currency) => [
     { name: t('ui.cash_flow.s_income'), type: 'column', data: currency.months.map((m) => m.income) },
@@ -203,6 +205,8 @@ const deleteEvent = () => {
                                     <th v-if="hasInterest(currency)" class="px-4 py-2 text-right font-semibold" :title="$t('ui.cash_flow.interest_hint')">{{ $t('ui.cash_flow.interest') }}</th>
                                     <th class="px-4 py-2 text-right font-semibold">{{ $t('ui.cash_flow.net') }}</th>
                                     <th class="py-2 pl-4 text-right font-semibold">{{ $t('ui.cash_flow.balance') }}</th>
+                                    <th v-if="hasBudget(currency)" class="py-2 pl-4 text-right font-semibold">{{ $t('ui.cash_flow.on_budget_cash') }}</th>
+                                    <th v-if="hasBudget(currency)" class="py-2 pl-4 text-right font-semibold">{{ $t('ui.cash_flow.ready_projected') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -215,10 +219,19 @@ const deleteEvent = () => {
                                     <td class="py-2 pl-4 text-right font-semibold" :class="row.closing < 0 ? 'text-red-600 dark:text-red-400' : ''">
                                         <Money :amount="row.closing" :currency="currency.currency" />
                                     </td>
+                                    <td v-if="hasBudget(currency)" class="py-2 pl-4 text-right" :class="row.onBudget < 0 ? 'text-red-600 dark:text-red-400' : ''">
+                                        <Money :amount="row.onBudget ?? 0" :currency="currency.currency" />
+                                    </td>
+                                    <td v-if="hasBudget(currency)" class="py-2 pl-4 text-right font-semibold" :class="row.readyToAssign < 0 ? 'text-red-600 dark:text-red-400' : 'text-primary-700 dark:text-primary-400'">
+                                        <Money :amount="row.readyToAssign ?? 0" :currency="currency.currency" signed />
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                    <p v-if="hasBudget(currency)" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        {{ $t('ui.cash_flow.projected_note') }} {{ $t('ui.cash_flow.no_interest_note') }}
+                    </p>
                 </div>
             </section>
 

@@ -4,13 +4,18 @@ namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
+use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Enums\Certainty;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Enums\PlannedEventStatus;
+use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Services\BucketLedger;
 use App\Modules\Planning\Services\CashFlowProjector;
+use App\Modules\Shared\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class CashFlowProjectorTest extends TestCase
@@ -128,5 +133,25 @@ class CashFlowProjectorTest extends TestCase
     public function test_accounts_without_a_rate_earn_nothing(): void
     {
         $this->assertSame('0.00', $this->months(ForecastView::Conservative)[0]['interest']->toDecimalString());
+    }
+
+    public function test_the_page_shows_projected_on_budget_cash_and_ready_to_assign(): void
+    {
+        Account::factory()->for($this->user)->offBudget()->create(['currency' => 'COP', 'initial_balance' => 5000000]);
+        $savings = Bucket::factory()->savings()->for($this->user)->create(['currency' => 'COP']);
+        app(BucketLedger::class)->credit($savings, Money::of(300000), AllocationSource::Adjustment);
+
+        // On budget: 1,000,000 - 20,000 (overdue, October) = 980,000; November + 500,000 + 300,000 - 100,000 = 1,680,000;
+        // December - 50,000 = 1,630,000. Ready to assign: the same minus the 300,000 the savings bucket holds.
+        $this->get('/planning/cash-flow?view=expected&months=3')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('projection.0.currency', 'COP')
+            ->where('projection.0.months.0.closing', 5980000)
+            ->where('projection.0.months.0.onBudget', 980000)
+            ->where('projection.0.months.0.readyToAssign', 680000)
+            ->where('projection.0.months.1.onBudget', 1680000)
+            ->where('projection.0.months.1.readyToAssign', 1380000)
+            ->where('projection.0.months.2.onBudget', 1630000)
+            ->where('projection.0.months.2.readyToAssign', 1330000)
+        );
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Planning\Http\Controllers;
 
+use App\Modules\Identity\Models\User;
 use App\Modules\Planning\Contracts\UpcomingPlans;
 use App\Modules\Planning\Enums\Certainty;
 use App\Modules\Planning\Enums\ForecastView;
@@ -14,6 +15,7 @@ use App\Modules\Planning\Http\Requests\PlannedEvents\UpdatePlannedEventRequest;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
+use App\Modules\Planning\Services\BucketProjection;
 use App\Modules\Planning\Services\CashFlowProjector;
 use App\Modules\Planning\Services\PlannedEventPresenter;
 use App\Modules\Planning\Services\PlannedEventService;
@@ -32,7 +34,7 @@ class PlannedEventController extends Controller
     /** Rows the review inbox shows on the cash flow page. */
     private const REVIEW_LIMIT = 50;
 
-    public function index(Request $request, CashFlowProjector $projector, PlannedEventService $service, PlannedEventPresenter $presenter, UpcomingPlans $upcoming): Response
+    public function index(Request $request, CashFlowProjector $projector, BucketProjection $buckets, PlannedEventService $service, PlannedEventPresenter $presenter, UpcomingPlans $upcoming): Response
     {
         $this->authorize('viewAny', PlannedEvent::class);
 
@@ -53,16 +55,19 @@ class PlannedEventController extends Controller
 
         $matches = $service->suggestedMatches($request->user(), $events);
 
+        $budget = $this->budgetRows($request->user(), $view, $months, $projector, $buckets);
         $projection = $projector->project($request->user(), $view, $months)->map(fn (array $currency) => [
             'currency' => $currency['currency'],
             'opening' => $currency['opening']->toFloat(),
-            'months' => collect($currency['months'])->map(fn (array $month) => [
+            'months' => collect($currency['months'])->map(fn (array $month, int $index) => [
                 'month' => $month['month'],
                 'income' => $month['income']->toFloat(),
                 'expense' => $month['expense']->toFloat(),
                 'interest' => $month['interest']->toFloat(),
                 'net' => $month['net']->toFloat(),
                 'closing' => $month['closing']->toFloat(),
+                'onBudget' => $budget[$currency['currency']][$index]['onBudget'] ?? null,
+                'readyToAssign' => $budget[$currency['currency']][$index]['readyToAssign'] ?? null,
             ])->values(),
         ])->values();
 
@@ -84,6 +89,28 @@ class PlannedEventController extends Controller
             'months' => $months,
             'section' => in_array($request->query('section'), ['repeating', 'review'], true) ? $request->query('section') : null,
         ]);
+    }
+
+    /**
+     * Projected cash in on-budget accounts at each month end (no interest) and what of it is ready to assign: that cash
+     * minus what funded bucket envelopes are projected to hold. Projected only; nothing here is a real balance.
+     *
+     * @return array<string, list<array{onBudget: float, readyToAssign: float}>> keyed by currency, one row per month
+     */
+    private function budgetRows(User $user, ForecastView $view, int $months, CashFlowProjector $projector, BucketProjection $buckets): array
+    {
+        $rows = [];
+        foreach ($projector->budgetMonthly($user, $view, $months) as $currency => $projection) {
+            $ends = array_map(fn (array $month) => Carbon::parse($month['month'].'-01')->endOfMonth()->startOfDay(), $projection['months']);
+            $earmarks = $buckets->earmarksAt($user, $currency, $view, $ends);
+
+            $rows[$currency] = array_map(fn (array $month, Carbon $end) => [
+                'onBudget' => $month['closing']->toFloat(),
+                'readyToAssign' => $month['closing']->subtract($earmarks[$end->toDateString()])->toFloat(),
+            ], $projection['months'], $ends);
+        }
+
+        return $rows;
     }
 
     /**
