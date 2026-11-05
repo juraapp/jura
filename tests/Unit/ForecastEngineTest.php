@@ -199,7 +199,7 @@ class ForecastEngineTest extends TestCase
         $this->assertSame('200.00', $this->money($result->endBalances[1]));
         $this->assertSame('700.00', $this->money($result->endReadyToAssign));
         $this->assertSame('900.00', $this->money($result->endCash));
-        $this->assertArrayNotHasKey(2, $result->timeline[0]->envelopes, 'a limit-only bucket holds no money');
+        $this->assertArrayNotHasKey(2, $result->timeline[0]->envelopes(), 'a limit-only bucket holds no money');
     }
 
     public function test_a_limit_only_bucket_starts_its_envelope_from_zero_on_its_first_allocation(): void
@@ -210,7 +210,7 @@ class ForecastEngineTest extends TestCase
 
         $result = $this->simulate($this->input(1000, [$bucket], [$this->income('2026-10-10', 500), $this->expense('2026-10-12', 50, 7)], '2026-10-20'));
 
-        $this->assertSame('200.00', $this->money($result->pointAt($this->day('2026-10-10'))->envelopes[1]));
+        $this->assertSame('200.00', $this->money($result->pointAt($this->day('2026-10-10'))->envelopes()[1]));
         $this->assertSame('150.00', $this->money($result->endBalances[1]));
         $this->assertSame('1300.00', $this->money($result->endReadyToAssign));
     }

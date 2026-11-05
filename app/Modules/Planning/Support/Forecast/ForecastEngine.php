@@ -22,7 +22,7 @@ use WeakMap;
  */
 final class ForecastEngine
 {
-    /** @var WeakMap<EngineInput, array{dates: list<string>, days: array<string, array{flows: list<EngineFlow>, cycles: list<int>, windows: list<int>}>, windows: array<int, array{0: CarbonImmutable, 1: CarbonImmutable}>}> */
+    /** @var WeakMap<EngineInput, array<string, mixed>> the days to visit and reusable work per input (see schedule()) */
     private WeakMap $schedules;
 
     public function __construct(private readonly IncomeStep $step = new IncomeStep)
@@ -36,47 +36,114 @@ final class ForecastEngine
     public function run(EngineInput $input, array $lines): EngineResult
     {
         $schedule = $this->schedules[$input] ??= $this->schedule($input);
-        $state = new EngineState($input, $schedule['windows']);
 
         $dates = $schedule['dates'];
-        foreach ($lines as $line) {
+        $notBefore = [];
+        foreach ($lines as $index => $line) {
+            $notBefore[$index] = $line->notBefore?->format('Y-m-d');
             if ($line->notBefore !== null && $line->notBefore->gt($input->start) && $line->notBefore->lte($input->end)) {
-                $dates[] = $line->notBefore->format('Y-m-d');
+                $dates[] = $notBefore[$index];
             }
         }
-        $dates = array_values(array_unique($dates));
-        sort($dates);
+        if (count($dates) !== count($schedule['dates'])) {
+            $dates = array_values(array_unique($dates));
+            sort($dates);
+        }
 
-        foreach ($dates as $key) {
-            $date = CarbonImmutable::parse($key);
-            $day = $schedule['days'][$key] ?? null;
+        $run = new EngineRun($input, $schedule, $dates, $lines, $notBefore, implode(',', $dates));
 
-            foreach ($day['flows'] ?? [] as $flow) {
-                $this->applyFlow($input, $state, $flow, $date);
+        for ($bought = count($lines); $bought >= 1; $bought--) {
+            $snapshot = $schedule['memo']->snapshots[$run->daysKey][$run->prefixes[$bought]] ?? null;
+            if ($snapshot !== null) {
+                return $this->simulate($run, clone $snapshot[0], $snapshot[1]);
+            }
+        }
+
+        $baseline = $schedule['memo']->baselines[$run->daysKey] ??= $this->baseline($run);
+        $last = count($baseline) - 1;
+        foreach ($baseline as $index => $preBuy) {
+            $state = clone $preBuy;
+            $this->buy($run, $state, $index);
+
+            if ($state->bought !== [] || $index === $last) {
+                return $this->simulate($run, $state, $index);
+            }
+        }
+
+        return $this->finish($input, $lines, new EngineState($input, $schedule['windows'], $schedule['calendar']));
+    }
+
+    /**
+     * Carries a run on from a day whose flows are already applied: buys what can be bought that day, closes it, then
+     * simulates every later day.
+     */
+    private function simulate(EngineRun $run, EngineState $state, int $from): EngineResult
+    {
+        $count = count($run->dates);
+        for ($index = $from; $index < $count; $index++) {
+            $date = $run->moment($index);
+            if ($index > $from) {
+                $this->applyDay($run, $state, $index, $date);
             }
 
-            foreach ($day['cycles'] ?? [] as $bucketId) {
-                $this->moveLeftover($state, $state->buckets[$bucketId], $date);
-            }
-
-            foreach ($day['windows'] ?? [] as $bucketId) {
-                $state->closeWindow($bucketId);
-            }
-
-            $state->noteReached($date);
-            $this->buy($input, $lines, $state, $date);
-            $state->noteReached($date);
+            $this->buy($run, $state, $index);
+            $state->noteReachedIfFunded($date);
             $state->addPoint($date);
         }
 
-        return $this->finish($input, $lines, $state);
+        return $this->finish($run->input, $run->lines, $state);
+    }
+
+    /**
+     * The state of every day after its flows and cycle closes, before any purchase, when nothing is ever bought.
+     *
+     * @return list<EngineState>
+     */
+    private function baseline(EngineRun $run): array
+    {
+        $state = new EngineState($run->input, $run->schedule['windows'], $run->schedule['calendar']);
+        $state->noteReached($run->input->start);
+
+        $days = [];
+        foreach ($run->dates as $index => $key) {
+            $date = $run->moment($index);
+            $this->applyDay($run, $state, $index, $date);
+            $days[] = clone $state;
+            $state->addPoint($date);
+        }
+
+        return $days;
+    }
+
+    /**
+     * A day's flows, then its cycle closes (D19), then the windows that end on it.
+     */
+    private function applyDay(EngineRun $run, EngineState $state, int $index, CarbonImmutable $date): void
+    {
+        $key = $run->dates[$index];
+        $day = $run->schedule['days'][$key] ?? null;
+        $state->day = $key;
+
+        foreach ($day['flows'] ?? [] as $flow) {
+            $this->applyFlow($run->input, $state, $flow, $date);
+        }
+
+        foreach ($day['cycles'] ?? [] as $bucketId) {
+            $this->moveLeftover($state, $state->buckets[$bucketId], $date);
+        }
+
+        foreach ($day['windows'] ?? [] as $bucketId) {
+            $state->closeWindow($bucketId);
+        }
+
+        $state->noteReachedIfFunded($date);
     }
 
     /**
      * The days the simulation visits, independent of the lines: the start, every flow, every cycle end of a bucket
      * that does not carry its money over, the end of each bucket's current window and every month end.
      *
-     * @return array{dates: list<string>, days: array<string, array{flows: list<EngineFlow>, cycles: list<int>, windows: list<int>}>, windows: array<int, array{0: CarbonImmutable, 1: CarbonImmutable}>}
+     * @return array{dates: list<string>, moments: array<string, CarbonImmutable>, days: array<string, array{flows?: list<EngineFlow>, cycles?: list<int>, windows?: list<int>}>, windows: array<int, array{0: CarbonImmutable, 1: CarbonImmutable}>, calendar: EngineCalendar, memo: EngineMemo}
      */
     private function schedule(EngineInput $input): array
     {
@@ -126,7 +193,12 @@ final class ForecastEngine
         $dates = array_values(array_unique([...$dates, ...array_map('strval', array_keys($days))]));
         sort($dates);
 
-        return ['dates' => $dates, 'days' => $days, 'windows' => $windows];
+        $moments = [];
+        foreach ($dates as $key) {
+            $moments[$key] = CarbonImmutable::parse($key);
+        }
+
+        return ['dates' => $dates, 'moments' => $moments, 'days' => $days, 'windows' => $windows, 'calendar' => new EngineCalendar, 'memo' => new EngineMemo];
     }
 
     private function applyFlow(EngineInput $input, EngineState $state, EngineFlow $flow, CarbonImmutable $date): void
@@ -204,13 +276,16 @@ final class ForecastEngine
     }
 
     /**
-     * Buys as many scenario items as can be paid on this day, in order.
-     *
-     * @param  list<EngineLine>  $lines
+     * Buys as many scenario items as can be paid on this day, in order, remembering the state after each purchase.
      */
-    private function buy(EngineInput $input, array $lines, EngineState $state, CarbonImmutable $date): void
+    private function buy(EngineRun $run, EngineState $state, int $index): void
     {
-        while ($state->next < count($lines)) {
+        $lines = $run->lines;
+        $key = $run->dates[$index];
+        $date = $run->moment($index);
+        $input = $run->input;
+        $count = count($lines);
+        while ($state->next < $count) {
             $line = $lines[$state->next];
 
             if ($line->blocked !== null) {
@@ -219,12 +294,7 @@ final class ForecastEngine
                 continue;
             }
 
-            $earliest = $state->lastPurchase;
-            if ($line->notBefore !== null && $line->notBefore->gt($earliest)) {
-                $earliest = $line->notBefore;
-            }
-
-            if ($date->lt($earliest)) {
+            if ($key < $state->lastPurchaseDay || ($run->notBefore[$state->next] !== null && $key < $run->notBefore[$state->next])) {
                 return;
             }
 
@@ -252,9 +322,10 @@ final class ForecastEngine
             if ($bucketId !== null) {
                 $this->completeIfDone($state, $bucketId, $date);
             }
-            $state->lastPurchase = $date;
+            $state->lastPurchaseDay = $key;
             $state->bought[$state->next] = [$date, $fromBucket, $fromFree];
             $state->next++;
+            $run->remember($state, $index);
         }
     }
 
@@ -293,6 +364,13 @@ final class ForecastEngine
      */
     private function finish(EngineInput $input, array $lines, EngineState $state): EngineResult
     {
+        $dips = [];
+        foreach ($state->points as $point) {
+            if ($point->free->isNegative()) {
+                $dips[] = $point->date;
+            }
+        }
+
         $free = $state->free();
         $cashRoom = $input->timeline->suffixMin($input->end)->subtract($state->committed);
         $spendable = $this->smaller($free, $cashRoom);
@@ -304,7 +382,7 @@ final class ForecastEngine
                 $results[] = new LineResult(
                     $line->itemId, $line->name, $line->price, $date, (int) round($input->start->diffInDays($date)), Money::zero(), null,
                     $line->desiredBy !== null && $date->gt($line->desiredBy), $line->importance,
-                    $fromBucket, $fromFree, null, false, $this->freeDipAfter($state, $date), $line->warnings,
+                    $fromBucket, $fromFree, null, false, $this->firstOnOrAfter($dips, $date), $line->warnings,
                 );
 
                 continue;
@@ -348,13 +426,14 @@ final class ForecastEngine
 
     /**
      * The first day on or after a purchase when ready to assign is below zero.
+     *
+     * @param  list<CarbonImmutable>  $dips  days ready to assign is below zero, ascending
      */
-    private function freeDipAfter(EngineState $state, CarbonImmutable $date): ?CarbonImmutable
+    private function firstOnOrAfter(array $dips, CarbonImmutable $date): ?CarbonImmutable
     {
-        $key = $date->format('Y-m-d');
-        foreach ($state->points as $point) {
-            if ($point->date->format('Y-m-d') >= $key && $point->free->isNegative()) {
-                return $point->date;
+        foreach ($dips as $dip) {
+            if ($dip->gte($date)) {
+                return $dip;
             }
         }
 
