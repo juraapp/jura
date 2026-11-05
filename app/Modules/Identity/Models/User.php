@@ -12,6 +12,7 @@ use App\Modules\Shared\Support\UserFormat;
 use ArrayObject;
 use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,7 +26,7 @@ use Illuminate\Support\Facades\Auth;
     'date_format', 'time_format', 'decimal_separator', 'thousands_separator', 'fraction_digits', 'currency_display', 'currency_position',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -65,6 +66,14 @@ class User extends Authenticatable
             'date_format', 'time_format', 'decimal_separator', 'thousands_separator',
             'fraction_digits', 'currency_display', 'currency_position',
         ]), $this->locale ?? 'en');
+    }
+
+    /**
+     * The language notifications are written in, also when they are sent from a job or a command.
+     */
+    public function preferredLocale(): string
+    {
+        return $this->locale ?? 'en';
     }
 
     /**

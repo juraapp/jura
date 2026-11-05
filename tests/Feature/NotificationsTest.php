@@ -155,4 +155,22 @@ class NotificationsTest extends TestCase
         $this->assertSame("Couldn't record Gym automatically: its account is archived or deleted.", $notes[0]->data['message']);
         $this->assertSame(0, $bystander->notifications()->count());
     }
+
+    public function test_a_notification_from_the_hourly_job_is_written_in_its_owners_language(): void
+    {
+        Carbon::setTestNow('2026-10-12 12:00:00');
+        app()->setLocale('en');
+        $user = User::factory()->create(['timezone' => 'UTC', 'locale' => 'es']);
+        $account = Account::factory()->for($user)->inactive()->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        PlannedEvent::factory()->for($user)->expense()->create([
+            'date' => '2026-10-12', 'currency' => 'COP', 'account_id' => $account->id, 'category_id' => $category->id, 'auto_post' => true, 'description' => 'Gimnasio',
+        ]);
+
+        app(SeriesPoster::class)->postDue();
+
+        $note = $user->notifications()->where('type', PlannedPostingBlocked::class)->sole();
+        $this->assertSame('No se pudo registrar Gimnasio automáticamente: su cuenta está archivada o eliminada.', $note->data['message']);
+        $this->assertSame('en', app()->getLocale());
+    }
 }
