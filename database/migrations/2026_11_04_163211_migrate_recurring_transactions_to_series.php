@@ -126,7 +126,8 @@ return new class extends Migration
             DB::table('planned_events')->insert($batch);
         }
 
-        // Set here when this runs after the column exists (a fresh database); otherwise its migration backfills it.
+        // On a fresh database the column does not exist yet and add_materialized_until_to_planned_event_series
+        // backfills it from these occurrences; this only runs when the migration is run again after it.
         if ($occurrences !== [] && Schema::hasColumn('planned_event_series', 'materialized_until')) {
             DB::table('planned_event_series')->where('id', $seriesId)->update(['materialized_until' => end($occurrences)['date']]);
         }
@@ -137,7 +138,9 @@ return new class extends Migration
      * chained dates with "no overflow", so a monthly template on the 29th-31st sank to the 28th after February
      * for good, and a yearly one on 29 February stayed on the 28th. Only then is the rhythm re-anchored on its
      * day (the template's day of month or its first transaction's day), and always so that the first
-     * occurrence still falls in the next due date's own month. A next due date the user moved stays as it is.
+     * occurrence still falls in the next due date's own month. A next due date the user moved stays as it is,
+     * except one moved to the 28th-30th of a template whose day is later: it cannot be told apart from drift and
+     * is re-anchored to the template's day (still in the same month).
      */
     private function anchor(string $frequency, CarbonImmutable $nextDue, ?CarbonImmutable $first, ?int $dayOfMonth): CarbonImmutable
     {
