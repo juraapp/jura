@@ -167,6 +167,25 @@ class AutoPostTest extends TestCase
         Event::assertDispatched(PlannedPostingFailed::class, fn (PlannedPostingFailed $event) => $event->plannedEventId === $oneOff->id);
     }
 
+    public function test_editing_a_blocked_plan_or_its_series_clears_the_stale_error(): void
+    {
+        Carbon::setTestNow('2026-11-10 09:00:00');
+        [$user, $account, $category] = $this->owner();
+        $series = PlannedEventSeries::factory()->for($user)->create([
+            'type' => 'expense', 'description' => 'Gym', 'amount' => 30, 'currency' => 'COP', 'starts_on' => '2026-11-20',
+            'account_id' => $account->id, 'category_id' => $category->id, 'auto_post' => true, 'materialized_until' => '2026-11-20',
+        ]);
+        $occurrence = $this->plan($user, $account, $category, '2026-11-20', ['series_id' => $series->id, 'post_error' => 'account_inactive']);
+        $single = $this->plan($user, $account, $category, '2026-11-25', ['post_error' => 'category_missing']);
+        $payload = ['type' => 'expense', 'description' => 'Gym', 'amount' => 30, 'certainty' => 'confirmed', 'account_id' => $account->id, 'category_id' => $category->id, 'auto_post' => true];
+
+        $this->actingAs($user)->patch("/planning/cash-flow/{$single->id}", $payload + ['date' => '2026-11-25'])->assertSessionHasNoErrors();
+        $this->actingAs($user)->patch("/planning/series/{$series->id}", $payload + ['frequency' => 'monthly', 'next_date' => '2026-11-20'])->assertSessionHasNoErrors();
+
+        $this->assertNull($single->fresh()->post_error);
+        $this->assertNull($occurrence->fresh()->post_error);
+    }
+
     public function test_a_failure_is_reported_and_the_batch_continues(): void
     {
         Carbon::setTestNow('2026-11-10 09:00:00');

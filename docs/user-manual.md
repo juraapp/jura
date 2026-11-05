@@ -204,7 +204,8 @@ transactions if they happened).
 category) becomes a real transaction on its date, in your time zone, without you doing anything. It is marked
 **Auto** on the page. If you missed some dates (for example the app was not running), each one is recorded on its
 own date the next time it runs. If its account was archived or deleted or its category deleted, the plan stays open
-with a red note saying why; fix the account or category and it is recorded on the next try.
+with a red note saying why; fix the account or category and it is recorded on the next try. Editing the plan
+clears the note until the next try.
 
 **Needs review.** At the top of the page, plans whose date has passed and that are still open, and plans that could
 not be recorded automatically, wait for you: **Confirm** records them (one click when the plan has an account and a

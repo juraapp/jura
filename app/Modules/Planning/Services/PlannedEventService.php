@@ -279,7 +279,7 @@ class PlannedEventService
                 $upcoming->delete();
                 $this->rebuildFromToday($series, $today);
             } else {
-                $upcoming->get()->each(fn (PlannedEvent $occurrence) => $occurrence->update($attributes));
+                $upcoming->get()->each(fn (PlannedEvent $occurrence) => $occurrence->update($attributes + ['post_error' => null]));
             }
 
             if ($series->ends_on !== null) {
@@ -364,7 +364,7 @@ class PlannedEventService
                     ->open()
                     ->where('date', '>=', $event->date->toDateString())
                     ->get()
-                    ->each(fn (PlannedEvent $occurrence) => $occurrence->update($attributes));
+                    ->each(fn (PlannedEvent $occurrence) => $occurrence->update($attributes + ['post_error' => null]));
             });
 
             return;
@@ -375,8 +375,10 @@ class PlannedEventService
             ? ['realized_transaction_id' => null]
             : [];
 
+        // The edit may have fixed what blocked the automatic post; the next try says again if not.
         $event->update($attributes + $unlink + $this->extras($data) + [
             'date' => $data['date'],
+            'post_error' => null,
         ]);
     }
 
