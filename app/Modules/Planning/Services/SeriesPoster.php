@@ -74,6 +74,9 @@ class SeriesPoster
     }
 
     /**
+     * Open auto-posting plans up to a date. A plan still linked to a transaction in the Trash is left out: the
+     * owner deleted what it recorded, so it waits in Needs review, and restoring the transaction closes it again.
+     *
      * @return Builder<PlannedEvent>
      */
     private function dueQuery(string $until)
@@ -81,6 +84,7 @@ class SeriesPoster
         return PlannedEvent::withoutGlobalScope('user')
             ->open()
             ->where('auto_post', true)
+            ->whereNull('realized_transaction_id')
             ->where('date', '<=', $until)
             ->with([
                 'user',

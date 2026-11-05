@@ -243,7 +243,8 @@ income, planned expenses and your projected balance, per currency. Today's balan
   at once leaves plans already marked as done alone.
 - A plan marked as done cannot be reopened directly. To undo it, delete its real transaction: the plan becomes
   open again. Restoring that transaction from the Trash marks the plan as done again, unless you have already
-  closed it with another transaction.
+  closed it with another transaction. A plan that recorded itself is not recorded again after you delete its
+  transaction: once its date has passed it waits in **Needs review** for you to confirm, match or skip it.
 
 **Changing repeating events.** Editing or deleting one occurrence asks whether it is **only this one** or **this
 and all future ones**. Earlier occurrences, and ones already done, are never touched. When you change "all future",
