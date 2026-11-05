@@ -188,6 +188,29 @@ class PlannedEventService
     }
 
     /**
+     * The series now ends on a date: it forgets creating the dates after it, but occurrences already confirmed or
+     * skipped for a date after it stay, so their series dates join the excluded dates and removing the end later
+     * does not plan them again.
+     */
+    private function cutAt(PlannedEventSeries $series, CarbonInterface $endsOn): void
+    {
+        $kept = PlannedEvent::forUser($series->user_id)
+            ->where('series_id', $series->id)
+            ->where('status', '!=', PlannedEventStatus::Planned->value)
+            ->get(['date', 'series_date'])
+            ->map(fn (PlannedEvent $event) => ($event->series_date ?? $event->date)->toDateString())
+            ->filter(fn (string $date) => $date > $endsOn->toDateString());
+
+        if ($kept->isNotEmpty()) {
+            $series->forceFill([
+                'excluded_dates' => collect($series->excluded_dates ?? [])->merge($kept)->unique()->sort()->values()->all(),
+            ])->save();
+        }
+
+        $this->rewindTo($series, $endsOn);
+    }
+
+    /**
      * Tops up every active series to the standard horizon, counted from each owner's today (daily command).
      */
     public function extendAllSeries(): int
@@ -306,7 +329,7 @@ class PlannedEventService
                     ->open()
                     ->where('date', '>', $series->ends_on->toDateString())
                     ->delete();
-                $this->rewindTo($series, $series->ends_on);
+                $this->cutAt($series, $series->ends_on);
             }
 
             if (! $series->auto_post) {
@@ -422,7 +445,7 @@ class PlannedEventService
                     ->delete();
 
                 $series->update(['ends_on' => $event->date->copy()->subDay()->toDateString()]);
-                $this->rewindTo($series, $series->ends_on);
+                $this->cutAt($series, $series->ends_on);
             });
 
             return;

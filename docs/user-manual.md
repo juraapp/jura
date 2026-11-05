@@ -266,7 +266,8 @@ its old date and never skips the dates around it.
 whether it records automatically (**Auto**) or is **Paused**.
 - **Edit** changes the whole plan from today on: dates before today that are still open (overdue) keep what they
   were. Changing the frequency or the **Next date** moves every upcoming date to the new rhythm; an earlier end date
-  removes the dates after it. A date you already confirmed early or skipped counts for the new date closest to the
+  (or deleting a date "and all future ones") removes the open dates after it, and if you remove the end again, dates
+  after it you had already confirmed or skipped are not planned again. A date you already confirmed early or skipped counts for the new date closest to the
   date it was planned for (even if you had moved it), when that new date is within half a period of it (of the shorter
   rhythm when you change the frequency: 3 days for weekly, 7 for every two weeks, 15 for monthly, half a year for yearly; the later one when two are as close), so that
   payment is not planned twice. Every other new date is kept, and so is the **Next date** you type, unless you already
