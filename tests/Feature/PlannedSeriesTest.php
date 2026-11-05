@@ -433,6 +433,33 @@ class PlannedSeriesTest extends TestCase
         $this->assertSame(['2026-11-15', '2027-01-15'], $this->openDateList($series, 2));
     }
 
+    public function test_removing_the_end_after_deleting_this_and_future_does_not_plan_a_confirmed_date_again(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->confirmOn($series, '2027-02-15');
+        $this->actingAs($this->user)->delete("/planning/cash-flow/{$series->events()->where('date', '2027-01-15')->sole()->id}", ['scope' => 'future'])->assertSessionHasNoErrors();
+        $this->assertSame('2027-01-14', $series->fresh()->ends_on->toDateString());
+
+        $this->moveSeriesTo($series, $account, $category, '2026-11-15');
+
+        $this->assertSame(1, $series->events()->where('date', '2027-02-15')->count());
+        $this->assertSame(['2026-11-15', '2026-12-15', '2027-01-15', '2027-03-15'], $this->openDateList($series, 4));
+    }
+
+    public function test_removing_an_earlier_end_does_not_plan_a_confirmed_date_after_it_again(): void
+    {
+        [$series, $account, $category] = $this->rent();
+        $this->confirmOn($series, '2027-02-15');
+        $this->moveSeriesTo($series, $account, $category, '2026-11-15', endsOn: '2027-01-31');
+        $this->assertSame(['2026-11-15', '2026-12-15', '2027-01-15'], array_keys($this->openDates($series)));
+
+        $this->moveSeriesTo($series, $account, $category, '2026-11-15');
+
+        $this->assertSame(1, $series->events()->where('date', '2027-02-15')->count());
+        $this->assertSame(['2026-11-15', '2026-12-15', '2027-01-15', '2027-03-15'], $this->openDateList($series, 4));
+        $this->assertSame('2027-10-15', array_key_last($this->openDates($series)));
+    }
+
     public function test_the_migration_backfills_each_occurrences_series_date(): void
     {
         [$series, $account, $category] = $this->rent();
