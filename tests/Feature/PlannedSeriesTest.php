@@ -378,6 +378,7 @@ class PlannedSeriesTest extends TestCase
                 ->where('series.0.autoPost', true)
                 ->where('series.1.id', $paused->id)
                 ->where('series.1.isActive', false)
+                ->where('series.1.nextDate', '2026-11-15')
                 ->missing('accounts')
             );
     }

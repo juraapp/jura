@@ -212,28 +212,45 @@ class PlannedEventService
      */
     public function nextDate(PlannedEventSeries $series, ?CarbonInterface $today = null): ?CarbonImmutable
     {
-        $today = CarbonImmutable::instance($today ?? $series->user->today())->startOfDay();
+        return $this->nextDates(collect([$series]), $today ?? $series->user->today())[$series->id];
+    }
 
-        $stored = PlannedEvent::forUser($series->user_id)
-            ->where('series_id', $series->id)
-            ->open()
-            ->where('date', '>=', $today->toDateString())
-            ->min('date');
-
-        if ($stored !== null) {
-            return CarbonImmutable::parse($stored);
+    /**
+     * nextDate for several series of one owner, with one query.
+     *
+     * @param  Collection<int, PlannedEventSeries>  $series
+     * @return array<int, CarbonImmutable|null> keyed by series id
+     */
+    public function nextDates(Collection $series, CarbonInterface $today): array
+    {
+        $today = CarbonImmutable::instance($today)->startOfDay();
+        if ($series->isEmpty()) {
+            return [];
         }
 
-        return Recurrence::occurrences(
-            $series->frequency,
-            CarbonImmutable::parse($series->starts_on->toDateString()),
-            $series->ends_on !== null ? CarbonImmutable::parse($series->ends_on->toDateString()) : null,
-            $series->excluded_dates ?? [],
-            $this->materializedUntil($series),
-            $today,
-            $today->addYears(2),
-            1,
-        )[0] ?? null;
+        $stored = PlannedEvent::forUser($series->first()->user_id)
+            ->whereIn('series_id', $series->map(fn (PlannedEventSeries $rule) => $rule->id)->all())
+            ->open()
+            ->where('date', '>=', $today->toDateString())
+            ->groupBy('series_id')
+            ->toBase()
+            ->selectRaw('series_id, min(date) as next_date')
+            ->get()
+            ->pluck('next_date', 'series_id');
+
+        return $series->mapWithKeys(fn (PlannedEventSeries $rule) => [$rule->id => isset($stored[$rule->id])
+            ? CarbonImmutable::parse($stored[$rule->id])
+            : Recurrence::occurrences(
+                $rule->frequency,
+                CarbonImmutable::parse($rule->starts_on->toDateString()),
+                $rule->ends_on !== null ? CarbonImmutable::parse($rule->ends_on->toDateString()) : null,
+                $rule->excluded_dates ?? [],
+                $this->materializedUntil($rule),
+                $today,
+                $today->addYears(2),
+                1,
+            )[0] ?? null,
+        ])->all();
     }
 
     /**
