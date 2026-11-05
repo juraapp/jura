@@ -123,3 +123,18 @@ Not covered: the CSV/PDF *content* of report downloads beyond status code + `Con
 
 `Waterfall`, `IncomeStep`, `Recurrence` (the dates of a repeating plan), `ProjectedItem`, `CashTimeline`, `ForecastEngine` and `ScenarioSuggester` (under `app/Modules/Planning/Support`) have no framework or database dependencies, so they are tested with plain PHPUnit `TestCase`s in `tests/Unit` using hand-built DTOs. Keep new forecast rules there with a failing unit test first; reserve feature tests for the wiring (`PlannerTest`, `IncomeAllocationTest`, and `ProjectionConsistencyTest`, which checks that the cash flow, the planner and `PlannedOccurrences` agree). In a PHPUnit test class never name a helper `run()`: `TestCase::run()` is final.
 
+### Forecast checks that do not trust themselves
+A test that recomputes the expected value with the code under test proves nothing. The forecast is checked three
+independent ways:
+- `FreeMoneyReconciliationTest` compares the engine with code written separately: at every month end and in every
+  view, engine cash = `CashFlowForecast::budgetMonthly` closing and engine ready to assign = that closing −
+  `BucketProjection::earmarksAt`; today's ready to assign = `MoneyMap`; with a purchase, cash = closing − what was
+  bought. The first month is also asserted with hand-computed numbers.
+- `IncomeAllocatorParityTest` lets the forecast predict an income, records the same income for real and compares the
+  split bucket by bucket (and with hand-computed amounts).
+- `ForecastEngineInvariantTest` is a property test: 300 seeded random inputs (`mt_srand`, so a failure names its case
+  and is reproducible), each checked against invariants recounted from the input alone (cash = start + flows −
+  purchases, ready to assign + funded envelopes = cash, no negative cash after a purchase, strict order, not-before,
+  determinism, an extra income never delays the first item, reused work equals a fresh run).
+- `ScenarioSuggesterTest` keeps a performance guard: 6 items, 36 months and 10 buckets suggest in under 1.5 s.
+
