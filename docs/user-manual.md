@@ -446,8 +446,9 @@ purchased and dropped items* to see them, and use the arrow to want one again.
 
 Menu: **Planning → Planner**.
 
-The planner answers "what should I buy first, and when can I afford each thing?". It replays the income you have
-planned through your buckets' filling rules and tells you the earliest date each wish-list item can be paid for.
+The planner answers "what should I buy first, and when can I afford each thing?". It plays your planned income and
+expenses forward, through your buckets' filling rules, and tells you the earliest date each wish-list item can be paid
+for from its bucket and your ready to assign without leaving your accounts short later.
 Nothing in the planner changes your real money. It follows the same rules as the live buckets, including fixed fills
 per cycle, *share of what is left*, step-ups, and buckets that close when their item is bought.
 
@@ -473,16 +474,23 @@ or *Look ahead* recalculates your order. If an item in a saved plan has since be
 shows it struck through and leaves it out of the calculation.
 
 **How the planner counts money (advanced).**
-- It starts from what each bucket has available today, then adds planned income as it would really be split: by
-  priority, with each bucket's rule, target and allowed accounts. Money that no bucket claims stays ready to assign,
-  and the planner starts from what is ready to assign today. Income planned into an off-budget account is left out.
-- An item with a bucket is paid from that bucket first and, if the bucket is short, from what is ready to assign. An
-  item without a bucket is paid from ready to assign. Items sharing a bucket share its money.
+- It works with **ready to assign**: the money in your on-budget accounts that no bucket holds. It starts from
+  today's ready to assign and from what each bucket holds today, then plays your planned money forward day by day:
+  - planned income (in an on-budget account, or with no account) is split as it would really be: by priority, with
+    each bucket's rule, cap and allowed accounts, or with the plan's own split. What no bucket claims stays ready to
+    assign. Income planned into an off-budget account is left out;
+  - planned expenses come out of your accounts; one in a category also comes out of every funded spending bucket that
+    tracks the category, like real spending does;
+  - planned transfers count only when they cross the budget's edge (to or from an off-budget account);
+  - cycles close with their carry-over (money returns to ready to assign or moves to another bucket).
+- An item with a bucket is paid from that bucket first and the rest from ready to assign. An item without a bucket
+  is paid from ready to assign. Items sharing a bucket share its money.
+- A purchase also needs the **cash**: the planner only buys an item on a day when your accounts still cover it after
+  every later planned expense (it looks at the lowest balance from that day on). So an item can wait even though
+  ready to assign covers it today, because a bill later in the month needs that money.
+- Projected interest is never counted.
 - An item that can only be bought with certain accounts, while its bucket only receives income from other accounts,
   shows as **Blocked**.
-- If none of your buckets has a fill rule, the planner warns you: income does not reach any bucket, so only money
-  already in buckets and ready to assign is used.
-- Planned expenses are not taken out of bucket money in this version, and spending in a category is not predicted.
 
 ## Savings goals
 

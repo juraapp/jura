@@ -13,7 +13,8 @@ use App\Modules\Planning\Services\CashFlowProjector;
 use App\Modules\Planning\Services\PlannedEventService;
 use App\Modules\Planning\Services\PlannedOccurrences;
 use App\Modules\Planning\Services\PlannerService;
-use App\Modules\Planning\Support\Forecast\EngineIncome;
+use App\Modules\Planning\Support\Forecast\EngineFlow;
+use App\Modules\Planning\Support\Forecast\FlowKind;
 use App\Modules\Planning\Support\ProjectedItem;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -97,8 +98,9 @@ class ProjectionConsistencyTest extends TestCase
     {
         $context = app(PlannerService::class)->context($this->user, 'COP', ForecastView::Optimistic, 24);
 
-        $this->assertCount(50, $context->input->incomes);
-        $this->assertSame('31740.00', $this->sum(array_map(fn (EngineIncome $income) => $income->amount, $context->input->incomes)));
+        $incomes = array_values(array_filter($context->input->flows, fn (EngineFlow $flow) => $flow->kind === FlowKind::Income));
+        $this->assertCount(50, $incomes);
+        $this->assertSame('31740.00', $this->sum(array_map(fn (EngineFlow $flow) => $flow->amount, $incomes)));
     }
 
     public function test_a_24_month_horizon_includes_months_13_to_24(): void

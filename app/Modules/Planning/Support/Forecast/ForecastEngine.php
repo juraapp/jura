@@ -3,269 +3,215 @@
 namespace App\Modules\Planning\Support\Forecast;
 
 use App\Modules\Planning\Enums\CarryOverPolicy;
-use App\Modules\Planning\Enums\FillRule;
-use App\Modules\Planning\Support\CyclePeriod;
 use App\Modules\Planning\Support\IncomeStep;
 use App\Modules\Planning\Support\IncomeStepBucket;
 use App\Modules\Shared\Support\Money;
 use Carbon\CarbonImmutable;
+use WeakMap;
 
 /**
- * Deterministic simulation of bucket funds over time. Replays future incomes
- * through the priority waterfall (what no bucket claims stays ready to assign),
- * applies end-of-cycle carry-over, and buys the scenario's items strictly in
- * order at the earliest date they can be paid: an item without a bucket from
- * ready to assign, one with a bucket from the bucket first and the rest from
- * ready to assign. Pure: no I/O.
+ * Deterministic simulation of on-budget money over time. Ready to assign (free money) is never stored: it is cash
+ * minus what funded bucket envelopes hold. Planned incomes add cash and are split across buckets by the same
+ * IncomeStep the real allocator uses (what no bucket claims stays free); planned expenses take cash and shrink every
+ * funded spending bucket that tracks their category; planned transfers across the budget's edge move cash only.
+ * Cycles close with their carry-over. The scenario's items are bought strictly in order at the earliest day they
+ * can be paid: from their bucket first, the rest from free money, and only when the cash left after every later
+ * planned flow (the lowest end-of-day balance from that day on) still covers them. A later dip of ready to assign
+ * below zero only warns. Same-day order: flows, then cycle closes, then purchases. Pure: no I/O.
  */
 final class ForecastEngine
 {
-    /** @var array<int, array<string, Money>> income received per bucket and cycle start */
-    private array $received = [];
+    /** @var WeakMap<EngineInput, array{dates: list<string>, days: array<string, array{flows: list<EngineFlow>, cycles: list<int>, windows: list<int>}>, windows: array<int, array{0: CarbonImmutable, 1: CarbonImmutable}>}> */
+    private WeakMap $schedules;
 
-    /** @var array<int, CarbonImmutable> when each bucket was closed */
-    private array $completed = [];
-
-    /** @var array<int, CarbonImmutable> when each bucket first held its target (or was closed) */
-    private array $reached = [];
-
-    /** Money in the accounts no bucket holds, as the simulation goes. */
-    private Money $ready;
-
-    public function __construct(private readonly IncomeStep $step = new IncomeStep) {}
+    public function __construct(private readonly IncomeStep $step = new IncomeStep)
+    {
+        $this->schedules = new WeakMap;
+    }
 
     /**
      * @param  list<EngineLine>  $lines  the scenario, in purchase order
      */
     public function run(EngineInput $input, array $lines): EngineResult
     {
-        $buckets = [];
-        $balances = [];
-        $this->received = [];
-        $this->completed = [];
-        $this->reached = [];
-        $this->ready = $input->readyToAssign ?? Money::zero();
-        foreach ($input->buckets as $bucket) {
-            $period = $bucket->cyclePeriod();
-            if ($period !== null) {
-                $this->received[$bucket->id] = [$period->startOf($input->start->toDateTimeImmutable())->format('Y-m-d') => $bucket->receivedThisCycle ?? Money::zero()];
-            }
+        $schedule = $this->schedules[$input] ??= $this->schedule($input);
+        $state = new EngineState($input, $schedule['windows']);
 
-            $buckets[$bucket->id] = $bucket;
-            $balances[$bucket->id] = $bucket->envelope;
-            if ($bucket->completedOn !== null) {
-                $this->completed[$bucket->id] = $bucket->completedOn;
+        $dates = $schedule['dates'];
+        foreach ($lines as $line) {
+            if ($line->notBefore !== null && $line->notBefore->gt($input->start) && $line->notBefore->lte($input->end)) {
+                $dates[] = $line->notBefore->format('Y-m-d');
             }
         }
+        $dates = array_values(array_unique($dates));
+        sort($dates);
 
-        $state = new class
-        {
-            public int $next = 0;
+        foreach ($dates as $key) {
+            $date = CarbonImmutable::parse($key);
+            $day = $schedule['days'][$key] ?? null;
 
-            public CarbonImmutable $lastPurchase;
-
-            /** @var array<int, LineResult> */
-            public array $results = [];
-        };
-        $state->lastPurchase = $input->start;
-
-        $this->noteReached($input, $balances, $input->start);
-        $this->buy($input, $lines, $balances, $state, $input->start);
-
-        foreach ($this->events($input, $lines) as $event) {
-            if ($event['type'] === 'income') {
-                $this->applyIncome($input, $buckets, $balances, $event['income']);
-            } elseif ($event['type'] === 'cycle') {
-                $this->closeCycle($input, $buckets[$event['bucketId']], $balances);
+            foreach ($day['flows'] ?? [] as $flow) {
+                $this->applyFlow($input, $state, $flow, $date);
             }
 
-            $this->noteReached($input, $balances, $event['date']);
-            $this->buy($input, $lines, $balances, $state, $event['date']);
-            $this->noteReached($input, $balances, $event['date']);
+            foreach ($day['cycles'] ?? [] as $bucketId) {
+                $this->moveLeftover($state, $state->buckets[$bucketId], $date);
+            }
+
+            foreach ($day['windows'] ?? [] as $bucketId) {
+                $state->closeWindow($bucketId);
+            }
+
+            $state->noteReached($date);
+            $this->buy($input, $lines, $state, $date);
+            $state->noteReached($date);
+            $state->addPoint($date);
         }
 
-        while ($state->next < count($lines)) {
-            $this->recordUnbought($input, $lines[$state->next], $balances, $state);
-            $state->next++;
-        }
-
-        return new EngineResult(array_values($state->results), $balances, $this->ready);
+        return $this->finish($input, $lines, $state);
     }
 
     /**
-     * @param  list<EngineLine>  $lines
-     * @return list<array{date: CarbonImmutable, order: int, type: string, income?: EngineIncome, bucketId?: int}>
+     * The days the simulation visits, independent of the lines: the start, every flow, every cycle end of a bucket
+     * that does not carry its money over, the end of each bucket's current window and every month end.
+     *
+     * @return array{dates: list<string>, days: array<string, array{flows: list<EngineFlow>, cycles: list<int>, windows: list<int>}>, windows: array<int, array{0: CarbonImmutable, 1: CarbonImmutable}>}
      */
-    private function events(EngineInput $input, array $lines): array
+    private function schedule(EngineInput $input): array
     {
-        $events = [];
+        $start = $input->start->startOfDay();
+        $end = $input->end->startOfDay();
+        $days = [];
+        $dates = [$start->format('Y-m-d')];
 
-        foreach ($input->incomes as $income) {
-            $date = $income->date->lt($input->start) ? $input->start : $income->date;
-            if ($date->lte($input->end)) {
-                $events[] = ['date' => $date, 'order' => 0, 'type' => 'income', 'income' => $income];
+        $flows = $input->flows;
+        usort($flows, fn (EngineFlow $a, EngineFlow $b) => [$a->date->format('Y-m-d'), $a->seq] <=> [$b->date->format('Y-m-d'), $b->seq]);
+        foreach ($flows as $flow) {
+            $date = $flow->date->lt($start) ? $start : $flow->date->startOfDay();
+            if ($date->gt($end)) {
+                continue;
             }
+            $days[$date->format('Y-m-d')]['flows'][] = $flow;
         }
 
+        $windows = [];
         foreach ($input->buckets as $bucket) {
-            if ($bucket->cycle === null || $bucket->carryOver === CarryOverPolicy::Carry) {
+            $period = $bucket->windowPeriod();
+            $windowStart = CarbonImmutable::instance($period->startOf($start->toDateTimeImmutable()));
+            $windowEnd = CarbonImmutable::instance($period->endOf($start->toDateTimeImmutable()));
+            $windows[$bucket->id] = [$windowStart, $windowEnd];
+            if ($windowEnd->lte($end)) {
+                $days[$windowEnd->format('Y-m-d')]['windows'][] = $bucket->id;
+            }
+
+            $cycle = $bucket->cyclePeriod();
+            if ($cycle === null || $bucket->carryOver === CarryOverPolicy::Carry) {
                 continue;
             }
 
-            $period = new CyclePeriod($bucket->cycle, $bucket->cycleEvery, $bucket->cycleAnchor?->toDateTimeImmutable());
-            $cursor = CarbonImmutable::instance($period->endOf($input->start->toDateTimeImmutable()))->startOfDay();
-            while ($cursor->lte($input->end)) {
-                $events[] = ['date' => $cursor, 'order' => 1, 'type' => 'cycle', 'bucketId' => $bucket->id];
-                $cursor = CarbonImmutable::instance($period->endOf($cursor->addDay()->toDateTimeImmutable()))->startOfDay();
+            $cursor = CarbonImmutable::instance($cycle->endOf($start->toDateTimeImmutable()));
+            while ($cursor->lte($end)) {
+                $days[$cursor->format('Y-m-d')]['cycles'][] = $bucket->id;
+                $cursor = CarbonImmutable::instance($cycle->endOf($cursor->addDay()->toDateTimeImmutable()));
             }
         }
 
-        foreach ($lines as $line) {
-            if ($line->notBefore !== null && $line->notBefore->gt($input->start) && $line->notBefore->lte($input->end)) {
-                $events[] = ['date' => $line->notBefore, 'order' => 2, 'type' => 'check'];
-            }
+        for ($month = $start->endOfMonth()->startOfDay(); $month->lte($end); $month = $month->addDay()->endOfMonth()->startOfDay()) {
+            $dates[] = $month->format('Y-m-d');
         }
+        $dates[] = $end->format('Y-m-d');
 
-        usort($events, fn (array $a, array $b) => [$a['date']->getTimestamp(), $a['order']] <=> [$b['date']->getTimestamp(), $b['order']]);
+        $dates = array_values(array_unique([...$dates, ...array_map('strval', array_keys($days))]));
+        sort($dates);
 
-        return $events;
+        return ['dates' => $dates, 'days' => $days, 'windows' => $windows];
     }
 
-    /**
-     * @param  array<int, EngineBucket>  $buckets
-     * @param  array<int, Money>  $balances
-     */
-    private function applyIncome(EngineInput $input, array $buckets, array &$balances, EngineIncome $income): void
+    private function applyFlow(EngineInput $input, EngineState $state, EngineFlow $flow, CarbonImmutable $date): void
     {
+        if ($flow->kind === FlowKind::Boundary) {
+            $state->cash = $state->cash->add($flow->amount);
+
+            return;
+        }
+
+        if ($flow->kind === FlowKind::Expense) {
+            $state->cash = $state->cash->subtract($flow->amount);
+            if ($flow->categoryId !== null) {
+                $state->spendCategory($flow->categoryId, $flow->amount, $date);
+            }
+
+            return;
+        }
+
+        $state->cash = $state->cash->add($flow->amount);
+
         $inputs = [];
         foreach ($input->buckets as $bucket) {
             $inputs[] = new IncomeStepBucket(
                 $bucket->id,
                 $bucket->rule,
-                $this->valueOn($bucket, $income->date),
-                $bucket->cap,
-                $bucket->rule === FillRule::FillToTarget || $bucket->isSavings,
-                $balances[$bucket->id],
-                $this->receivedOn($bucket, $income->date),
-                $bucket->acceptsAccount($income->accountId) && ! $this->isCompleted($bucket->id, $income->date),
+                $state->valueOn($bucket, $date),
+                $bucket->capOn($date),
+                $bucket->roomApplies(),
+                $state->env[$bucket->id],
+                $state->receivedOn($bucket, $date),
+                $bucket->acceptsAccount($flow->accountId) && ! $state->isCompleted($bucket->id, $date),
             );
         }
 
-        $result = $this->step->split($income->amount, $inputs);
-
-        foreach ($result['allocations'] as $bucketId => $amount) {
-            $balances[$bucketId] = $balances[$bucketId]->add($amount);
-
-            if (isset($this->received[$bucketId])) {
-                $key = $buckets[$bucketId]->cyclePeriod()->startOf($income->date->toDateTimeImmutable())->format('Y-m-d');
-                $this->received[$bucketId][$key] = ($this->received[$bucketId][$key] ?? Money::zero())->add($amount);
-            }
+        $split = $this->step->split($flow->amount, $inputs, $flow->overrides);
+        $allocated = Money::zero();
+        foreach ($split['allocations'] as $bucketId => $amount) {
+            $state->fund($bucketId, $amount, $date);
+            $state->noteReceived($bucketId, $amount, $date);
+            $allocated = $allocated->add($amount);
         }
 
-        $this->ready = $this->ready->add($result['leftover']);
-    }
-
-    private function isCompleted(int $bucketId, CarbonImmutable $date): bool
-    {
-        return isset($this->completed[$bucketId]) && $this->completed[$bucketId]->lte($date);
+        $state->incomeCount++;
+        $state->incomeAmount = $state->incomeAmount->add($flow->amount);
+        $state->incomeAllocated = $state->incomeAllocated->add($allocated);
+        $state->incomeLeftFree = $state->incomeLeftFree->add($flow->amount->subtract($allocated));
     }
 
     /**
-     * The fill value on a date: the step-up value once the bucket it waits for has held its target,
-     * counted from the start of the current cycle.
+     * Gives away what a bucket holds when its cycle closes (or when it completes): to its overflow bucket, or back
+     * to ready to assign. A bucket set to overflow into itself keeps it.
      */
-    private function valueOn(EngineBucket $bucket, CarbonImmutable $date): ?string
+    private function moveLeftover(EngineState $state, EngineBucket $bucket, CarbonImmutable $date): void
     {
-        if ($bucket->stepUpValue === null || $bucket->stepUpAfterBucketId === null || ! isset($this->reached[$bucket->stepUpAfterBucketId])) {
-            return $bucket->value;
+        if (! $state->funded[$bucket->id]) {
+            return;
         }
 
-        $period = $bucket->cyclePeriod();
-        $cutoff = $period !== null ? CarbonImmutable::instance($period->startOf($date->toDateTimeImmutable()))->subDay() : $date;
-
-        return $this->reached[$bucket->stepUpAfterBucketId]->lte($cutoff) ? $bucket->stepUpValue : $bucket->value;
-    }
-
-    /**
-     * @param  array<int, Money>  $balances
-     */
-    private function noteReached(EngineInput $input, array $balances, CarbonImmutable $date): void
-    {
-        foreach ($input->buckets as $bucket) {
-            if (! isset($this->reached[$bucket->id]) && $bucket->cap !== null && ! $balances[$bucket->id]->lessThan($bucket->cap)) {
-                $this->reached[$bucket->id] = $date;
-            }
-        }
-    }
-
-    /**
-     * A bucket marked "completes on purchase" closes when something is bought from it: what is left moves
-     * to its overflow bucket (or back to ready to assign) and it stops receiving income.
-     *
-     * @param  array<int, Money>  $balances
-     */
-    private function completeIfDone(EngineInput $input, int $bucketId, array &$balances, CarbonImmutable $date): void
-    {
-        foreach ($input->buckets as $bucket) {
-            if ($bucket->id !== $bucketId || ! $bucket->completesOnPurchase || isset($this->completed[$bucketId])) {
-                continue;
-            }
-
-            $this->completed[$bucketId] = $date;
-            $this->reached[$bucketId] ??= $date;
-            $this->closeCycle($input, $bucket, $balances);
-        }
-    }
-
-    private function receivedOn(EngineBucket $bucket, CarbonImmutable $date): ?Money
-    {
-        if (! isset($this->received[$bucket->id])) {
-            return null;
-        }
-
-        $key = $bucket->cyclePeriod()->startOf($date->toDateTimeImmutable())->format('Y-m-d');
-
-        return $this->received[$bucket->id][$key] ?? Money::zero();
-    }
-
-    /**
-     * @param  array<int, Money>  $balances
-     */
-    private function closeCycle(EngineInput $input, EngineBucket $bucket, array &$balances): void
-    {
-        $leftover = $balances[$bucket->id];
+        $leftover = $state->env[$bucket->id];
         if (! $leftover->isPositive()) {
             return;
         }
 
         $target = $bucket->carryOver === CarryOverPolicy::Overflow ? $bucket->overflowBucketId : null;
-
-        if ($target === $bucket->id || ($target !== null && ! isset($balances[$target]))) {
+        if ($target === $bucket->id) {
             return;
         }
 
-        $balances[$bucket->id] = $balances[$bucket->id]->subtract($leftover);
-
-        if ($target === null) {
-            $this->ready = $this->ready->add($leftover);
-        } else {
-            $balances[$target] = $balances[$target]->add($leftover);
+        $state->withdraw($bucket->id, $leftover, $date);
+        if ($target !== null && isset($state->buckets[$target])) {
+            $state->fund($target, $leftover, $date);
+            $state->noteIncoming($target, $leftover, $date);
         }
     }
 
     /**
-     * Buys as many scenario items as are due on this date, in order.
+     * Buys as many scenario items as can be paid on this day, in order.
      *
      * @param  list<EngineLine>  $lines
-     * @param  array<int, Money>  $balances
      */
-    private function buy(EngineInput $input, array $lines, array &$balances, object $state, CarbonImmutable $date): void
+    private function buy(EngineInput $input, array $lines, EngineState $state, CarbonImmutable $date): void
     {
         while ($state->next < count($lines)) {
             $line = $lines[$state->next];
 
             if ($line->blocked !== null) {
-                $this->recordUnbought($input, $line, $balances, $state);
                 $state->next++;
 
                 continue;
@@ -280,61 +226,141 @@ final class ForecastEngine
                 return;
             }
 
-            $bucketId = $line->bucketId !== null && isset($balances[$line->bucketId]) ? $line->bucketId : null;
-            $fromBucket = $this->fromBucket($line, $bucketId, $balances);
-            $fromReady = $line->price->subtract($fromBucket);
+            $bucketId = $this->payingBucket($state, $line, $date);
+            $fromBucket = $bucketId === null ? Money::zero() : $this->smaller($state->env[$bucketId], $line->price);
+            $fromFree = $line->price->subtract($fromBucket);
 
-            if ($fromReady->isPositive() && $this->spendableReady()->lessThan($fromReady)) {
+            if ($fromFree->greaterThan($state->free())) {
+                $state->limitedBy[$state->next] = 'free';
+
                 return;
             }
 
-            if ($bucketId !== null) {
-                $balances[$bucketId] = $balances[$bucketId]->subtract($fromBucket);
+            if ($line->price->greaterThan($input->timeline->suffixMin($date)->subtract($state->committed))) {
+                $state->limitedBy[$state->next] = 'cash';
+
+                return;
             }
-            $this->ready = $this->ready->subtract($fromReady);
+
+            if ($bucketId !== null && $fromBucket->isPositive()) {
+                $state->withdraw($bucketId, $fromBucket, $date, released: false);
+            }
+            $state->cash = $state->cash->subtract($line->price);
+            $state->committed = $state->committed->add($line->price);
             if ($bucketId !== null) {
-                $this->completeIfDone($input, $bucketId, $balances, $date);
+                $this->completeIfDone($state, $bucketId, $date);
             }
             $state->lastPurchase = $date;
-            $state->results[$state->next] = new LineResult(
-                $line->itemId, $line->name, $line->price, $date, (int) round($input->start->diffInDays($date)), Money::zero(), null,
-                $line->desiredBy !== null && $date->gt($line->desiredBy), $line->importance,
-            );
+            $state->bought[$state->next] = [$date, $fromBucket, $fromFree];
             $state->next++;
         }
     }
 
     /**
-     * @param  array<int, Money>  $balances
+     * The bucket that pays first: the line's, when it is funded, holds money and is not closed.
      */
-    private function recordUnbought(EngineInput $input, EngineLine $line, array $balances, object $state): void
+    private function payingBucket(EngineState $state, EngineLine $line, CarbonImmutable $date): ?int
     {
-        $bucketId = $line->bucketId !== null && isset($balances[$line->bucketId]) ? $line->bucketId : null;
-        $missing = $line->price->subtract($this->fromBucket($line, $bucketId, $balances))->subtract($this->spendableReady());
+        $id = $line->bucketId;
 
-        $state->results[$state->next] = new LineResult(
-            $line->itemId, $line->name, $line->price, null, null,
-            $line->blocked !== null || $missing->isPositive() ? ($line->blocked !== null ? $line->price : $missing) : Money::zero(),
-            $line->blocked, false, $line->importance,
+        if ($id === null || ! isset($state->buckets[$id]) || ! $state->funded[$id] || $state->isCompleted($id, $date) || ! $state->env[$id]->isPositive()) {
+            return null;
+        }
+
+        return $id;
+    }
+
+    /**
+     * A bucket marked "completes on purchase" closes when something is bought from it: what is left moves to its
+     * overflow bucket (or back to ready to assign) and it stops receiving income.
+     */
+    private function completeIfDone(EngineState $state, int $bucketId, CarbonImmutable $date): void
+    {
+        $bucket = $state->buckets[$bucketId];
+        if (! $bucket->completesOnPurchase || isset($state->completed[$bucketId])) {
+            return;
+        }
+
+        $state->completed[$bucketId] = $date;
+        $state->reached[$bucketId] ??= $date;
+        $this->moveLeftover($state, $bucket, $date);
+    }
+
+    /**
+     * @param  list<EngineLine>  $lines
+     */
+    private function finish(EngineInput $input, array $lines, EngineState $state): EngineResult
+    {
+        $free = $state->free();
+        $cashRoom = $input->timeline->suffixMin($input->end)->subtract($state->committed);
+        $spendable = $this->smaller($free, $cashRoom);
+
+        $results = [];
+        foreach ($lines as $index => $line) {
+            if (isset($state->bought[$index])) {
+                [$date, $fromBucket, $fromFree] = $state->bought[$index];
+                $results[] = new LineResult(
+                    $line->itemId, $line->name, $line->price, $date, (int) round($input->start->diffInDays($date)), Money::zero(), null,
+                    $line->desiredBy !== null && $date->gt($line->desiredBy), $line->importance,
+                    $fromBucket, $fromFree, null, false, $this->freeDipAfter($state, $date), $line->warnings,
+                );
+
+                continue;
+            }
+
+            if ($line->blocked !== null) {
+                $results[] = new LineResult(
+                    $line->itemId, $line->name, $line->price, null, null, $line->price, $line->blocked, false, $line->importance,
+                    warnings: $line->warnings,
+                );
+
+                continue;
+            }
+
+            $bucketId = $this->payingBucket($state, $line, $input->end);
+            $inBucket = $bucketId === null ? Money::zero() : $this->smaller($state->env[$bucketId], $line->price);
+            $missing = $line->price->subtract($inBucket)->subtract($spendable->isPositive() ? $spendable : Money::zero());
+            $limitedBy = $state->limitedBy[$index] ?? match (true) {
+                $line->price->subtract($inBucket)->greaterThan($free) => 'free',
+                $line->price->greaterThan($cashRoom) => 'cash',
+                default => null,
+            };
+
+            $results[] = new LineResult(
+                $line->itemId, $line->name, $line->price, null, null, $missing->isPositive() ? $missing : Money::zero(), null, false, $line->importance,
+                limitedBy: $limitedBy, warnings: $line->warnings,
+            );
+        }
+
+        return new EngineResult(
+            $results,
+            $state->env,
+            $state->cash,
+            $free,
+            $state->points,
+            $state->outcomes,
+            $state->reached,
+            new IncomeSummary($state->incomeCount, $state->incomeAmount, $state->incomeAllocated, $state->incomeLeftFree),
         );
     }
 
     /**
-     * What the bucket pays toward a line: its positive funds, up to the price.
-     *
-     * @param  array<int, Money>  $balances
+     * The first day on or after a purchase when ready to assign is below zero.
      */
-    private function fromBucket(EngineLine $line, ?int $bucketId, array $balances): Money
+    private function freeDipAfter(EngineState $state, CarbonImmutable $date): ?CarbonImmutable
     {
-        if ($bucketId === null || ! $balances[$bucketId]->isPositive()) {
-            return Money::zero();
+        $key = $date->format('Y-m-d');
+        foreach ($state->points as $point) {
+            if ($point->date->format('Y-m-d') >= $key && $point->free->isNegative()) {
+                return $point->date;
+            }
         }
 
-        return $balances[$bucketId]->lessThan($line->price) ? $balances[$bucketId] : $line->price;
+        return null;
     }
 
-    private function spendableReady(): Money
+    private function smaller(Money $a, Money $b): Money
     {
-        return $this->ready->isPositive() ? $this->ready : Money::zero();
+        return $a->lessThan($b) ? $a : $b;
     }
 }
