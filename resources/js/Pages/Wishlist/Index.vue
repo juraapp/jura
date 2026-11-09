@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -10,6 +10,7 @@ import ModalForm from '@/Components/ModalForm.vue';
 import Money from '@/Components/Money.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
+import MoneyInput from '@/Components/MoneyInput.vue';
 import TextInput from '@/Components/TextInput.vue';
 import SelectInput from '@/Components/SelectInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -25,7 +26,8 @@ import {
     unpurchase,
     bulkDestroy,
 } from '@/actions/App/Modules/Planning/Http/Controllers/WishlistItemController';
-import { destroy as destroyProject } from '@/actions/App/Modules/Planning/Http/Controllers/ProjectController';
+import { destroy as destroyProject, quickStore as quickStoreProject } from '@/actions/App/Modules/Planning/Http/Controllers/ProjectController';
+import { withCsrfHeader } from '@/csrf';
 import ProjectModal from '@/Components/ProjectModal.vue';
 import { useFormat } from '@/composables/useFormat';
 import BulkCheckbox from '@/Components/BulkCheckbox.vue';
@@ -112,7 +114,10 @@ const blankItem = (projectId = '') => ({
     currency: props.currencies[0],
     importance: 3,
     project_id: projectId,
+    funding: 'ready',
     bucket_id: '',
+    new_bucket_fill_rule: 'fixed',
+    new_bucket_fill_value: '',
     desired_by: '',
     allowed_account_ids: [],
     url: '',
@@ -122,10 +127,64 @@ const blankItem = (projectId = '') => ({
 
 const itemForm = useForm(blankItem());
 const bucketChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === itemForm.currency));
+
+/* The chosen bucket stops filling at its limit: below the price, the rest of the price comes from ready to assign. */
+const chosenBucket = computed(() => bucketChoices.value.find((bucket) => bucket.id === Number(itemForm.bucket_id)) ?? null);
+const capBelowPrice = computed(() => itemForm.funding === 'bucket' && chosenBucket.value?.cap !== null && chosenBucket.value?.cap !== undefined
+    && Number(itemForm.price) > 0 && chosenBucket.value.cap < Number(itemForm.price));
+
+/* Projects made from this form show up before the page reloads. A project has one currency, so only the ones that
+   match the item's are offered. */
+const extraProjects = ref([]);
+const allProjects = computed(() => [...props.projects, ...extraProjects.value.filter((added) => !props.projects.some((project) => project.id === added.id))]);
+const projectChoices = computed(() => allProjects.value.filter((project) => !project.currency || project.currency === itemForm.currency));
+const selectedProject = computed(() => allProjects.value.find((project) => project.id === Number(itemForm.project_id)) ?? null);
+
+const newProject = reactive({ open: false, name: '', error: '', processing: false });
+
+watch(() => itemForm.project_id, (value) => {
+    if (value === '__new__') {
+        itemForm.project_id = '';
+        newProject.open = true;
+        newProject.error = '';
+    }
+});
+
+const createProject = async () => {
+    newProject.processing = true;
+    newProject.error = '';
+
+    try {
+        const response = await fetch(quickStoreProject.url(), {
+            method: 'POST',
+            headers: withCsrfHeader({ Accept: 'application/json', 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ name: newProject.name, currency: itemForm.currency }),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            newProject.error = data.errors?.name?.[0] ?? data.errors?.currency?.[0] ?? t('ui.common.request_failed');
+
+            return;
+        }
+
+        extraProjects.value.push(data);
+        itemForm.project_id = data.id;
+        newProject.open = false;
+        newProject.name = '';
+    } catch {
+        newProject.error = t('ui.common.request_failed');
+    } finally {
+        newProject.processing = false;
+    }
+};
 const itemAccountChoices = computed(() => props.accounts.filter((account) => account.currency === itemForm.currency));
 
 /* A bucket or account in another currency would stay selected but invisible, and the server rejects it. */
 watch(() => itemForm.currency, () => {
+    if (itemForm.project_id && !projectChoices.value.some((project) => project.id === Number(itemForm.project_id))) {
+        itemForm.project_id = '';
+    }
     if (itemForm.bucket_id && !bucketChoices.value.some((bucket) => bucket.id === itemForm.bucket_id)) {
         itemForm.bucket_id = '';
     }
@@ -143,7 +202,10 @@ const openItemModal = (item = null, projectId = '') => {
             currency: item.currency,
             importance: item.importance,
             project_id: item.projectId ?? '',
+            funding: item.bucket ? 'bucket' : 'ready',
             bucket_id: item.bucket?.id ?? '',
+            new_bucket_fill_rule: 'fixed',
+            new_bucket_fill_value: '',
             desired_by: item.desiredBy ?? '',
             allowed_account_ids: [...item.allowedAccountIds],
             url: item.url ?? '',
@@ -157,7 +219,15 @@ const openItemModal = (item = null, projectId = '') => {
 
 const submitItem = () => {
     const action = editingItem.value ? update(editingItem.value.id) : store();
-    itemForm.submit(action, { preserveScroll: true, onSuccess: () => (showItemModal.value = false) });
+
+    itemForm.transform(({ funding, ...data }) => ({
+        ...data,
+        project_id: data.project_id === '' ? null : data.project_id,
+        bucket_id: funding === 'bucket' && data.bucket_id !== '' ? data.bucket_id : null,
+        new_bucket: funding === 'new',
+        new_bucket_fill_rule: funding === 'new' ? data.new_bucket_fill_rule : null,
+        new_bucket_fill_value: funding === 'new' ? data.new_bucket_fill_value : null,
+    })).submit(action, { preserveScroll: true, onSuccess: () => (showItemModal.value = false) });
 };
 
 const setStatus = (item, status) => {
@@ -412,24 +482,78 @@ onMounted(() => {
                         <InputLabel for="item_project" :value="$t('ui.wishlist.project')" />
                         <SelectInput id="item_project" v-model="itemForm.project_id">
                             <option value="">{{ $t('ui.wishlist.no_project') }}</option>
-                            <option v-for="project in projects" :key="project.id" :value="project.id">{{ project.name }}</option>
+                            <option v-for="project in projectChoices" :key="project.id" :value="project.id">{{ project.name }}</option>
+                            <option value="__new__">＋ {{ $t('ui.wishlist.new_project_option') }}</option>
                         </SelectInput>
                         <InputError class="mt-1" :message="itemForm.errors.project_id" />
                     </div>
                 </div>
 
-                <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700" :open="Boolean(itemForm.bucket_id) || itemForm.allowed_account_ids.length > 0">
+                <div v-if="newProject.open" class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                    <InputLabel for="quick_project_name" :value="$t('ui.wishlist.quick_project_title')" />
+                    <div class="mt-1 flex flex-wrap gap-2">
+                        <TextInput
+                            id="quick_project_name"
+                            v-model="newProject.name"
+                            type="text"
+                            class="block min-w-0 flex-1"
+                            :placeholder="$t('ui.wishlist.project_placeholder')"
+                            @keydown.enter.prevent="createProject"
+                        />
+                        <SecondaryButton type="button" :disabled="newProject.processing || newProject.name.trim() === ''" @click="createProject">{{ $t('ui.wishlist.quick_project_create') }}</SecondaryButton>
+                        <SecondaryButton type="button" @click="newProject.open = false">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    </div>
+                    <InputError class="mt-1" :message="newProject.error" />
+                </div>
+
+                <fieldset class="space-y-2">
+                    <legend class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('ui.wishlist.funding_title') }}</legend>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <input v-model="itemForm.funding" type="radio" value="ready" class="text-primary-600 focus:ring-primary-500" />
+                        {{ selectedProject?.bucket ? $t('ui.wishlist.funding_project_bucket', { name: selectedProject.bucket.name }) : $t('ui.wishlist.funding_ready') }}
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <input v-model="itemForm.funding" type="radio" value="bucket" class="text-primary-600 focus:ring-primary-500" />
+                        {{ $t('ui.wishlist.funding_bucket') }}
+                    </label>
+                    <div v-if="itemForm.funding === 'bucket'" class="pl-6">
+                        <SelectInput id="item_bucket" v-model="itemForm.bucket_id">
+                            <option value="">{{ $t('ui.wishlist.no_bucket') }}</option>
+                            <option v-for="bucket in bucketChoices" :key="bucket.id" :value="bucket.id">{{ bucket.name }}</option>
+                        </SelectInput>
+                        <p v-if="capBelowPrice" class="mt-1 text-xs text-amber-600 dark:text-amber-400">{{ $t('ui.wishlist.cap_below_price', { cap: format.money(chosenBucket.cap, itemForm.currency) }) }}</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.wishlist.bucket_hint') }}</p>
+                        <InputError class="mt-1" :message="itemForm.errors.bucket_id" />
+                    </div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <input v-model="itemForm.funding" type="radio" value="new" class="text-primary-600 focus:ring-primary-500" />
+                        {{ $t('ui.wishlist.funding_new_bucket') }}
+                    </label>
+                    <div v-if="itemForm.funding === 'new'" class="space-y-2 pl-6">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.wishlist.funding_new_hint') }}</p>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <InputLabel for="item_fill_rule" :value="$t('ui.wishlist.fill_title')" />
+                                <SelectInput id="item_fill_rule" v-model="itemForm.new_bucket_fill_rule">
+                                    <option value="fixed">{{ $t('ui.wishlist.fill_fixed') }}</option>
+                                    <option value="percent">{{ $t('ui.wishlist.fill_percent') }}</option>
+                                    <option value="of_remaining">{{ $t('ui.wishlist.fill_of_remaining') }}</option>
+                                </SelectInput>
+                                <InputError class="mt-1" :message="itemForm.errors.new_bucket_fill_rule" />
+                            </div>
+                            <div>
+                                <InputLabel for="item_fill_value" :value="itemForm.new_bucket_fill_rule === 'fixed' ? $t('ui.wishlist.fill_amount') : $t('ui.wishlist.fill_percentage')" />
+                                <MoneyInput v-if="itemForm.new_bucket_fill_rule === 'fixed'" id="item_fill_value" v-model="itemForm.new_bucket_fill_value" :currency="itemForm.currency" class="mt-1" />
+                                <TextInput v-else id="item_fill_value" v-model="itemForm.new_bucket_fill_value" type="number" step="0.01" min="0" max="100" class="mt-1 block w-full" />
+                                <InputError class="mt-1" :message="itemForm.errors.new_bucket_fill_value" />
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700" :open="itemForm.allowed_account_ids.length > 0">
                     <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200">{{ $t('ui.wishlist.funding') }}</summary>
                     <div class="mt-3 space-y-4">
-                        <div>
-                            <InputLabel for="item_bucket" :value="$t('ui.wishlist.pay_bucket')" />
-                            <SelectInput id="item_bucket" v-model="itemForm.bucket_id">
-                                <option value="">{{ $t('ui.wishlist.no_bucket') }}</option>
-                                <option v-for="bucket in bucketChoices" :key="bucket.id" :value="bucket.id">{{ bucket.name }}</option>
-                            </SelectInput>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.wishlist.bucket_hint') }}</p>
-                            <InputError class="mt-1" :message="itemForm.errors.bucket_id" />
-                        </div>
                         <div>
                             <InputLabel for="item_desired_by" :value="$t('ui.wishlist.want_by')" />
                             <TextInput id="item_desired_by" v-model="itemForm.desired_by" type="date" class="mt-1 block w-full" />

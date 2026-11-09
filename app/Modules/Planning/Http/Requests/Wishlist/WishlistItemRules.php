@@ -4,6 +4,7 @@ namespace App\Modules\Planning\Http\Requests\Wishlist;
 
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Enums\BucketKind;
+use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Models\Project;
 use App\Modules\Shared\Validation\LedgerRules;
 use App\Modules\Shared\Validation\MoneyRules;
@@ -41,9 +42,23 @@ trait WishlistItemRules
                 },
             ],
             'bucket_id' => [
+                Rule::prohibitedIf(fn () => $this->boolean('new_bucket')),
                 'nullable',
                 'integer',
                 Rule::exists('buckets', 'id')->where('user_id', $userId)->where('kind', BucketKind::Savings->value)->where('currency', $currency),
+            ],
+            'new_bucket' => ['nullable', 'boolean'],
+            'new_bucket_fill_rule' => [
+                Rule::requiredIf(fn () => $this->boolean('new_bucket')),
+                'nullable',
+                Rule::in([FillRule::Fixed->value, FillRule::Percent->value, FillRule::PercentOfRemaining->value]),
+            ],
+            'new_bucket_fill_value' => [
+                Rule::requiredIf(fn () => $this->boolean('new_bucket')),
+                'nullable',
+                'numeric',
+                'gt:0',
+                ...($this->input('new_bucket_fill_rule') === FillRule::Fixed->value ? ['decimal:0,2', 'max:'.MoneyRules::MAX] : ['decimal:0,4', 'max:100']),
             ],
             'desired_by' => ['nullable', 'date'],
             'allowed_account_ids' => ['nullable', 'array'],
