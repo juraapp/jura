@@ -24,6 +24,7 @@ return [
         'custom' => 'Custom',
         'forecast' => 'Forecast',
         'projects' => 'Projects',
+        'reports_projects' => 'Project report',
         'profile_security' => 'Profile & security',
         'categories' => 'Categories',
         'preferences' => 'Preferences',

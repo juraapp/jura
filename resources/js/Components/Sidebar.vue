@@ -7,6 +7,7 @@ import { useSidebar } from '@/composables/useSidebar';
 import { index as accountsIndex } from '@/routes/accounts';
 import { index as bucketsIndex } from '@/routes/buckets';
 import { index as plannedEventsIndex } from '@/routes/planned-events';
+import { index as projectsIndex } from '@/routes/projects';
 import { index as wishlistIndex } from '@/routes/wishlist';
 import { index as plannerIndex } from '@/routes/planner';
 import { index as categoriesIndex } from '@/routes/categories';
@@ -52,6 +53,7 @@ const sections = [
         items: [
             { label: 'ui.shell.nav.cash_flow', route: plannedEventsIndex, icon: 'calendar', badge: 'reviewCount' },
             { label: 'ui.shell.nav.buckets', route: bucketsIndex, icon: 'chart-pie' },
+            { label: 'ui.shell.nav.projects', route: projectsIndex, icon: 'folder' },
             { label: 'ui.shell.nav.wish_list', route: wishlistIndex, icon: 'flag' },
             { label: 'ui.shell.nav.planner', route: plannerIndex, icon: 'scale' },
             { label: 'ui.shell.nav.savings_goals', route: savingsGoalsIndex, icon: 'flag' },
@@ -65,7 +67,7 @@ const sections = [
             { label: 'ui.shell.nav.custom', route: reportsCustom, icon: 'document-chart-bar' },
             { label: 'ui.shell.nav.forecast', route: reportsForecast, icon: 'arrow-trending-up' },
             { label: 'ui.shell.nav.buckets', route: reportsBuckets, icon: 'chart-pie' },
-            { label: 'ui.shell.nav.projects', route: reportsProjects, icon: 'flag' },
+            { label: 'ui.shell.nav.reports_projects', route: reportsProjects, icon: 'flag' },
         ],
     },
     {

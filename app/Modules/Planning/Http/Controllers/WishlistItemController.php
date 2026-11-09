@@ -19,13 +19,14 @@ use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class WishlistItemController extends Controller
 {
-    public function index(ProjectOverview $overview, LedgerQuery $ledger): Response
+    public function index(Request $request, ProjectOverview $overview, LedgerQuery $ledger): Response
     {
         $this->authorize('viewAny', WishlistItem::class);
 
@@ -35,7 +36,7 @@ class WishlistItemController extends Controller
         $currencies = Auth::user()->accounts()->pluck('currency')->unique()->sort()->values();
 
         return Inertia::render('Wishlist/Index', [
-            'projects' => Project::orderBy('name')->get()->map(fn (Project $project) => [
+            'projects' => Project::with('bucket')->orderBy('name')->get()->map(fn (Project $project) => [
                 'id' => $project->id,
                 'name' => $project->name,
                 'kind' => $project->kind->value,
@@ -43,7 +44,12 @@ class WishlistItemController extends Controller
                 'color' => $project->color,
                 'icon' => $project->icon,
                 'notes' => $project->notes,
+                'currency' => $project->currency,
+                'budget' => $project->budget_amount?->toFloat(),
+                'targetDate' => $project->target_date?->toDateString(),
+                'bucket' => $project->bucket ? ['id' => $project->bucket->id, 'name' => $project->bucket->name] : null,
             ])->values(),
+            'newItemProject' => ($projectId = (int) $request->query('project')) > 0 && Project::whereKey($projectId)->exists() ? $projectId : null,
             'items' => $items->map(fn (WishlistItem $item) => $this->present($item, $covered))->values(),
             'buckets' => Bucket::inPriorityOrder()->where('kind', BucketKind::Savings->value)->get(['id', 'name', 'currency', 'allowed_account_ids']),
             'accounts' => $ledger->activeAccountOptions(Auth::id()),

@@ -427,6 +427,37 @@ Then add a **Renault 21** to the wish list at 10,000,000 using the *Purchase fun
 - In **Upcoming & cash flow**, an account with an interest rate (see *Accounts*) adds a projected *Interest* column, so the
   forecast includes what your bank "boxes" earn.
 
+## Projects
+
+Menu: **Planning → Projects**.
+
+A project is a goal made of several things you want, for example a home studio or a trip, with its own money plan.
+Press **New project** and fill in:
+
+- a **name**, a **type** (project, hobby, category, other), a **colour** and notes;
+- a **currency**: one per project, and every item in the project must use it;
+- an optional **budget** and **target date**;
+- an optional **savings bucket**. Choose **Use one of my savings buckets** (one that no other project uses, in the
+  project's currency) or **Create a bucket for this project**: Jura makes a savings bucket named like the project,
+  whose target is the budget (or what the wanted items cost), and fills it from your income the way you choose (a
+  fixed amount every month, a percentage of each income, or a share of what is left after the other buckets). Items
+  of the project that have no bucket of their own are paid from the project's bucket.
+
+Each project is a card with a bar (what you already bought, what your buckets cover, what is still wanted) and:
+
+- **Budget**, **Planned** (what the wanted items cost), **Spent** (what the purchases really cost) and **Left**
+  (budget - spent - planned; red when you are over);
+- **Everything bought by**: the date the last wanted item could be bought, following the planner's best order for
+  *all* your wanted items together (Expected income, 24 months ahead), so two projects never count on the same free
+  money. *Not within 24 months* means the money does not get there in time. With a target date it also says **On
+  time** or **After the target date**;
+- how much to **put aside each month** to cover what the buckets do not yet, up to the target date.
+
+Open a project to see each item (when it could be bought, how it is paid, what it really cost), its bucket and
+the budget numbers, and to edit or delete it. Deleting a project keeps its items (without a project) and its
+bucket, unless you tick **Also delete its savings bucket**, in which case the money in it is ready to assign again.
+Items that belong to no project appear in a last card, **Not in a project**.
+
 ## Wish list and projects
 
 Menu: **Planning → Wish list**.
@@ -434,8 +465,9 @@ Menu: **Planning → Wish list**.
 A place for everything you would like to get. Group things into **projects** (a home studio, a trip), **hobbies**
 (cycling) or any other grouping, and rate how much you want each one.
 
-- **New project** creates a group with a name, a type and a colour. Deleting a project keeps its items under
-  "No project".
+- **New project** (also in **Planning → Projects**, see above) creates a group. Deleting a project keeps its items
+  under "No project". On the Projects page, a project's **New item** button comes back here with the item form open
+  and the project already chosen.
 - **New item** needs a name and a price. Set **how much you want it** (1 to 5), and under *Funding, dates and limits*
   you can add a **bucket** to pay for it from, a date you would like it by, and a link.
 - **Can only be bought with**: tick the accounts that may pay for it, for example "Physical money" only; only accounts
@@ -569,7 +601,7 @@ below lists the planned income, planned expenses and each view's balance per mon
 spending from buckets over six months, and the table projects each bucket 12 months ahead using the view you choose at
 the top (it replays your planned income through your fill rules, like the planner).
 
-**Projects report.** For each project (and items with no project): what is still wanted, what you already bought, how
+**Project report** (Reports → Project report). For each project (and items with no project): what is still wanted, what you already bought, how
 much is funded today, and the month everything could be bought if you follow the planner's best order over the next 24
 months, using the chosen view of your income. Shared buckets are counted once (the most wanted item first), and the
 dates come from one plan for all your wanted items, so two projects never count on the same free money. A project

@@ -91,9 +91,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/buckets/{bucket}/adjust', [BucketController::class, 'adjust'])->name('buckets.adjust');
     Route::get('planning/wishlist', [WishlistItemController::class, 'index'])->name('wishlist.index');
     Route::post('planning/wishlist', [WishlistItemController::class, 'store'])->name('wishlist.store');
-    Route::post('planning/wishlist/projects', [ProjectController::class, 'store'])->name('projects.store');
-    Route::patch('planning/wishlist/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
-    Route::delete('planning/wishlist/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+    Route::get('planning/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::get('planning/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::post('planning/projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::patch('planning/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
+    Route::delete('planning/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
     Route::patch('planning/wishlist/{wishlistItem}', [WishlistItemController::class, 'update'])->name('wishlist.update');
     Route::delete('planning/wishlist/{wishlistItem}', [WishlistItemController::class, 'destroy'])->name('wishlist.destroy');
     Route::post('planning/wishlist/bulk-delete', [WishlistItemController::class, 'bulkDestroy'])->name('wishlist.bulk-delete');

@@ -131,6 +131,12 @@ the `XSRF-TOKEN` cookie) when they are not GETs, since they bypass Inertia's rou
 (`Pages/Transactions/Import.vue`) uses the same `fetch()` + `withCsrfHeader()` pattern against its own `parse`/`store`
 JSON endpoints.
 
+## Projects
+`Pages/Projects/Index.vue` (cards) and `Show.vue` (one project) get every number from `ProjectOverview` (never
+recompute funded or budget left on the client). `Components/ProjectModal.vue` creates and edits a project and is the
+only project form: the Projects pages and the Wish list both use it. A project's page links to
+`/planning/wishlist?project=<id>`, which opens the Wish list's item form with that project chosen (`newItemProject`).
+
 ## Planned rows
 
 `Components/PlannedBand.vue` (the overdue and upcoming bands on the transactions list, from the deferred `planned`

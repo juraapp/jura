@@ -37,12 +37,13 @@ class ProjectOverview
      * @return list<array{
      *     id: int|null, name: string|null, kind: string|null, kindLabel: string|null, color: string|null, icon: string|null,
      *     notes: string|null, currency: string|null, budget: float|null, targetDate: string|null,
-     *     bucket: array{id: int, name: string}|null,
+     *     bucket: array{id: int, name: string, envelope: float}|null,
+     *     items?: list<array<string, mixed>>,
      *     counts: array{wanted: int, purchased: int, dropped: int},
      *     totals: list<array{currency: string, wanted: float, purchased: float, funded: float, fundedPercent: float, budgetLeft: float|null, completion: string|null, onTime: bool|null, neededPerMonth: float|null}>
-     * }> projects by name, then the items without a project
+     * }> projects by name, then the items without a project (`items` only with $withItems)
      */
-    public function index(User $user, ?ForecastView $view = null, int $months = 24): array
+    public function index(User $user, ?ForecastView $view = null, int $months = 24, bool $withItems = false): array
     {
         $view ??= ForecastView::default();
 
@@ -59,11 +60,11 @@ class ProjectOverview
 
         $entries = [];
         foreach ($projects as $project) {
-            $entries[] = $this->entry($project, $byProject->get($project->id, collect()), $covered, $paid, $dates, $today);
+            $entries[] = $this->entry($project, $byProject->get($project->id, collect()), $covered, $paid, $dates, $today, $withItems);
         }
 
         if ($byProject->has(0)) {
-            $entries[] = $this->entry(null, $byProject->get(0), $covered, $paid, $dates, $today);
+            $entries[] = $this->entry(null, $byProject->get(0), $covered, $paid, $dates, $today, $withItems);
         }
 
         return $entries;
@@ -124,7 +125,7 @@ class ProjectOverview
      * @param  array<int, string|null>  $dates
      * @return array<string, mixed>
      */
-    private function entry(?Project $project, Collection $items, array $covered, array $paid, array $dates, CarbonInterface $today): array
+    private function entry(?Project $project, Collection $items, array $covered, array $paid, array $dates, CarbonInterface $today, bool $withItems): array
     {
         $currencies = $items->pluck('currency')->when($project?->currency !== null, fn (Collection $all) => $all->push($project->currency))->unique()->sort()->values();
 
@@ -139,13 +140,42 @@ class ProjectOverview
             'currency' => $project?->currency,
             'budget' => $project?->budget_amount?->toFloat(),
             'targetDate' => $project?->target_date?->toDateString(),
-            'bucket' => $project?->bucket !== null ? ['id' => $project->bucket->id, 'name' => $project->bucket->name] : null,
+            'bucket' => $project?->bucket !== null ? ['id' => $project->bucket->id, 'name' => $project->bucket->name, 'envelope' => $this->funds->envelope($project->bucket)->toFloat()] : null,
             'counts' => [
                 'wanted' => $items->where('status', WishlistStatus::Wanted)->count(),
                 'purchased' => $items->where('status', WishlistStatus::Purchased)->count(),
                 'dropped' => $items->where('status', WishlistStatus::Dropped)->count(),
             ],
             'totals' => $currencies->map(fn (string $currency) => $this->totals($project, $items->where('currency', $currency), $currency, $covered, $paid, $dates, $today))->all(),
+        ] + ($withItems ? ['items' => $items->map(fn (WishlistItem $item) => $this->itemRow($item, $covered, $paid, $dates))->values()->all()] : []);
+    }
+
+    /**
+     * One item of a project, for its page.
+     *
+     * @param  array<int, Money>  $covered
+     * @param  array<int, Money>  $paid
+     * @param  array<int, string|null>  $dates
+     * @return array<string, mixed>
+     */
+    private function itemRow(WishlistItem $item, array $covered, array $paid, array $dates): array
+    {
+        $coveredAmount = $covered[$item->id] ?? null;
+
+        return [
+            'id' => $item->id,
+            'name' => $item->name,
+            'price' => $item->price->toFloat(),
+            'currency' => $item->currency,
+            'importance' => $item->importance,
+            'status' => $item->status->value,
+            'statusLabel' => $item->status->label(),
+            'desiredBy' => $item->desired_by?->toDateString(),
+            'purchasedOn' => $item->purchased_on?->toDateString(),
+            'paid' => $item->status === WishlistStatus::Purchased ? ($paid[$item->purchased_transaction_id] ?? $item->price)->toFloat() : null,
+            'bucket' => $item->fundingBucket !== null ? ['id' => $item->fundingBucket->id, 'name' => $item->fundingBucket->name, 'fromProject' => $item->bucket === null] : null,
+            'fundedPercent' => $coveredAmount !== null && $item->price->isPositive() ? round($coveredAmount->percentageOf($item->price), 1) : null,
+            'purchaseDate' => $dates[$item->id] ?? null,
         ];
     }
 
