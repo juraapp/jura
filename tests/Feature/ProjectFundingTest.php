@@ -68,7 +68,7 @@ class ProjectFundingTest extends TestCase
 
     public function test_a_project_keeps_its_currency_budget_and_target_date(): void
     {
-        $this->post('/planning/wishlist/projects', $this->projectPayload(['budget_amount' => '3000000.50', 'target_date' => '2027-06-30']))
+        $this->post('/planning/projects', $this->projectPayload(['budget_amount' => '3000000.50', 'target_date' => '2027-06-30']))
             ->assertSessionHasNoErrors();
 
         $project = Project::sole();
@@ -79,7 +79,7 @@ class ProjectFundingTest extends TestCase
 
     public function test_a_budget_needs_a_currency(): void
     {
-        $this->post('/planning/wishlist/projects', ['name' => 'Garage', 'kind' => 'project', 'budget_amount' => '100'])
+        $this->post('/planning/projects', ['name' => 'Garage', 'kind' => 'project', 'budget_amount' => '100'])
             ->assertSessionHasErrors('currency');
     }
 
@@ -88,13 +88,13 @@ class ProjectFundingTest extends TestCase
         $bike = $this->savingsBucket();
         $dollars = $this->savingsBucket('Trip', 'USD');
 
-        $this->post('/planning/wishlist/projects', $this->projectPayload(['bucket_mode' => 'existing', 'bucket_id' => $bike->id]))
+        $this->post('/planning/projects', $this->projectPayload(['bucket_mode' => 'existing', 'bucket_id' => $bike->id]))
             ->assertSessionHasNoErrors();
         $this->assertSame($bike->id, Project::sole()->bucket_id);
 
-        $this->post('/planning/wishlist/projects', $this->projectPayload(['name' => 'Second', 'bucket_mode' => 'existing', 'bucket_id' => $bike->id]))
+        $this->post('/planning/projects', $this->projectPayload(['name' => 'Second', 'bucket_mode' => 'existing', 'bucket_id' => $bike->id]))
             ->assertSessionHasErrors('bucket_id');
-        $this->post('/planning/wishlist/projects', $this->projectPayload(['name' => 'Third', 'bucket_mode' => 'existing', 'bucket_id' => $dollars->id]))
+        $this->post('/planning/projects', $this->projectPayload(['name' => 'Third', 'bucket_mode' => 'existing', 'bucket_id' => $dollars->id]))
             ->assertSessionHasErrors('bucket_id');
         $this->assertSame(1, Project::count());
     }
@@ -104,13 +104,13 @@ class ProjectFundingTest extends TestCase
         $stranger = User::factory()->create();
         $theirs = Bucket::factory()->savings()->for($stranger)->create(['currency' => 'COP']);
 
-        $this->post('/planning/wishlist/projects', $this->projectPayload(['bucket_mode' => 'existing', 'bucket_id' => $theirs->id]))
+        $this->post('/planning/projects', $this->projectPayload(['bucket_mode' => 'existing', 'bucket_id' => $theirs->id]))
             ->assertSessionHasErrors('bucket_id');
     }
 
     public function test_a_new_bucket_targets_the_budget_and_fills_a_fixed_amount_every_month(): void
     {
-        $this->post('/planning/wishlist/projects', $this->projectPayload([
+        $this->post('/planning/projects', $this->projectPayload([
             'budget_amount' => '3000000', 'bucket_mode' => 'new', 'new_bucket' => ['fill_rule' => 'fixed', 'fill_value' => '500000'],
         ]))->assertSessionHasNoErrors();
 
@@ -132,7 +132,7 @@ class ProjectFundingTest extends TestCase
         WishlistItem::factory()->for($this->user)->create(['project_id' => $project->id, 'currency' => 'COP', 'price' => 400000, 'status' => 'purchased']);
         WishlistItem::factory()->for($this->user)->create(['project_id' => $project->id, 'currency' => 'USD', 'price' => 99]);
 
-        $this->patch("/planning/wishlist/projects/{$project->id}", $this->projectPayload([
+        $this->patch("/planning/projects/{$project->id}", $this->projectPayload([
             'bucket_mode' => 'new', 'new_bucket' => ['fill_rule' => 'percent', 'fill_value' => '25'],
         ]))->assertSessionHasNoErrors();
 
@@ -143,11 +143,11 @@ class ProjectFundingTest extends TestCase
 
     public function test_a_new_bucket_needs_a_fill_rule_and_value(): void
     {
-        $this->post('/planning/wishlist/projects', $this->projectPayload(['bucket_mode' => 'new']))
+        $this->post('/planning/projects', $this->projectPayload(['bucket_mode' => 'new']))
             ->assertSessionHasErrors(['new_bucket.fill_rule']);
-        $this->post('/planning/wishlist/projects', $this->projectPayload(['bucket_mode' => 'new', 'new_bucket' => ['fill_rule' => 'fixed']]))
+        $this->post('/planning/projects', $this->projectPayload(['bucket_mode' => 'new', 'new_bucket' => ['fill_rule' => 'fixed']]))
             ->assertSessionHasErrors(['new_bucket.fill_value']);
-        $this->post('/planning/wishlist/projects', $this->projectPayload(['bucket_mode' => 'new', 'new_bucket' => ['fill_rule' => 'percent', 'fill_value' => '101']]))
+        $this->post('/planning/projects', $this->projectPayload(['bucket_mode' => 'new', 'new_bucket' => ['fill_rule' => 'percent', 'fill_value' => '101']]))
             ->assertSessionHasErrors(['new_bucket.fill_value']);
     }
 
@@ -161,8 +161,8 @@ class ProjectFundingTest extends TestCase
         // 1,000 in the account, 300 earmarked in "Drop".
         $this->assertSame('700.00', $this->readyToAssign());
 
-        $this->delete("/planning/wishlist/projects/{$first->id}")->assertSessionHasNoErrors();
-        $this->delete("/planning/wishlist/projects/{$second->id}", ['delete_bucket' => true])->assertSessionHasNoErrors();
+        $this->delete("/planning/projects/{$first->id}")->assertSessionHasNoErrors();
+        $this->delete("/planning/projects/{$second->id}", ['delete_bucket' => true])->assertSessionHasNoErrors();
 
         $this->assertSame(0, Project::count());
         $this->assertSame(['Keep'], Bucket::pluck('name')->all());

@@ -62,15 +62,15 @@ class WishlistTest extends TestCase
 
     public function test_user_can_create_update_and_delete_a_project_and_its_items_become_unassigned(): void
     {
-        $this->post('/planning/wishlist/projects', ['name' => 'Home studio', 'kind' => 'project', 'color' => '#2563eb'])
+        $this->post('/planning/projects', ['name' => 'Home studio', 'kind' => 'project', 'color' => '#2563eb'])
             ->assertRedirect()->assertSessionHas('success');
         $project = Project::firstOrFail();
 
-        $this->patch("/planning/wishlist/projects/{$project->id}", ['name' => 'Music corner', 'kind' => 'hobby'])->assertRedirect();
+        $this->patch("/planning/projects/{$project->id}", ['name' => 'Music corner', 'kind' => 'hobby'])->assertRedirect();
         $this->assertSame('Music corner', $project->fresh()->name);
 
         $item = WishlistItem::factory()->for($this->user)->create(['project_id' => $project->id]);
-        $this->delete("/planning/wishlist/projects/{$project->id}")->assertRedirect();
+        $this->delete("/planning/projects/{$project->id}")->assertRedirect();
 
         $this->assertDatabaseMissing('projects', ['id' => $project->id]);
         $this->assertNull($item->fresh()->project_id);
@@ -78,11 +78,11 @@ class WishlistTest extends TestCase
 
     public function test_project_validation_and_isolation(): void
     {
-        $this->post('/planning/wishlist/projects', ['name' => '', 'kind' => 'weird'])->assertSessionHasErrors(['name', 'kind']);
+        $this->post('/planning/projects', ['name' => '', 'kind' => 'weird'])->assertSessionHasErrors(['name', 'kind']);
 
         $foreign = Project::factory()->create();
-        $this->patch("/planning/wishlist/projects/{$foreign->id}", ['name' => 'x', 'kind' => 'hobby'])->assertNotFound();
-        $this->delete("/planning/wishlist/projects/{$foreign->id}")->assertNotFound();
+        $this->patch("/planning/projects/{$foreign->id}", ['name' => 'x', 'kind' => 'hobby'])->assertNotFound();
+        $this->delete("/planning/projects/{$foreign->id}")->assertNotFound();
     }
 
     /* ---------- items ---------- */

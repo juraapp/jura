@@ -24,6 +24,7 @@ return [
         'custom' => 'Personalizado',
         'forecast' => 'Pronóstico',
         'projects' => 'Proyectos',
+        'reports_projects' => 'Informe de proyectos',
         'profile_security' => 'Perfil y seguridad',
         'categories' => 'Categorías',
         'preferences' => 'Preferencias',

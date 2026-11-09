@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -25,11 +25,8 @@ import {
     unpurchase,
     bulkDestroy,
 } from '@/actions/App/Modules/Planning/Http/Controllers/WishlistItemController';
-import {
-    store as storeProject,
-    update as updateProject,
-    destroy as destroyProject,
-} from '@/actions/App/Modules/Planning/Http/Controllers/ProjectController';
+import { destroy as destroyProject } from '@/actions/App/Modules/Planning/Http/Controllers/ProjectController';
+import ProjectModal from '@/Components/ProjectModal.vue';
 import { useFormat } from '@/composables/useFormat';
 import BulkCheckbox from '@/Components/BulkCheckbox.vue';
 import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
@@ -47,6 +44,8 @@ const props = defineProps({
     categories: { type: Array, required: true },
     currencies: { type: Array, required: true },
     projectKinds: { type: Array, required: true },
+    /** A project to start a new item in (from that project's page), or null. */
+    newItemProject: { type: Number, default: null },
 });
 
 const page = usePage();
@@ -89,21 +88,10 @@ const totalsByCurrency = (items) => {
 /* ---- project modal ---- */
 const showProjectModal = ref(false);
 const editingProject = ref(null);
-const projectForm = useForm({ name: '', kind: 'project', color: '#2563eb', notes: '' });
 
 const openProjectModal = (project = null) => {
     editingProject.value = project;
-    projectForm.clearErrors();
-    projectForm.name = project?.name ?? '';
-    projectForm.kind = project?.kind ?? 'project';
-    projectForm.color = project?.color ?? '#2563eb';
-    projectForm.notes = project?.notes ?? '';
     showProjectModal.value = true;
-};
-
-const submitProject = () => {
-    const action = editingProject.value ? updateProject(editingProject.value.id) : storeProject();
-    projectForm.submit(action, { preserveScroll: true, onSuccess: () => (showProjectModal.value = false) });
 };
 
 const confirmingDeleteProject = ref(null);
@@ -226,6 +214,13 @@ const submitPurchase = () => {
 };
 
 const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll: true });
+
+/* Arriving from a project's "New item": start the item in that project. */
+onMounted(() => {
+    if (props.newItemProject !== null) {
+        openItemModal(null, props.newItemProject);
+    }
+});
 </script>
 
 <template>
@@ -370,37 +365,15 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
             </template>
         </div>
 
-        <ModalForm :show="showProjectModal" :title="editingProject ? $t('ui.wishlist.edit_project_title') : $t('ui.wishlist.new_project_title')" @close="showProjectModal = false">
-            <form id="project-form" class="space-y-4" @submit.prevent="submitProject">
-                <div>
-                    <InputLabel for="project_name" :value="$t('ui.wishlist.name')" />
-                    <TextInput id="project_name" v-model="projectForm.name" type="text" class="mt-1 block w-full" :placeholder="$t('ui.wishlist.project_placeholder')" />
-                    <InputError class="mt-1" :message="projectForm.errors.name" />
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <InputLabel for="project_kind" :value="$t('ui.wishlist.type')" />
-                        <SelectInput id="project_kind" v-model="projectForm.kind">
-                            <option v-for="kind in projectKinds" :key="kind.value" :value="kind.value">{{ kind.label }}</option>
-                        </SelectInput>
-                        <InputError class="mt-1" :message="projectForm.errors.kind" />
-                    </div>
-                    <div>
-                        <InputLabel for="project_color" :value="$t('ui.wishlist.colour')" />
-                        <input id="project_color" v-model="projectForm.color" type="color" class="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700" />
-                        <InputError class="mt-1" :message="projectForm.errors.color" />
-                    </div>
-                </div>
-                <div>
-                    <InputLabel for="project_notes" :value="$t('ui.wishlist.notes')" />
-                    <TextInput id="project_notes" v-model="projectForm.notes" type="text" class="mt-1 block w-full" />
-                </div>
-            </form>
-            <template #footer>
-                <SecondaryButton type="button" @click="showProjectModal = false">{{ $t('ui.common.cancel') }}</SecondaryButton>
-                <PrimaryButton form="project-form" type="submit" :disabled="projectForm.processing">{{ $t('ui.wishlist.save') }}</PrimaryButton>
-            </template>
-        </ModalForm>
+        <ProjectModal
+            :show="showProjectModal"
+            :project="editingProject"
+            :kinds="projectKinds"
+            :currencies="currencies"
+            :buckets="buckets"
+            :projects="projects"
+            @close="showProjectModal = false"
+        />
 
         <ModalForm :show="showItemModal" :title="editingItem ? $t('ui.wishlist.edit_item') : $t('ui.wishlist.new_item_title')" @close="showItemModal = false">
             <form id="item-form" class="space-y-4" @submit.prevent="submitItem">
