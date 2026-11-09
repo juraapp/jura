@@ -11,6 +11,7 @@ use App\Modules\Shared\Validation\PlanningRules;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateTransactionRequest extends FormRequest
 {
@@ -19,6 +20,26 @@ class UpdateTransactionRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()->can('update', $this->route('transaction'));
+    }
+
+    /**
+     * The bucket of a wish-list purchase's expense is fixed by the purchase.
+     *
+     * @return array<int, Closure>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                $transaction = $this->route('transaction');
+
+                if ($this->has('bucket_id')
+                    && (int) $this->input('bucket_id') !== (int) $transaction->bucket_id
+                    && PlanningRules::isWishlistPurchase($this->user()->id, $transaction->id)) {
+                    $validator->errors()->add('bucket_id', __('transactions.bucket_locked_by_purchase'));
+                }
+            },
+        ];
     }
 
     public function rules(): array

@@ -14,6 +14,7 @@ use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Ledger\Services\TransactionService;
 use App\Modules\Planning\Contracts\UpcomingPlans;
 use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Validation\PlanningRules;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
@@ -250,6 +251,7 @@ class TransactionController extends Controller
             'notes' => $transaction->notes,
             'payment_method' => $transaction->payment_method?->value,
             'bucket_id' => $transaction->bucket_id,
+            'bucket_locked' => PlanningRules::isWishlistPurchase(Auth::id(), $transaction->id),
         ]);
     }
 

@@ -18,9 +18,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Buying a wish-list item: the real expense and the matching spend from its
- * bucket happen together and are undone together. The expense is linked to the
- * bucket (when paid from an on-budget account), so it never also counts in a
- * category envelope; the bucket pays what it has and the rest comes out of
+ * bucket happen together and are undone together. The expense is always linked
+ * to that bucket, so it never also counts in a category envelope, even if the account it was paid from is out of
+ * the budget for now; the bucket pays what it has (when the account is in the budget) and the rest comes out of
  * ready to assign. Deleting the expense from the
  * ledger reverses the purchase; restoring it from the Trash applies it again.
  */
@@ -42,8 +42,6 @@ class WishlistService
             $amount = Money::of($data['amount'] ?? $item->price->toDecimalString());
             $date = isset($data['date']) ? Carbon::parse($data['date']) : Carbon::instance($item->user->today());
 
-            $paidFromBucket = $item->bucket !== null && $this->ledger->isOnBudget($item->user_id, (int) $data['account_id']);
-
             $transactionId = $this->spending->withoutSpending(fn () => $this->transactions->record($item->user, TransactionType::Expense, [
                 'account_id' => $data['account_id'],
                 'category_id' => $data['category_id'],
@@ -51,7 +49,7 @@ class WishlistService
                 'date' => $date->toDateString(),
                 'description' => $item->name,
                 'notes' => $item->notes,
-                'bucket_id' => $paidFromBucket ? $item->bucket_id : null,
+                'bucket_id' => $item->bucket?->id,
             ]));
 
             $this->applyPurchase($item, $transactionId, $amount, $date, (int) $data['account_id']);

@@ -57,5 +57,6 @@ return [
     'any_account' => 'Cualquier cuenta (opcional)',
     'none_yet' => 'Ninguna aún (opcional)',
     'current_bucket' => 'actual',
+    'bucket_locked' => 'Este gasto pagó un artículo de la lista de deseos, así que su balde solo cambia deshaciendo la compra.',
     'record' => 'Registrar',
 ];

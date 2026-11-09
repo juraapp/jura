@@ -53,6 +53,8 @@ const loading = ref(true);
 const editAccounts = ref([]);
 /** Buckets an expense can be paid from (spend-options), fetched on every open since their funds change. */
 const buckets = ref([]);
+/** The expense of a wish-list purchase: its bucket belongs to the purchase and cannot change here. */
+const bucketLocked = ref(false);
 const overrides = reactive({});
 const series = ref(null);
 
@@ -177,6 +179,7 @@ const load = async () => {
             form.category_id = data.category_id;
             form.payment_method = data.payment_method ?? '';
             form.bucket_id = data.bucket_id ?? '';
+            bucketLocked.value = Boolean(data.bucket_locked);
         }
     } else if (props.intent === 'editPlanned') {
         fillPlan(props.event);
@@ -382,7 +385,7 @@ const fieldClass = 'mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-
 
             <div v-if="bucketChoices.length || form.errors.bucket_id">
                 <InputLabel for="bucket_id" :value="$t('ui.transaction_modal.pay_from_bucket')" />
-                <select id="bucket_id" v-model="form.bucket_id" :class="fieldClass">
+                <select id="bucket_id" v-model="form.bucket_id" :class="fieldClass" :disabled="bucketLocked">
                     <option value="">{{ $t('ui.transaction_modal.no_bucket') }}</option>
                     <option v-for="bucket in bucketChoices" :key="bucket.id" :value="bucket.id">
                         {{ bucket.name }} · {{ format.money(bucket.available, bucket.currency) }}{{ bucket.current ? ` · ${$t('ui.transaction_modal.current_bucket')}` : '' }}
@@ -390,6 +393,7 @@ const fieldClass = 'mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-
                 </select>
                 <p v-if="trackingBucket && !form.bucket_id" class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.transaction_modal.counted_in_bucket', { name: trackingBucket.name }) }}</p>
                 <p v-else-if="trackingBucket" class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.transaction_modal.paid_instead', { name: trackingBucket.name }) }}</p>
+                <p v-if="bucketLocked" class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.transaction_modal.bucket_locked') }}</p>
                 <InputError class="mt-1" :message="form.errors.bucket_id" />
             </div>
             <p v-else-if="trackingBucket" class="text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.transaction_modal.counted_in_bucket', { name: trackingBucket.name }) }}</p>

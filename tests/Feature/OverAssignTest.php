@@ -4,10 +4,15 @@ namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
+use App\Modules\Ledger\Models\Category;
+use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Ledger\Services\BalanceCalculator;
 use App\Modules\Planning\Contracts\MoneyMap;
 use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Services\BucketLedger;
+use App\Modules\Shared\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -75,5 +80,38 @@ class OverAssignTest extends TestCase
 
         $this->assertSame('650.00', $this->ready());
         $this->assertSame(2, Allocation::where('source', AllocationSource::Adjustment->value)->count());
+    }
+
+    public function test_changing_a_funded_buckets_category_asks_when_it_takes_more_than_is_ready(): void
+    {
+        $groceries = Category::factory()->expense()->create(['user_id' => $this->user->id, 'name' => 'Groceries']);
+        $fun = Category::factory()->expense()->create(['user_id' => $this->user->id, 'name' => 'Fun']);
+        $account = Account::where('user_id', $this->user->id)->sole();
+        $spending = Bucket::factory()->for($this->user)->create([
+            'currency' => 'COP', 'category_id' => $groceries->id, 'cap_amount' => 500, 'cycle' => 'monthly',
+            'tracking_started_on' => $this->user->today()->subDays(5)->toDateString(),
+        ]);
+        app(BucketLedger::class)->credit($spending, Money::of(300), AllocationSource::Adjustment, null, null);
+        foreach ([[$groceries, 100], [$fun, 40]] as [$category, $amount]) {
+            Transaction::factory()->for($this->user)->create([
+                'account_id' => $account->id, 'category_id' => $category->id, 'type' => 'expense', 'amount' => $amount, 'date' => $this->user->today()->toDateString(),
+            ]);
+        }
+        app(BalanceCalculator::class)->forgetAccount($account);
+        // 1,000 - 100 - 40 = 860 in the account. Groceries' envelope: 300 - 100 = 200. Ready to assign: 660.
+        $this->assertSame('660.00', $this->ready());
+        // 650 more is earmarked elsewhere: 10 left to assign.
+        app(BucketLedger::class)->credit($this->bucket, Money::of(650), AllocationSource::Adjustment, null, null);
+        $this->assertSame('10.00', $this->ready());
+
+        $payload = ['kind' => 'spending', 'category_id' => $fun->id, 'currency' => 'COP', 'cap_amount' => 500, 'cycle' => 'monthly'];
+
+        // Tracking "Fun" instead: its envelope is 300 - 40 = 260, 60 more than 200, but only 10 is ready.
+        $this->patch("/planning/buckets/{$spending->id}", $payload)->assertSessionHasErrors('over_assign');
+        $this->assertSame($groceries->id, $spending->fresh()->category_id);
+
+        $this->patch("/planning/buckets/{$spending->id}", $payload + ['confirm_over_assign' => true])->assertSessionHasNoErrors();
+        $this->assertSame($fun->id, $spending->fresh()->category_id);
+        $this->assertSame('-50.00', $this->ready(), '10 - 60');
     }
 }
