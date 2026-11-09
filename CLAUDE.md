@@ -25,9 +25,11 @@ certainty; `PlannedEventSeries` repeats it and can auto-post it as a real transa
 - `docs/frontend-conventions.md`, `docs/i18n-conventions.md`, `docs/dark-mode.md`, `docs/testing-conventions.md`.
 - `docs/user-manual.md`: end-user manual. A feature is not done until its manual page is updated.
 - `.ai/rules/`: committed project rules (read `index.md` first).
+- Docs are bilingual: `docs/` (English) and `docs/es/` (Spanish) mirror each other file by file.
 
 ## Project conventions
-- Keep these docs and this section current as the code changes; do it in the same change, not later.
+- Keep these docs and this section current as the code changes; do it in the same change, not later. Update
+  both `docs/` and `docs/es/` so the translations never drift.
 - Money is `decimal(15,2)` via `Shared/Support/Money` and `AsMoney`. Validate money input with
   `Shared/Validation/MoneyRules` and account/category foreign keys with `Shared/Validation/LedgerRules` (owner, not
   trashed, active, category type). Code reachable from jobs/console must scope by user explicitly (no auth there). Actual data is `Transaction`; projected
