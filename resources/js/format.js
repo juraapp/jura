@@ -41,8 +41,10 @@ function localeSeparators(locale) {
  * expects. Accepts either separator: with both, the last one is the decimal separator; a lone separator followed by
  * one or two digits is decimal, one repeated or followed by exactly three digits is a thousands separator unless it is
  * the user's decimal separator (so "1.234" is 1234 for a comma-decimal user and 1.234 is invalid for a dot-decimal one
- * only when it has three decimals). Currency symbols, letters and spaces are ignored. Returns '' for a blank input and
- * null when it cannot be read.
+ * only when it has three decimals). Currency symbols, a three-letter currency code before or after the amount, spaces
+ * and apostrophes are ignored; a minus (also U+2212) before the digits or parentheses make it negative. Any other
+ * letter, a minus inside the number or thousands groups that are not three digits make it unreadable. Returns '' for a
+ * blank input and null when it cannot be read.
  *
  * @param {string|number|null|undefined} text
  * @param {{ decimal?: string }} separators  the user's decimal separator ('.' or ',')
@@ -55,8 +57,16 @@ export function parseMoneyInput(text, { decimal = '.' } = {}) {
     const trimmed = String(text).trim();
     if (trimmed === '') return '';
 
-    const negative = /^[^\d]*-/.test(trimmed) || /^\(.*\)$/.test(trimmed);
-    const cleaned = trimmed.replace(/[^\d.,]/g, '');
+    const body = trimmed
+        .replace(/\u2212/g, '-')
+        .replace(/^[A-Za-z]{3}(?![A-Za-z])/, '')
+        .replace(/(?<![A-Za-z])[A-Za-z]{3}$/, '')
+        .replace(/[\p{Sc}\s']/gu, '');
+    const parts = body.match(/^(-)?(\()?(-)?([\d.,]+)(\))?$/);
+    if (parts === null || Boolean(parts[2]) !== Boolean(parts[5]) || (parts[1] && parts[3])) return null;
+
+    const negative = Boolean(parts[1] || parts[2] || parts[3]);
+    const cleaned = parts[4];
     if (!/\d/.test(cleaned)) return null;
 
     const lastDot = cleaned.lastIndexOf('.');
@@ -85,8 +95,8 @@ export function parseMoneyInput(text, { decimal = '.' } = {}) {
         fraction = cleaned.slice(index + 1);
     }
 
-    const group = decimalMark === ',' ? '.' : decimalMark === '.' ? ',' : null;
-    if (group !== null && whole.includes(decimalMark)) return null;
+    if (decimalMark !== null && whole.includes(decimalMark)) return null;
+    if (/[.,]/.test(whole) && !/^\d{1,3}([.,])\d{3}(\1\d{3})*$/.test(whole)) return null;
     whole = whole.replace(/[.,]/g, '');
     if (fraction.length > 2 || /[.,]/.test(fraction)) return null;
     if (whole === '' && fraction === '') return null;
