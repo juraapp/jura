@@ -27,28 +27,16 @@ const { isOpen, close } = useSidebar();
 
 const sections = [
     {
+        title: 'ui.shell.nav.money',
         items: [
             { label: 'ui.shell.nav.dashboard', route: dashboard, icon: 'home' },
-        ],
-    },
-    {
-        title: 'ui.shell.nav.finances',
-        items: [
-            { label: 'ui.shell.nav.transactions', route: transactionsIndex, icon: 'list-bullet' },
-            { label: 'ui.shell.nav.import_csv', route: transactionsImport, icon: 'arrow-up-tray' },
-            { label: 'ui.shell.nav.incomes', route: incomesIndex, icon: 'arrow-up-circle' },
-            { label: 'ui.shell.nav.expenses', route: expensesIndex, icon: 'arrow-down-circle' },
-            { label: 'ui.shell.nav.transfers', route: transfersIndex, icon: 'arrows-right-left' },
-        ],
-    },
-    {
-        title: 'ui.shell.nav.accounts',
-        items: [
             { label: 'ui.shell.nav.banks_wallets', route: accountsIndex, icon: 'wallet' },
+            { label: 'ui.shell.nav.transactions', route: transactionsIndex, also: [incomesIndex, expensesIndex, transfersIndex], icon: 'list-bullet' },
+            { label: 'ui.shell.nav.import_csv', route: transactionsImport, icon: 'arrow-up-tray' },
         ],
     },
     {
-        title: 'ui.shell.nav.planning',
+        title: 'ui.shell.nav.plan',
         items: [
             { label: 'ui.shell.nav.cash_flow', route: plannedEventsIndex, icon: 'calendar', badge: 'reviewCount' },
             { label: 'ui.shell.nav.buckets', route: bucketsIndex, icon: 'chart-pie' },
@@ -58,13 +46,13 @@ const sections = [
         ],
     },
     {
-        title: 'ui.shell.nav.reports',
+        title: 'ui.shell.nav.insights',
         items: [
             { label: 'ui.shell.nav.monthly', route: reportsMonthly, icon: 'document-chart-bar' },
             { label: 'ui.shell.nav.annual', route: reportsAnnual, icon: 'document-chart-bar' },
             { label: 'ui.shell.nav.custom', route: reportsCustom, icon: 'document-chart-bar' },
             { label: 'ui.shell.nav.forecast', route: reportsForecast, icon: 'arrow-trending-up' },
-            { label: 'ui.shell.nav.buckets', route: reportsBuckets, icon: 'chart-pie' },
+            { label: 'ui.shell.nav.reports_buckets', route: reportsBuckets, icon: 'chart-pie' },
             { label: 'ui.shell.nav.reports_projects', route: reportsProjects, icon: 'flag' },
         ],
     },
@@ -82,27 +70,30 @@ const sections = [
 
 const pathOf = (url) => new URL(url, window.location.origin).pathname.replace(/\/+$/, '') || '/';
 
+/** Every address an item answers for: its own, and the pages that belong to it (the Transactions item also covers the incomes, expenses and transfers lists). */
+const pathsOf = (item) => [item.route, ...(item.also ?? [])].map((route) => pathOf(route.url()));
+
 /*
- * The active item is the one whose path is the longest prefix of the current path (query string ignored),
+ * The active item is the one with the longest address that is a prefix of the current path (query string ignored),
  * so /finances/transactions?page=2 highlights Transactions, /finances/transactions/import only Import CSV,
- * and /planning/buckets/1/history Buckets, while /reports/buckets highlights the Buckets report.
+ * /finances/expenses Transactions too, and /planning/buckets/1/history Buckets, while /reports/buckets highlights
+ * the Bucket report.
  */
 const activeUrl = computed(() => {
     const current = pathOf(page.url);
     let best = null;
 
-    sections.forEach((section) => section.items.forEach((item) => {
-        const candidate = pathOf(item.route.url());
+    sections.forEach((section) => section.items.forEach((item) => pathsOf(item).forEach((candidate) => {
         const matches = current === candidate || (candidate !== '/' && current.startsWith(`${candidate}/`));
         if (matches && (best === null || candidate.length > best.length)) {
             best = candidate;
         }
-    }));
+    })));
 
     return best;
 });
 
-const isActive = (routeFn) => activeUrl.value === pathOf(routeFn.url());
+const isActive = (item) => pathsOf(item).includes(activeUrl.value);
 </script>
 
 <template>
@@ -129,7 +120,7 @@ const isActive = (routeFn) => activeUrl.value === pathOf(routeFn.url());
                         <Link
                             :href="item.route.url()"
                             class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition"
-                            :class="isActive(item.route)
+                            :class="isActive(item)
                                 ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-400'
                                 : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'"
                             @click="close"

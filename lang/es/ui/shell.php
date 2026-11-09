@@ -2,10 +2,10 @@
 
 return [
     'nav' => [
-        'finances' => 'Finanzas',
-        'accounts' => 'Cuentas',
-        'planning' => 'Planificación',
-        'reports' => 'Reportes',
+        'money' => 'Dinero',
+        'plan' => 'Plan',
+        'insights' => 'Informes',
+        'reports_buckets' => 'Informe de baldes',
         'settings' => 'Configuración',
         'dashboard' => 'Panel',
         'transactions' => 'Transacciones',
