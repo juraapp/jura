@@ -110,6 +110,18 @@ test('money input keeps the sign, and blanks and junk are told apart', () => {
     assert.equal(parseMoneyInput(12.5), '12.50');
 });
 
+test('money input reads a unicode minus and a currency code, and rejects stray letters and signs', () => {
+    assert.equal(parseMoneyInput('\u221250', { decimal: '.' }), '-50.00', 'U+2212 is a minus');
+    assert.equal(parseMoneyInput('$ -1,234.5', { decimal: '.' }), '-1234.50');
+    assert.equal(parseMoneyInput('COP 1.000', { decimal: ',' }), '1000.00');
+    assert.equal(parseMoneyInput('1.000 COP', { decimal: ',' }), '1000.00');
+    assert.equal(parseMoneyInput("1'234.50", { decimal: '.' }), '1234.50');
+    assert.equal(parseMoneyInput('1-2', { decimal: '.' }), null, 'a minus inside the number');
+    assert.equal(parseMoneyInput('1e3', { decimal: '.' }), null, 'a letter inside the number');
+    assert.equal(parseMoneyInput('1.2.3,4', { decimal: ',' }), null, 'thousands groups must have three digits');
+    assert.equal(parseMoneyInput('-', { decimal: '.' }), null);
+});
+
 test('money input shows grouped amounts with decimals only when there are cents', () => {
     assert.equal(formatMoneyInput('1234.5', { decimal: ',', group: '.' }), '1.234,50');
     assert.equal(formatMoneyInput('1234567', { decimal: '.', group: ',' }), '1,234,567');
