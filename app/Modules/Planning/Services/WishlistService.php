@@ -7,6 +7,8 @@ use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Enums\TransactionType;
 use App\Modules\Planning\Enums\AllocationSource;
+use App\Modules\Planning\Enums\BucketKind;
+use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Enums\WishlistStatus;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
@@ -31,7 +33,31 @@ class WishlistService
         private readonly BucketLedger $funds,
         private readonly LedgerQuery $ledger,
         private readonly ExpenseSpending $spending,
+        private readonly BucketManager $buckets,
     ) {}
+
+    /**
+     * A savings bucket to save up for the item: it targets the price, fills from the user's income the way they
+     * chose and closes when the item is bought (what is left goes back to ready to assign).
+     *
+     * @param  array<string, mixed>  $data  validated item data with new_bucket_fill_rule and new_bucket_fill_value
+     */
+    public function createBucketFor(User $user, array $data): Bucket
+    {
+        $rule = FillRule::from($data['new_bucket_fill_rule']);
+
+        return $this->buckets->save($user, [
+            'name' => $data['name'],
+            'kind' => BucketKind::Savings->value,
+            'currency' => strtoupper($data['currency'] ?? $user->currency_default),
+            'cap_amount' => Money::of($data['price'])->toDecimalString(),
+            'fill_rule' => $rule->value,
+            'fill_value' => $data['new_bucket_fill_value'],
+            'cycle' => $rule === FillRule::Fixed ? 'monthly' : null,
+            'completes_on_purchase' => true,
+            'allowed_account_ids' => $data['allowed_account_ids'] ?? [],
+        ]);
+    }
 
     /**
      * @param  array{account_id: int, category_id: int, amount?: mixed, date?: string|null}  $data

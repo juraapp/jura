@@ -468,8 +468,18 @@ A place for everything you would like to get. Group things into **projects** (a 
 - **New project** (also in **Planning → Projects**, see above) creates a group. Deleting a project keeps its items
   under "No project". On the Projects page, a project's **New item** button comes back here with the item form open
   and the project already chosen.
-- **New item** needs a name and a price. Set **how much you want it** (1 to 5), and under *Funding, dates and limits*
-  you can add a **bucket** to pay for it from, a date you would like it by, and a link.
+- **New item** needs a name and a price. Set **how much you want it** (1 to 5) and choose a **project** (or press
+  *New project…* in the list to make one on the spot; a project has one currency, so only projects in the item's
+  currency are offered). Then choose **how you will pay for it**:
+  - *From ready to assign* (or *From the project's bucket* when the project has one): nothing is set aside for it;
+  - *From a bucket I already have*: pick one of your savings buckets in the item's currency. If the bucket stops
+    filling below the price, the form says so: the rest of the price will come from ready to assign;
+  - *Save up for it in a new bucket*: Jura makes a savings bucket named like the item, with the price as its target,
+    filled from your income the way you choose (a fixed amount every month, a percentage of each income or a share
+    of what is left). It closes when you buy the item, and what is left goes back to ready to assign.
+
+  Under *Funding, dates and limits* you can also add a date you would like it by, the accounts that may pay for it,
+  and a link.
 - **Can only be bought with**: tick the accounts that may pay for it, for example "Physical money" only; only accounts
   in the item's currency are listed. Leave all unchecked to allow any account. If the bucket is also restricted to certain accounts, only accounts allowed by both
   can be used.

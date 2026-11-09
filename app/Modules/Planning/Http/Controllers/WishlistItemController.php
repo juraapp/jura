@@ -51,7 +51,13 @@ class WishlistItemController extends Controller
             ])->values(),
             'newItemProject' => ($projectId = (int) $request->query('project')) > 0 && Project::whereKey($projectId)->exists() ? $projectId : null,
             'items' => $items->map(fn (WishlistItem $item) => $this->present($item, $covered))->values(),
-            'buckets' => Bucket::inPriorityOrder()->where('kind', BucketKind::Savings->value)->get(['id', 'name', 'currency', 'allowed_account_ids']),
+            'buckets' => Bucket::inPriorityOrder()->where('kind', BucketKind::Savings->value)->get()->map(fn (Bucket $bucket) => [
+                'id' => $bucket->id,
+                'name' => $bucket->name,
+                'currency' => $bucket->currency,
+                'allowed_account_ids' => $bucket->allowed_account_ids,
+                'cap' => $bucket->cap_amount?->toFloat(),
+            ])->values(),
             'accounts' => $ledger->activeAccountOptions(Auth::id()),
             'categories' => $ledger->categoryOptions(Auth::id(), CategoryType::Expense, ['id', 'name', 'icon', 'color']),
             'currencies' => $currencies->isEmpty() ? collect([Auth::user()->currency_default]) : $currencies,
@@ -59,19 +65,28 @@ class WishlistItemController extends Controller
         ]);
     }
 
-    public function store(StoreWishlistItemRequest $request): RedirectResponse
+    public function store(StoreWishlistItemRequest $request, WishlistService $service): RedirectResponse
     {
-        $item = new WishlistItem($this->attributes($request->validated(), $request->user()->currency_default));
+        $data = $request->validated();
+        $attributes = $this->attributes($data, $request->user()->currency_default);
+        if (! empty($data['new_bucket'])) {
+            $attributes['bucket_id'] = $service->createBucketFor($request->user(), $data + ['currency' => $attributes['currency']])->id;
+        }
+
+        $item = new WishlistItem($attributes);
         $item->user_id = $request->user()->id;
         $item->save();
 
         return back()->with('success', __('wishlist.saved'));
     }
 
-    public function update(UpdateWishlistItemRequest $request, WishlistItem $wishlistItem): RedirectResponse
+    public function update(UpdateWishlistItemRequest $request, WishlistItem $wishlistItem, WishlistService $service): RedirectResponse
     {
         $data = $request->validated();
         $attributes = $this->attributes($data, $wishlistItem->currency);
+        if (! empty($data['new_bucket'])) {
+            $attributes['bucket_id'] = $service->createBucketFor($request->user(), $data + ['currency' => $attributes['currency']])->id;
+        }
 
         if ($wishlistItem->status !== WishlistStatus::Purchased && isset($data['status'])) {
             $attributes['status'] = $data['status'];

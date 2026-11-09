@@ -92,6 +92,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('planning/wishlist', [WishlistItemController::class, 'index'])->name('wishlist.index');
     Route::post('planning/wishlist', [WishlistItemController::class, 'store'])->name('wishlist.store');
     Route::get('planning/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::post('planning/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quick-store');
     Route::get('planning/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     Route::post('planning/projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::patch('planning/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');

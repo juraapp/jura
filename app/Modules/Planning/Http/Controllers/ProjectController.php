@@ -5,6 +5,7 @@ namespace App\Modules\Planning\Http\Controllers;
 use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Enums\ProjectKind;
+use App\Modules\Planning\Http\Requests\Projects\QuickStoreProjectRequest;
 use App\Modules\Planning\Http\Requests\Projects\StoreProjectRequest;
 use App\Modules\Planning\Http\Requests\Projects\UpdateProjectRequest;
 use App\Modules\Planning\Models\Bucket;
@@ -12,6 +13,7 @@ use App\Modules\Planning\Models\Project;
 use App\Modules\Planning\Services\ProjectManager;
 use App\Modules\Planning\Services\ProjectOverview;
 use App\Modules\Shared\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,6 +51,28 @@ class ProjectController extends Controller
         $projects->save($request->user(), $request->validated());
 
         return back()->with('success', __('wishlist.project_saved'));
+    }
+
+    /**
+     * Creates a project from an item's form and answers with it, so the form can choose it without a reload.
+     */
+    public function quickStore(QuickStoreProjectRequest $request, ProjectManager $projects): JsonResponse
+    {
+        $project = $projects->save($request->user(), $request->validated() + ['kind' => ProjectKind::Project->value]);
+
+        return response()->json([
+            'id' => $project->id,
+            'name' => $project->name,
+            'kind' => $project->kind->value,
+            'kindLabel' => $project->kind->label(),
+            'color' => $project->color,
+            'icon' => $project->icon,
+            'notes' => $project->notes,
+            'currency' => $project->currency,
+            'budget' => null,
+            'targetDate' => null,
+            'bucket' => null,
+        ], 201);
     }
 
     public function update(UpdateProjectRequest $request, Project $project, ProjectManager $projects): RedirectResponse

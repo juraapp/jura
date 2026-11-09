@@ -135,7 +135,7 @@ JSON endpoints.
 `Pages/Projects/Index.vue` (cards) and `Show.vue` (one project) get every number from `ProjectOverview` (never
 recompute funded or budget left on the client). `Components/ProjectModal.vue` creates and edits a project and is the
 only project form: the Projects pages and the Wish list both use it. A project's page links to
-`/planning/wishlist?project=<id>`, which opens the Wish list's item form with that project chosen (`newItemProject`).
+`/planning/wishlist?project=<id>`, which opens the Wish list's item form with that project chosen (`newItemProject`). The item form can make a project on the spot (`POST planning/projects/quick`, plain `fetch()` with `withCsrfHeader`, then it chooses it) and offers three ways to pay: ready to assign (or the project's bucket), an existing bucket, or a new bucket made for the item (`new_bucket` plus a fill rule and value).
 
 ## Planned rows
 
