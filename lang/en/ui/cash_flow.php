@@ -17,7 +17,7 @@ return [
     'interest_hint' => 'Projected interest from accounts with a yield rate',
     'net' => 'Net',
     'balance' => 'Balance',
-    'on_budget_cash' => 'On-budget cash',
+    'on_budget_cash' => 'On-budget cash (projected)',
     'ready_projected' => 'Ready to assign (projected)',
     'projected_note' => 'On-budget cash is the projected balance of the accounts in your budget. Ready to assign (projected) is that cash minus what your buckets are projected to hold at the end of the month.',
     'no_interest_note' => 'Projected interest is left out of both.',

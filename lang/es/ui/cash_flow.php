@@ -17,7 +17,7 @@ return [
     'interest_hint' => 'Intereses proyectados de las cuentas con tasa de rendimiento',
     'net' => 'Neto',
     'balance' => 'Saldo',
-    'on_budget_cash' => 'Efectivo en el presupuesto',
+    'on_budget_cash' => 'Efectivo en el presupuesto (proyectado)',
     'ready_projected' => 'Disponible para asignar (proyectado)',
     'projected_note' => 'El efectivo en el presupuesto es el saldo proyectado de las cuentas de tu presupuesto. Disponible para asignar (proyectado) es ese efectivo menos lo que tus baldes tendrían al final del mes.',
     'no_interest_note' => 'Los intereses proyectados no se incluyen en ninguno de los dos.',

@@ -109,7 +109,7 @@ const chartOptions = (currency) => ({
     legend: { labels: { colors: [palette().text, palette().text, palette().text], useSeriesColors: false } },
     tooltip: { y: { formatter: (v) => formatMoney(v, currency.currency, locale()) } },
 });
-/* On-budget cash and projected ready to assign exist only for currencies with accounts in the budget or buckets. */
+/* The on-budget columns appear for a currency only when the server computed them (accounts in the budget, buckets or planned money in that currency). */
 const hasBudget = (currency) => currency.months.some((m) => m.onBudget !== null && m.onBudget !== undefined);
 const hasInterest = (currency) => currency.months.some((m) => m.interest > 0);
 const chartSeries = (currency) => [

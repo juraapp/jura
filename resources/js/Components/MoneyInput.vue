@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import { useFormat } from '@/composables/useFormat';
 
 /**
@@ -44,6 +44,8 @@ const onBlur = (event) => {
 };
 
 const input = ref(null);
+const fallbackId = useId();
+const prefixId = computed(() => `${props.id ?? fallbackId}-currency`);
 defineExpose({ focus: () => input.value.focus() });
 </script>
 
@@ -51,6 +53,7 @@ defineExpose({ focus: () => input.value.focus() });
     <div class="relative">
         <span
             v-if="currency"
+            :id="prefixId"
             class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-xs font-medium text-gray-500 dark:text-gray-400"
         >{{ currency }}</span>
         <input
@@ -60,6 +63,7 @@ defineExpose({ focus: () => input.value.focus() });
             inputmode="decimal"
             autocomplete="off"
             :value="text"
+            :aria-describedby="currency ? prefixId : undefined"
             :placeholder="placeholder"
             :disabled="disabled"
             class="block w-full rounded-lg border-gray-300 text-sm tabular-nums shadow-sm focus:border-primary-500 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"

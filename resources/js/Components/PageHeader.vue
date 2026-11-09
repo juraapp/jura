@@ -27,7 +27,7 @@ defineProps({
 
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0">
-                <h1 class="truncate text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ title }}</h1>
+                <h1 class="break-words text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ title }}</h1>
                 <p v-if="subtitle" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
             </div>
 
