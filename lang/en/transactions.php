@@ -9,5 +9,6 @@ return [
     'currency_mismatch' => 'Both accounts must use the same currency. Transfers between currencies are not supported.',
     'account_currency_mismatch' => 'This account uses a different currency. Pick an account in :currency.',
     'bucket_off_budget' => 'An expense in an off-budget account cannot be paid from a bucket.',
+    'bucket_locked_by_purchase' => 'The bucket of a wish-list purchase can only change by undoing the purchase.',
     'future_date_confirm' => 'This date is after today. Plan it instead, or confirm it already happened.',
 ];

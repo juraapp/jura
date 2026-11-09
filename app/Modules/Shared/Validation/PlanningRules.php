@@ -3,6 +3,7 @@
 namespace App\Modules\Shared\Validation;
 
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
 
@@ -12,6 +13,19 @@ use Illuminate\Validation\Rules\Exists;
  */
 final class PlanningRules
 {
+    /**
+     * Whether the transaction is the expense of a wish-list item that was bought. Its bucket link belongs to the
+     * purchase (the item's own or its project's bucket): editing the expense must not change or drop it, or the
+     * purchase would also count in a category envelope.
+     */
+    public static function isWishlistPurchase(int $userId, int $transactionId): bool
+    {
+        return DB::table('wishlist_items')
+            ->where('user_id', $userId)
+            ->where('purchased_transaction_id', $transactionId)
+            ->exists();
+    }
+
     /**
      * One of the user's buckets an expense can be paid from: no tracked category (a category's spending
      * already comes out of its spending bucket), not completed and, when given, in the expense's currency.

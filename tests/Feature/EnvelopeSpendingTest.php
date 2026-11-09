@@ -116,7 +116,7 @@ class EnvelopeSpendingTest extends TestCase
         $this->assertSame('700.00', $this->ready());
     }
 
-    public function test_a_purchase_from_an_off_budget_account_is_not_linked_to_the_bucket(): void
+    public function test_a_purchase_from_an_off_budget_account_takes_nothing_from_the_bucket_but_keeps_the_link(): void
     {
         $deposit = Account::factory()->for($this->user)->offBudget()->create(['currency' => 'COP', 'initial_balance' => 500]);
         $bike = $this->savings('Bike');
@@ -125,8 +125,9 @@ class EnvelopeSpendingTest extends TestCase
 
         $this->buy($item, $deposit);
 
-        // Paid with unbudgeted money: bike keeps 300; bank 1000; ready 700.
-        $this->assertNull(Transaction::sole()->bucket_id);
+        // Paid with unbudgeted money: bike keeps 300; bank 1000; ready 700. The expense still names the bike, so when the
+        // account joins the budget the bike (not a category envelope) pays (ProjectFundingTest).
+        $this->assertSame($bike->id, Transaction::sole()->bucket_id);
         $this->assertSame('300.00', $this->envelope($bike));
         $this->assertSame('700.00', $this->ready());
     }

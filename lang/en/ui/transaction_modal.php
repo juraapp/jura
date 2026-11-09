@@ -57,5 +57,6 @@ return [
     'any_account' => 'Any account (optional)',
     'none_yet' => 'None yet (optional)',
     'current_bucket' => 'current',
+    'bucket_locked' => 'This expense paid for a wish-list item, so its bucket changes only by undoing the purchase.',
     'record' => 'Record',
 ];

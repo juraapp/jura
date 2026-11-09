@@ -73,19 +73,22 @@ class BucketManager
 
     /**
      * How much saving this data would move out of ready to assign through the bucket's opening balance: the change
-     * in the opening amount, less the category spending a first opening brings into the envelope. Saving a new
+     * in the opening amount, less the category spending a first opening brings into the envelope, plus what changing a
+     * funded bucket's category does to its envelope. Saving a new
      * spending bucket for a category that already has one updates that bucket, so its opening counts as the base.
      *
      * @param  array<string, mixed>  $data  validated request data
      */
     public function openingEffect(User $user, array $data, ?Bucket $bucket = null): Money
     {
-        if (! array_key_exists('opening_balance', $data)) {
-            return Money::zero();
-        }
-
         $kind = BucketKind::from($data['kind']);
         $categoryId = $kind === BucketKind::Spending ? ($data['category_id'] ?? null) : null;
+        $retracked = $this->categoryChangeEffect($bucket, $kind, $categoryId);
+
+        if (! array_key_exists('opening_balance', $data)) {
+            return $retracked;
+        }
+
         $target = $bucket ?? $this->matchingSpendingBucket($user, $kind, $categoryId, (string) $data['currency'], $data['cycle'] ?? null);
 
         $probe = $target !== null ? clone $target : new Bucket(['tracking_started_on' => $user->today()->toDateString()]);
@@ -97,9 +100,30 @@ class BucketManager
         $amount = Money::of($data['opening_balance'] ?? 0);
         $current = $target !== null ? $this->buckets->openingBalance($target) : Money::zero();
 
-        return $current->isZero()
+        return $retracked->add($current->isZero()
             ? $this->buckets->assignEffect($probe, $amount)
-            : $amount->subtract($current);
+            : $amount->subtract($current));
+    }
+
+    /**
+     * What changing a funded bucket's category (or kind) does to ready to assign: its envelope pays for the new
+     * category's spending since it was funded instead of the old one's, so the envelope (and what is earmarked)
+     * changes by the difference.
+     */
+    private function categoryChangeEffect(?Bucket $bucket, BucketKind $kind, mixed $categoryId): Money
+    {
+        $categoryId = $categoryId !== null ? (int) $categoryId : null;
+
+        if ($bucket === null || ! $this->buckets->isFunded($bucket)
+            || ($kind === $bucket->kind && $categoryId === $bucket->category_id)) {
+            return Money::zero();
+        }
+
+        $after = clone $bucket;
+        $after->kind = $kind;
+        $after->category_id = $categoryId;
+
+        return $this->buckets->envelope($after)->subtract($this->buckets->envelope($bucket));
     }
 
     /**
