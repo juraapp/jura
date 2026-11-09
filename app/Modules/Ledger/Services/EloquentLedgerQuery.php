@@ -113,6 +113,19 @@ class EloquentLedgerQuery implements LedgerQuery
             ->value('accounts.currency');
     }
 
+    public function amounts(int $userId, array $transactionIds): array
+    {
+        if ($transactionIds === []) {
+            return [];
+        }
+
+        return Transaction::forUser($userId)
+            ->whereIn('id', $transactionIds)
+            ->get(['id', 'amount'])
+            ->mapWithKeys(fn (Transaction $transaction) => [$transaction->id => $transaction->amount])
+            ->all();
+    }
+
     public function income(int $userId, int $transactionId): ?array
     {
         $transaction = Transaction::forUser($userId)

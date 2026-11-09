@@ -32,7 +32,8 @@ interface PlanningOverview
     public function projectedBucketBalances(User $user, ForecastView $view, int $months): array;
 
     /**
-     * Wish-list totals per project (and unassigned items) per currency.
+     * Every project (and the items in none) with what is planned, bought, funded and left of the budget per currency
+     * and when the last wanted item can be bought (all projects planned together, so they share the free money).
      *
      * @return list<array<string, mixed>>
      */

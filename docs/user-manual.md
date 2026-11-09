@@ -441,8 +441,9 @@ A place for everything you would like to get. Group things into **projects** (a 
 - **Can only be bought with**: tick the accounts that may pay for it, for example "Physical money" only; only accounts
   in the item's currency are listed. Leave all unchecked to allow any account. If the bucket is also restricted to certain accounts, only accounts allowed by both
   can be used.
-- When an item is linked to a bucket, it shows a **% funded** bar: the bucket's available money compared with the
-  price. Items that share one bucket each compare against the same pot, so their bars overlap rather than add up.
+- When an item has a bucket (its own, or its project's), it shows a **% funded** bar: how much of the price the
+  bucket's money covers. Items that share one bucket use its money once, the most wanted first, so their bars add up
+  to what the bucket really holds instead of overlapping.
 
 **Buying.** Press the check button (*Mark as purchased*), choose the account and category, and confirm the final
 price. Only accounts in the item's currency (and allowed for the item and its bucket) are offered. If you have no account in
@@ -570,7 +571,10 @@ the top (it replays your planned income through your fill rules, like the planne
 
 **Projects report.** For each project (and items with no project): what is still wanted, what you already bought, how
 much is funded today, and the month everything could be bought if you follow the planner's best order over the next 24
-months, using the chosen view of your income. Shared buckets are counted once per item, so percentages can overlap.
+months, using the chosen view of your income. Shared buckets are counted once (the most wanted item first), and the
+dates come from one plan for all your wanted items, so two projects never count on the same free money. A project
+shows its budget left (budget - what its purchases really cost - what is still wanted) and, when it has a target
+date, whether the last item is bought in time and how much to put aside each month to make it.
 
 ## Notifications
 

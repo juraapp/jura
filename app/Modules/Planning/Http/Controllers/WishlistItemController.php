@@ -13,26 +13,24 @@ use App\Modules\Planning\Http\Requests\Wishlist\UpdateWishlistItemRequest;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\Project;
 use App\Modules\Planning\Models\WishlistItem;
-use App\Modules\Planning\Services\BucketLedger;
+use App\Modules\Planning\Services\ProjectOverview;
 use App\Modules\Planning\Services\WishlistService;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class WishlistItemController extends Controller
 {
-    public function index(BucketLedger $funds, LedgerQuery $ledger): Response
+    public function index(ProjectOverview $overview, LedgerQuery $ledger): Response
     {
         $this->authorize('viewAny', WishlistItem::class);
 
-        $items = WishlistItem::with(['bucket', 'project'])->orderBy('id')->get();
-        $available = $items->pluck('bucket')->filter()->unique('id')
-            ->mapWithKeys(fn (Bucket $bucket) => [$bucket->id => $funds->available($bucket)]);
+        $items = WishlistItem::with(['bucket', 'project.bucket'])->orderBy('id')->get();
+        $covered = $overview->coverage($items->where('status', WishlistStatus::Wanted));
 
         $currencies = Auth::user()->accounts()->pluck('currency')->unique()->sort()->values();
 
@@ -46,7 +44,7 @@ class WishlistItemController extends Controller
                 'icon' => $project->icon,
                 'notes' => $project->notes,
             ])->values(),
-            'items' => $items->map(fn (WishlistItem $item) => $this->present($item, $available))->values(),
+            'items' => $items->map(fn (WishlistItem $item) => $this->present($item, $covered))->values(),
             'buckets' => Bucket::inPriorityOrder()->where('kind', BucketKind::Savings->value)->get(['id', 'name', 'currency', 'allowed_account_ids']),
             'accounts' => $ledger->activeAccountOptions(Auth::id()),
             'categories' => $ledger->categoryOptions(Auth::id(), CategoryType::Expense, ['id', 'name', 'icon', 'color']),
@@ -145,14 +143,14 @@ class WishlistItemController extends Controller
     }
 
     /**
-     * @param  Collection<int, Money>  $available  funded money by bucket id
+     * @param  array<int, Money>  $covered  what each wanted item's bucket covers, by item id
      * @return array<string, mixed>
      */
-    private function present(WishlistItem $item, Collection $available): array
+    private function present(WishlistItem $item, array $covered): array
     {
         $funded = null;
-        if ($item->bucket !== null && $item->price->isPositive()) {
-            $funded = max(0, min(100, $available->get($item->bucket_id, Money::zero())->percentageOf($item->price)));
+        if ($item->fundingBucket !== null && $item->price->isPositive() && isset($covered[$item->id])) {
+            $funded = max(0, min(100, $covered[$item->id]->percentageOf($item->price)));
         }
 
         return [
@@ -167,6 +165,7 @@ class WishlistItemController extends Controller
             'purchasedOn' => $item->purchased_on?->toDateString(),
             'projectId' => $item->project_id,
             'bucket' => $item->bucket ? ['id' => $item->bucket->id, 'name' => $item->bucket->name] : null,
+            'projectBucket' => $item->bucket === null && $item->fundingBucket ? ['id' => $item->fundingBucket->id, 'name' => $item->fundingBucket->name] : null,
             'allowedAccountIds' => $item->allowed_account_ids ?? [],
             'fundedPercent' => $funded,
             'url' => $item->url,

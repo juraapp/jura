@@ -5,11 +5,8 @@ namespace App\Modules\Planning\Services;
 use App\Modules\Identity\Models\User;
 use App\Modules\Planning\Contracts\PlanningOverview;
 use App\Modules\Planning\Enums\ForecastView;
-use App\Modules\Planning\Enums\WishlistStatus;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
-use App\Modules\Planning\Models\WishlistItem;
-use App\Modules\Shared\Support\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -21,6 +18,7 @@ class PlanningOverviewService implements PlanningOverview
     public function __construct(
         private readonly BucketLedger $funds,
         private readonly PlannerService $planner,
+        private readonly ProjectOverview $projects,
     ) {}
 
     public function bucketsByCurrency(User $user): array
@@ -97,89 +95,7 @@ class PlanningOverviewService implements PlanningOverview
 
     public function projectSummaries(User $user, ForecastView $view, int $months): array
     {
-        $items = WishlistItem::forUser($user)->with(['bucket', 'project'])->orderBy('id')->get();
-        $groups = $items->groupBy(fn (WishlistItem $item) => $item->project_id ?? 0);
-
-        $summaries = [];
-        foreach ($groups as $projectId => $groupItems) {
-            $project = $groupItems->first()->project;
-
-            $summaries[] = [
-                'id' => $project?->id,
-                'name' => $project?->name,
-                'kind' => $project?->kind->value,
-                'kindLabel' => $project?->kind->label(),
-                'color' => $project?->color,
-                'counts' => [
-                    'wanted' => $groupItems->where('status', WishlistStatus::Wanted)->count(),
-                    'purchased' => $groupItems->where('status', WishlistStatus::Purchased)->count(),
-                    'dropped' => $groupItems->where('status', WishlistStatus::Dropped)->count(),
-                ],
-                'totals' => $this->totals($user, $groupItems, $view, $months),
-            ];
-        }
-
-        usort($summaries, fn (array $a, array $b) => [$a['name'] === null, $a['name']] <=> [$b['name'] === null, $b['name']]);
-
-        return $summaries;
-    }
-
-    /**
-     * @param  Collection<int, WishlistItem>  $items
-     * @return list<array{currency: string, wanted: float, purchased: float, fundedPercent: float, completion: string|null}>
-     */
-    private function totals(User $user, Collection $items, ForecastView $view, int $months): array
-    {
-        $totals = [];
-
-        foreach ($items->groupBy('currency')->sortKeys() as $currency => $currencyItems) {
-            $wanted = $currencyItems->where('status', WishlistStatus::Wanted);
-            $wantedTotal = $wanted->reduce(fn (Money $sum, WishlistItem $item) => $sum->add($item->price), Money::zero());
-            $purchasedTotal = $currencyItems->where('status', WishlistStatus::Purchased)
-                ->reduce(fn (Money $sum, WishlistItem $item) => $sum->add($item->price), Money::zero());
-
-            $covered = Money::zero();
-            foreach ($wanted as $item) {
-                if ($item->bucket !== null) {
-                    $available = $this->funds->available($item->bucket);
-                    $covered = $covered->add($available->isPositive() ? ($available->lessThan($item->price) ? $available : $item->price) : Money::zero());
-                }
-            }
-
-            $totals[] = [
-                'currency' => $currency,
-                'wanted' => $wantedTotal->toFloat(),
-                'purchased' => $purchasedTotal->toFloat(),
-                'fundedPercent' => $wantedTotal->isPositive() ? round($covered->percentageOf($wantedTotal), 1) : 0.0,
-                'completion' => $this->completion($user, $wanted, $currency, $view, $months),
-            ];
-        }
-
-        return $totals;
-    }
-
-    /**
-     * The date the last wanted item could be bought, following the planner's best order; null if some cannot be bought in time.
-     *
-     * @param  Collection<int, WishlistItem>  $wanted
-     */
-    private function completion(User $user, Collection $wanted, string $currency, ForecastView $view, int $months): ?string
-    {
-        if ($wanted->isEmpty()) {
-            return null;
-        }
-
-        $context = $this->planner->context($user, $currency, $view, $months);
-        $lines = $this->planner->lines($user, $currency, $context, $wanted->map(fn (WishlistItem $item) => ['item_id' => $item->id])->values()->all());
-        $best = $this->planner->suggest($context, $lines, 1)[0] ?? null;
-
-        if ($best === null) {
-            return null;
-        }
-
-        $dates = array_column($best['lines'], 'purchaseDate');
-
-        return in_array(null, $dates, true) ? null : max($dates);
+        return $this->projects->index($user, $view, $months);
     }
 
     /**

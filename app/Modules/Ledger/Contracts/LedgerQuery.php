@@ -72,6 +72,15 @@ interface LedgerQuery
     public function transactionCurrency(int $userId, int $transactionId): ?string;
 
     /**
+     * The amounts of some of the user's transactions, by id; ids that are not theirs (or are in the Trash) are
+     * left out.
+     *
+     * @param  list<int>  $transactionIds
+     * @return array<int, Money>
+     */
+    public function amounts(int $userId, array $transactionIds): array;
+
+    /**
      * One of the user's income transactions, or null if it is not theirs or not an income.
      *
      * @return array{account_id: int, amount: Money, currency: string, date: CarbonInterface}|null
