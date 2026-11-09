@@ -41,7 +41,7 @@ group="topbar">`, so a page only drops `<MoneyMapStrip />` in; never recompute r
 
 ## The established CRUD-page shape
 
-Every domain `Index.vue` (Accounts, Categories, Buckets, SavingsGoals) follows the same shape — copy the closest existing one rather than inventing a new structure:
+Every domain `Index.vue` (Accounts, Categories, Buckets) follows the same shape — copy the closest existing one rather than inventing a new structure:
 
 ```vue
 <script setup>
@@ -62,7 +62,7 @@ const submit = () => {
 - **A disabled `<select>`/`<input>` still submits its value.** Inertia's `useForm()` serializes the reactive JS form object directly (not a native `FormData` collected from the DOM), so `:disabled="editingBucket !== null"` on a field only prevents the *user* from changing it — the value is still sent. This mirrors the original Livewire behavior (a `wire:model`-bound property stays in server-side state regardless of `@disabled` on the rendered element) and is relied on deliberately in `Buckets/Index.vue` to lock `currency` visually on edit while still round-tripping the existing value.
 - Delete confirmation is a plain `Modal`, not `ModalForm` (no form inside, just a yes/no).
 - Flash messages (`back()->with('success'|'error'|'warning', ...)`, plus `undo`) are shown as toasts by `ToastContainer`; pages do not read `page.props.flash` themselves.
-- Delete-dialog copy must match what happens: say the record can be restored from the Trash for soft-deleted models (transactions, accounts, categories, savings goals) and use `ui.common.cannot_be_undone` only for hard deletes.
+- Delete-dialog copy must match what happens: say the record can be restored from the Trash for soft-deleted models (transactions, accounts, categories) and use `ui.common.cannot_be_undone` only for hard deletes.
 
 ## Page header and width
 

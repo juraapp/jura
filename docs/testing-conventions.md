@@ -59,7 +59,7 @@ public function test_user_cannot_update_another_users_bucket(): void
 
 ## Soft deletes
 
-`Account`, `Category`, `SavingsGoal`, and `Transaction` use `SoftDeletes`; `Bucket`, `Allocation`, `PlannedEvent` and `PlannedEventSeries` don't. Use the right assertion:
+`Account`, `Category` and `Transaction` use `SoftDeletes`; `Bucket`, `Allocation`, `PlannedEvent` and `PlannedEventSeries` don't. Use the right assertion:
 
 ```php
 $this->assertSoftDeleted('accounts', ['id' => $account->id]);   // soft-delete models
@@ -111,7 +111,7 @@ Don't try to precompute `X-Inertia-Version` — it's not stable when resolved ou
 
 ## What's covered, what isn't
 
-Every domain module from the Inertia migration has feature test coverage (`tests/Feature/{Accounts,Categories,Budgets,SavingsGoals,PlannedEvents,PlannedSeries,AutoPost,Transactions,TransactionImport,Reports,Preferences,Dashboard,Notifications,TransactionImportTemplate}Test.php`) — index rendering, create/update/delete happy paths, validation failures, and cross-tenant authorization. Auth flows (`tests/Feature/Auth/*`) and profile management (`ProfileTest.php`) are Breeze's own generated PHPUnit tests, adapted for the Inertia+Vue scaffold rather than rewritten from scratch.
+Every domain module from the Inertia migration has feature test coverage (`tests/Feature/{Accounts,Categories,Buckets,PlannedEvents,PlannedSeries,AutoPost,Transactions,TransactionImport,Reports,Preferences,Dashboard,Notifications,TransactionImportTemplate}Test.php`) — index rendering, create/update/delete happy paths, validation failures, and cross-tenant authorization. Auth flows (`tests/Feature/Auth/*`) and profile management (`ProfileTest.php`) are Breeze's own generated PHPUnit tests, adapted for the Inertia+Vue scaffold rather than rewritten from scratch.
 
 Not covered: the CSV/PDF *content* of report downloads beyond status code + `Content-Type` (real Dompdf/CSV rendering is exercised, but byte-for-byte output isn't asserted), and Vue-side interaction tests (no component-level JS test runner is set up — `GlobalTransactionModal`'s open/edit/submit flow is verified only through the backend endpoints it calls).
 

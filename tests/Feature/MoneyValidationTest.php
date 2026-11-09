@@ -93,7 +93,6 @@ class MoneyValidationTest extends TestCase
         $this->post('/planning/cash-flow', [
             'type' => 'income', 'description' => 'Salary', 'amount' => $amount, 'date' => '2026-11-01', 'certainty' => 'expected',
         ])->assertSessionHasErrors('amount');
-        $this->post('/planning/goals', ['name' => 'Car', 'target_amount' => $amount])->assertSessionHasErrors('target_amount');
         $this->post('/planning/wishlist', ['name' => 'Phone', 'price' => $amount, 'currency' => 'COP'])->assertSessionHasErrors('price');
     }
 }

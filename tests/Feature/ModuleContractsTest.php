@@ -22,11 +22,9 @@ use App\Modules\Planning\Contracts\MoneyMap;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
-use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Planning\Policies\BucketPolicy;
 use App\Modules\Planning\Policies\PlannedEventPolicy;
 use App\Modules\Planning\Policies\PlannedEventSeriesPolicy;
-use App\Modules\Planning\Policies\SavingsGoalPolicy;
 use App\Modules\Planning\Services\BucketService;
 use App\Modules\Planning\Services\MoneyMapService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -165,6 +163,5 @@ class ModuleContractsTest extends TestCase
         $this->assertInstanceOf(BucketPolicy::class, Gate::getPolicyFor(Bucket::class));
         $this->assertInstanceOf(PlannedEventPolicy::class, Gate::getPolicyFor(PlannedEvent::class));
         $this->assertInstanceOf(PlannedEventSeriesPolicy::class, Gate::getPolicyFor(PlannedEventSeries::class));
-        $this->assertInstanceOf(SavingsGoalPolicy::class, Gate::getPolicyFor(SavingsGoal::class));
     }
 }
