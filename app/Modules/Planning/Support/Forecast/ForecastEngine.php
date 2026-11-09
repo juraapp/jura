@@ -17,8 +17,10 @@ use WeakMap;
  * Cycles close with their carry-over. The scenario's items are bought strictly in order at the earliest day they
  * can be paid: from their bucket first, the rest from free money, and only when the cash left after every later
  * planned flow (the lowest end-of-day balance from that day on) still covers them. A later dip of ready to assign
- * below zero only warns. Same-day order: flows (incomes, then transfers, then expenses), then cycle closes, then
- * purchases. Pure: no I/O.
+ * below zero only warns. A cycle's leftover moves the day after it ends, like BucketCycleService dates its carry-over
+ * rows: every leftover of the cycles that ended the day before is measured first, then moved (so same-day closes do
+ * not cascade). Same-day order: those moves, then flows (incomes, then transfers, then expenses), then purchases.
+ * Pure: no I/O.
  */
 final class ForecastEngine
 {
@@ -143,7 +145,7 @@ final class ForecastEngine
     }
 
     /**
-     * The state of every day after its flows and cycle closes, before any purchase, when nothing is ever bought.
+     * The state of every day after its cycle moves and flows, before any purchase, when nothing is ever bought.
      *
      * @return list<EngineState>
      */
@@ -164,7 +166,7 @@ final class ForecastEngine
     }
 
     /**
-     * A day's flows, then its cycle closes (D19), then the windows that end on it.
+     * A day: the carry-over of the cycles that ended the day before, the windows that ended then, then its flows.
      */
     private function applyDay(EngineRun $run, EngineState $state, int $index, CarbonImmutable $date): void
     {
@@ -172,24 +174,25 @@ final class ForecastEngine
         $day = $run->schedule['days'][$key] ?? null;
         $state->day = $key;
 
-        foreach ($day['flows'] ?? [] as $flow) {
-            $this->applyFlow($run->input, $state, $flow, $date);
-        }
-
-        foreach ($day['cycles'] ?? [] as $bucketId) {
-            $this->moveLeftover($state, $state->buckets[$bucketId], $date);
+        if (isset($day['cycles'])) {
+            $this->closeCycles($state, $day['cycles'], $date);
         }
 
         foreach ($day['windows'] ?? [] as $bucketId) {
             $state->closeWindow($bucketId);
         }
 
+        foreach ($day['flows'] ?? [] as $flow) {
+            $this->applyFlow($run->input, $state, $flow, $date);
+        }
+
         $state->noteReachedIfFunded($date);
     }
 
     /**
-     * The days the simulation visits, independent of the lines: the start, every flow, every cycle end of a bucket
-     * that does not carry its money over, the end of each bucket's current window and every month end.
+     * The days the simulation visits, independent of the lines: the start, every flow, the day after every cycle end
+     * of a bucket that does not carry its money over (when the leftover moves), the day after the end of each
+     * bucket's current window (when its outcome is known) and every month end.
      *
      * @return array{dates: list<string>, moments: array<string, CarbonImmutable>, days: array<string, array{flows?: list<EngineFlow>, cycles?: list<int>, windows?: list<int>}>, windows: array<int, array{0: CarbonImmutable, 1: CarbonImmutable}>, calendar: EngineCalendar, memo: EngineMemo}
      */
@@ -217,8 +220,8 @@ final class ForecastEngine
             $windowStart = CarbonImmutable::instance($period->startOf($start->toDateTimeImmutable()));
             $windowEnd = CarbonImmutable::instance($period->endOf($start->toDateTimeImmutable()));
             $windows[$bucket->id] = [$windowStart, $windowEnd];
-            if ($windowEnd->lte($end)) {
-                $days[$windowEnd->format('Y-m-d')]['windows'][] = $bucket->id;
+            if ($windowEnd->lt($end)) {
+                $days[$windowEnd->addDay()->format('Y-m-d')]['windows'][] = $bucket->id;
             }
 
             $cycle = $bucket->cyclePeriod();
@@ -227,8 +230,8 @@ final class ForecastEngine
             }
 
             $cursor = CarbonImmutable::instance($cycle->endOf($start->toDateTimeImmutable()));
-            while ($cursor->lte($end)) {
-                $days[$cursor->format('Y-m-d')]['cycles'][] = $bucket->id;
+            while ($cursor->lt($end)) {
+                $days[$cursor->addDay()->format('Y-m-d')]['cycles'][] = $bucket->id;
                 $cursor = CarbonImmutable::instance($cycle->endOf($cursor->addDay()->toDateTimeImmutable()));
             }
         }
@@ -276,7 +279,7 @@ final class ForecastEngine
                 $state->valueOn($bucket, $date),
                 $bucket->capOn($date),
                 $bucket->roomApplies(),
-                $state->env[$bucket->id],
+                $state->funded[$bucket->id] ? $state->env[$bucket->id] : Money::zero(),
                 $state->receivedOn($bucket, $date),
                 $bucket->acceptsAccount($flow->accountId) && ! $state->isCompleted($bucket->id, $date),
             );
@@ -297,29 +300,63 @@ final class ForecastEngine
     }
 
     /**
-     * Gives away what a bucket holds when its cycle closes (or when it completes): to its overflow bucket, or back
-     * to ready to assign. A bucket set to overflow into itself keeps it.
+     * Applies the carry-over of the cycles that ended the day before: every leftover is measured first, then moved
+     * (what one bucket passes on is not passed on again by its target the same day). The amounts are reported in the
+     * windows of the day the cycles ended.
+     *
+     * @param  list<int>  $bucketIds
      */
-    private function moveLeftover(EngineState $state, EngineBucket $bucket, CarbonImmutable $date): void
+    private function closeCycles(EngineState $state, array $bucketIds, CarbonImmutable $date): void
+    {
+        $ended = $date->subDay();
+        $moves = [];
+        foreach ($bucketIds as $bucketId) {
+            $move = $this->leftover($state, $state->buckets[$bucketId]);
+            if ($move !== null) {
+                $moves[$bucketId] = $move;
+            }
+        }
+
+        foreach ($moves as $bucketId => [$amount, $target]) {
+            $this->move($state, $bucketId, $target, $amount, $ended, $date);
+        }
+    }
+
+    /**
+     * What a funded bucket gives away when its cycle closes (or when it completes) and where it goes (null = ready
+     * to assign); null when nothing moves (nothing left, or a bucket set to overflow into itself).
+     *
+     * @return array{0: Money, 1: int|null}|null
+     */
+    private function leftover(EngineState $state, EngineBucket $bucket): ?array
     {
         if (! $state->funded[$bucket->id]) {
-            return;
+            return null;
         }
 
         $leftover = $state->env[$bucket->id];
         if (! $leftover->isPositive()) {
-            return;
+            return null;
         }
 
         $target = $bucket->carryOver === CarryOverPolicy::Overflow ? $bucket->overflowBucketId : null;
         if ($target === $bucket->id) {
-            return;
+            return null;
         }
 
-        $state->withdraw($bucket->id, $leftover, $date);
-        if ($target !== null && isset($state->buckets[$target])) {
-            $state->fund($target, $leftover, $date);
-            $state->noteIncoming($target, $leftover, $date);
+        return [$leftover, $target !== null && isset($state->buckets[$target]) ? $target : null];
+    }
+
+    /**
+     * @param  CarbonImmutable  $reportedOn  the day the move belongs to (the cycle's end, or the completion day)
+     * @param  CarbonImmutable  $date  the day the money moves
+     */
+    private function move(EngineState $state, int $bucketId, ?int $target, Money $amount, CarbonImmutable $reportedOn, CarbonImmutable $date): void
+    {
+        $state->withdraw($bucketId, $amount, $reportedOn);
+        if ($target !== null) {
+            $state->fund($target, $amount, $date);
+            $state->noteIncoming($target, $amount, $reportedOn);
         }
     }
 
@@ -367,8 +404,8 @@ final class ForecastEngine
             }
             $state->cash = $state->cash->subtract($line->price);
             $state->committed = $state->committed->add($line->price);
-            if ($bucketId !== null) {
-                $this->completeIfDone($state, $bucketId, $date);
+            if ($line->bucketId !== null && isset($state->buckets[$line->bucketId])) {
+                $this->completeIfDone($state, $line->bucketId, $date);
             }
             $state->lastPurchaseDay = $key;
             $state->bought[$state->next] = [$date, $fromBucket, $fromFree];
@@ -392,8 +429,9 @@ final class ForecastEngine
     }
 
     /**
-     * A bucket marked "completes on purchase" closes when something is bought from it: what is left moves to its
-     * overflow bucket (or back to ready to assign) and it stops receiving income.
+     * A bucket marked "completes on purchase" closes when its item is bought, whether or not it paid for it (like
+     * WishlistService): what is left moves to its overflow bucket (or back to ready to assign) the same day and it
+     * stops receiving income.
      */
     private function completeIfDone(EngineState $state, int $bucketId, CarbonImmutable $date): void
     {
@@ -404,7 +442,10 @@ final class ForecastEngine
 
         $state->completed[$bucketId] = $date;
         $state->reached[$bucketId] ??= $date;
-        $this->moveLeftover($state, $bucket, $date);
+        $move = $this->leftover($state, $bucket);
+        if ($move !== null) {
+            $this->move($state, $bucketId, $move[1], $move[0], $date, $date);
+        }
     }
 
     /**

@@ -42,7 +42,8 @@ class BucketProjection
             $horizon = $end->gt($horizon) ? $end : $horizon;
         }
 
-        [$input, $result] = $this->run($user, $currency, $view ?? ForecastView::default(), $horizon);
+        // One day past the last window: a cycle's carry-over moves the day after it ends.
+        [$input, $result] = $this->run($user, $currency, $view ?? ForecastView::default(), $horizon->addDay());
 
         $projection = [];
         foreach ($input->buckets as $bucket) {

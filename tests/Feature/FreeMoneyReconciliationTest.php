@@ -32,8 +32,8 @@ use Tests\TestCase;
  * Projected ready to assign must reconcile with two pieces computed elsewhere: the on-budget cash month by month
  * (CashFlowProjector::budgetMonthly, written without the forecast builder) and what funded envelopes hold
  * (BucketProjection). At every month end: engine cash = projected on-budget cash, and engine ready to assign =
- * projected cash − projected earmarks. Today it must equal the money map. The first month is also checked against
- * hand-computed numbers.
+ * projected cash − projected earmarks. Today it must equal the money map. Because the earmark side runs the same
+ * engine, three month ends are also checked against numbers worked out by hand.
  */
 class FreeMoneyReconciliationTest extends TestCase
 {
@@ -159,19 +159,40 @@ class FreeMoneyReconciliationTest extends TestCase
         }
     }
 
-    public function test_the_first_month_end_matches_the_hand_computed_figures(): void
+    /**
+     * Expected view, worked by hand (Fun has a fixed 100,000 a month, Emergency takes half of what is left up to its
+     * 2,000,000 target; a cycle's leftover moves the day after it ends):
+     * - Nov 10 (today): the overdue 80,000 wallet income fills groceries' room (600,000 - 250,000) with 80,000.
+     * - Nov 15: +1,500,000. Groceries 270,000 (full), Fun 100,000, Emergency half of 1,130,000 = 565,000 (1,065,000).
+     * - Nov 20: groceries spends 200,000 (400,000). Nov 30: cash 1,950,000 + 80,000 + 1,500,000 - 200,000 = 3,330,000,
+     *   earmarked 400,000 + 100,000 + 1,065,000 = 1,565,000.
+     * - Dec 1: groceries releases 400,000, Fun's 100,000 overflows into Emergency (1,165,000).
+     * - Dec 5: 250,000 leaves for the brokerage. Dec 15: +1,500,000: groceries 600,000, Fun 100,000, Emergency 400,000
+     *   (1,565,000). Dec 20: +400,000 (expected): Emergency 200,000 (1,765,000); groceries spends 200,000 (400,000).
+     *   Dec 31: cash 4,780,000, earmarked 400,000 + 100,000 + 1,765,000 = 2,265,000.
+     * - Jan 1: groceries releases 400,000, Fun's 100,000 overflows (Emergency 1,865,000). Jan 5: +50,000 from the
+     *   brokerage. Jan 15: +1,500,000: groceries 600,000, Fun 100,000, Emergency only its last 135,000 (2,000,000).
+     *   Jan 20: groceries spends 200,000. Jan 31: cash 6,130,000, earmarked 400,000 + 100,000 + 2,000,000 = 2,500,000.
+     */
+    public function test_month_ends_match_the_hand_computed_figures(): void
     {
-        // Expected view, Nov 30. Cash: 1,950,000 + 80,000 (overdue wallet income, today) + 1,500,000 (Nov 15) - 200,000 (Nov 20)
-        // = 3,330,000. Nov 10: the 80,000 fills groceries' room (600,000 - 250,000 = 350,000) with 80,000. Nov 15:
-        // groceries takes 270,000 (full), Fun 100,000, Emergency half of the 1,130,000 left = 565,000 (1,065,000).
-        // Nov 20: groceries spends 200,000 (400,000). Nov 30: groceries releases 400,000, Fun's 100,000 overflows into
-        // Emergency: 1,165,000 earmarked, 2,165,000 free.
-        $point = $this->engine(ForecastView::Expected)->pointAt(CarbonImmutable::parse('2026-11-30'));
+        $result = $this->engine(ForecastView::Expected);
+        $expected = [
+            '2026-11-30' => ['3330000.00', '1565000.00', '1765000.00'],
+            '2026-12-31' => ['4780000.00', '2265000.00', '2515000.00'],
+            '2027-01-31' => ['6130000.00', '2500000.00', '3630000.00'],
+        ];
+        $earmarks = app(BucketProjection::class)->earmarksAt($this->user, 'COP', ForecastView::Expected, array_map(fn (string $day) => CarbonImmutable::parse($day), array_keys($expected)));
+        $months = array_column($this->cashMonths(ForecastView::Expected), 'closing', 'month');
 
-        $this->assertSame(['3330000.00', '1165000.00', '2165000.00'], [
-            $point->cash->toDecimalString(), $point->earmarked->toDecimalString(), $point->free->toDecimalString(),
-        ]);
-        $this->assertSame('1165000.00', app(BucketProjection::class)->earmarksAt($this->user, 'COP', ForecastView::Expected, [CarbonImmutable::parse('2026-11-30')])['2026-11-30']->toDecimalString());
+        foreach ($expected as $day => [$cash, $earmarked, $free]) {
+            $point = $result->pointAt(CarbonImmutable::parse($day));
+            $this->assertSame([$cash, $earmarked, $free], [
+                $point->cash->toDecimalString(), $point->earmarked->toDecimalString(), $point->free->toDecimalString(),
+            ], $day);
+            $this->assertSame($earmarked, $earmarks[$day]->toDecimalString(), "earmarks {$day}");
+            $this->assertSame($cash, $months[substr($day, 0, 7)]->toDecimalString(), "on-budget cash {$day}");
+        }
     }
 
     public function test_with_a_purchase_cash_is_the_projected_cash_less_what_was_bought(): void

@@ -217,7 +217,8 @@ class ForecastEngineTest extends TestCase
 
     public function test_cycle_ends_release_to_ready_to_assign_or_overflow_into_another_bucket(): void
     {
-        // Groceries (400) overflows into Savings on Oct 31, Fun (100) returns to ready to assign.
+        // Groceries (400) overflows into Savings when October ends, Fun (100) returns to ready to assign: both move on
+        // Nov 1, the day after, like the real carry-over rows.
         $groceries = $this->bucket(1, 400, ['isSavings' => false, 'cycle' => BudgetPeriodType::Monthly, 'carryOver' => CarryOverPolicy::Overflow, 'overflowBucketId' => 3]);
         $fun = $this->bucket(2, 100, ['isSavings' => false, 'cycle' => BudgetPeriodType::Monthly, 'carryOver' => CarryOverPolicy::Release]);
         $savings = $this->bucket(3, 0);
@@ -226,7 +227,8 @@ class ForecastEngineTest extends TestCase
 
         $this->assertSame(['0.00', '0.00', '400.00'], array_map(fn (Money $money) => $this->money($money), array_values($result->endBalances)));
         $this->assertSame('600.00', $this->money($result->endReadyToAssign));
-        $this->assertSame('500.00', $this->money($result->pointAt($this->day('2026-10-30'))->free), 'before the cycle ends');
+        $this->assertSame('500.00', $this->money($result->pointAt($this->day('2026-10-31'))->free), 'on the last day of the cycle');
+        $this->assertSame('600.00', $this->money($result->pointAt($this->day('2026-11-01'))->free), 'the day after');
 
         $cycle = $result->cycles[1];
         $this->assertSame(['2026-10-01', '2026-10-31', '0.00', '400.00', '400.00', '0.00', '0.00'], [
@@ -236,6 +238,59 @@ class ForecastEngineTest extends TestCase
         $this->assertSame(['0.00', '400.00', '400.00'], [
             $this->money($result->cycles[3]->projectedEnd), $this->money($result->cycles[3]->receivedFromOthers), $this->money($result->cycles[3]->close),
         ]);
+    }
+
+    public function test_cycles_ending_the_same_day_pass_their_leftover_on_once(): void
+    {
+        // A (100) overflows into B, B (50) into C, C (30) releases; all monthly. On Nov 1 each leftover is measured
+        // before anything moves: A's 100 lands in B, B's 50 in C, C's 30 goes back to ready to assign.
+        $a = $this->bucket(1, 100, ['isSavings' => false, 'cycle' => BudgetPeriodType::Monthly, 'carryOver' => CarryOverPolicy::Overflow, 'overflowBucketId' => 2]);
+        $b = $this->bucket(2, 50, ['isSavings' => false, 'cycle' => BudgetPeriodType::Monthly, 'carryOver' => CarryOverPolicy::Overflow, 'overflowBucketId' => 3]);
+        $c = $this->bucket(3, 30, ['isSavings' => false, 'cycle' => BudgetPeriodType::Monthly, 'carryOver' => CarryOverPolicy::Release]);
+
+        $result = $this->simulate($this->input(1000, [$a, $b, $c], [], '2026-11-15'));
+
+        $this->assertSame(['0.00', '100.00', '50.00'], array_map(fn (Money $money) => $this->money($money), array_values($result->endBalances)));
+        $this->assertSame('850.00', $this->money($result->endReadyToAssign));
+    }
+
+    public function test_an_item_bought_on_the_last_day_of_its_buckets_cycle_is_paid_from_the_bucket(): void
+    {
+        // The bucket (500, releases monthly) still holds its money on Oct 31: the 500 item waiting until then is paid
+        // from it, and nothing is left to release on Nov 1.
+        $bucket = $this->bucket(1, 500, ['isSavings' => false, 'cycle' => BudgetPeriodType::Monthly, 'carryOver' => CarryOverPolicy::Release]);
+
+        $result = $this->simulate($this->input(500, [$bucket], [], '2026-11-30'), [$this->line(1, 500, 1, '2026-10-31')]);
+
+        $this->assertSame(['2026-10-31', '500.00', '0.00'], [
+            $result->lines[0]->purchaseDate->toDateString(), $this->money($result->lines[0]->fromBucket), $this->money($result->lines[0]->fromFree),
+        ]);
+        $this->assertSame('0.00', $this->money($result->endReadyToAssign));
+    }
+
+    public function test_a_never_funded_fill_to_target_bucket_fills_to_its_target_not_past_its_spending(): void
+    {
+        // Limit-only spending bucket, 150 spent against a 600 target. The 1,000 income funds it: its envelope starts
+        // from zero, so it takes 600 (not 750); 400 stays free.
+        $bucket = $this->bucket(1, -150, ['isSavings' => false, 'categoryId' => 7, 'isFunded' => false, 'rule' => FillRule::FillToTarget, 'cap' => Money::of(600)]);
+
+        $result = $this->simulate($this->input(0, [$bucket], [$this->income('2026-10-10', 1000)], '2026-10-20'));
+
+        $this->assertSame('600.00', $this->money($result->endBalances[1]));
+        $this->assertSame('400.00', $this->money($result->endReadyToAssign));
+    }
+
+    public function test_a_bucket_that_completes_on_purchase_closes_even_when_it_paid_nothing(): void
+    {
+        // The bucket was never funded (Fixed 100, no cycle). The 900 item is bought today from free money; the bucket
+        // completes anyway, so the three 500 incomes stay free: 1,000 - 900 + 1,500 = 1,600.
+        $bucket = $this->bucket(1, 0, ['rule' => FillRule::Fixed, 'value' => '100', 'completesOnPurchase' => true, 'isFunded' => false]);
+
+        $result = $this->simulate($this->input(1000, [$bucket], [$this->income('2026-10-15', 500), $this->income('2026-11-15', 500), $this->income('2026-12-15', 500)], '2026-12-31'), [$this->line(1, 900, 1)]);
+
+        $this->assertSame(self::START, $result->lines[0]->purchaseDate->toDateString());
+        $this->assertSame('1600.00', $this->money($result->endReadyToAssign));
+        $this->assertSame('0.00', $this->money($result->endBalances[1]));
     }
 
     public function test_a_bucket_that_completes_on_purchase_closes_and_returns_what_is_left(): void
