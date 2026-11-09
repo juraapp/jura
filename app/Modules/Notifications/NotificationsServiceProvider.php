@@ -4,7 +4,6 @@ namespace App\Modules\Notifications;
 
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Notifications\Console\Commands\NotifyBehindSavingsBuckets;
-use App\Modules\Notifications\Console\Commands\NotifyBehindSavingsGoals;
 use App\Modules\Notifications\Console\Commands\NotifyUpcomingPlannedPayments;
 use App\Modules\Notifications\Listeners\CheckBudgetThreshold;
 use App\Modules\Notifications\Listeners\CheckLowAccountBalance;
@@ -23,7 +22,6 @@ class NotificationsServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                NotifyBehindSavingsGoals::class,
                 NotifyBehindSavingsBuckets::class,
                 NotifyUpcomingPlannedPayments::class,
             ]);

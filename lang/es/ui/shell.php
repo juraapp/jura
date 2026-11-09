@@ -18,7 +18,6 @@ return [
         'buckets' => 'Baldes',
         'wish_list' => 'Lista de deseos',
         'planner' => 'Planificador',
-        'savings_goals' => 'Metas de ahorro',
         'monthly' => 'Mensual',
         'annual' => 'Anual',
         'custom' => 'Personalizado',

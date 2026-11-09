@@ -36,11 +36,6 @@ return [
         'yearly' => 'Yearly',
     ],
 
-    'savings_goal_status' => [
-        'active' => 'Active',
-        'completed' => 'Completed',
-        'archived' => 'Archived',
-    ],
 
     'transaction_type' => [
         'income' => 'Income',

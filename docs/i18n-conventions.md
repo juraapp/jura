@@ -12,12 +12,12 @@ look. Do not format numbers or dates by hand: use `useFormat()` in Vue and `$use
 ```
 lang/en/   accounts.php  buckets.php  categories.php  enums.php  insights.php
            messages.php  notifications.php  pdf.php  preferences.php
-           planned-events.php  planner.php  savings-goals.php  transactions.php  wishlist.php
+           planned-events.php  planner.php  transactions.php  wishlist.php
 lang/es/   (mirrors lang/en/ exactly, same keys)
 ```
 
 - One file per domain module for flash/action strings (`__('budgets.saved')`, `__('categories.has_transactions')`), following the flat-array style in e.g. `lang/en/accounts.php`.
-- `enums.php` — `label()` methods on every backend enum (`AccountType`, `CategoryType`, `TransactionType`, `PaymentMethod`, `RecurringFrequency`, `BudgetPeriodType`, `SavingsGoalStatus`) resolve through `__('enums.{enum_snake_case}.{value}')`.
+- `enums.php` — `label()` methods on every backend enum (`AccountType`, `CategoryType`, `TransactionType`, `PaymentMethod`, `RecurringFrequency`, `BudgetPeriodType`) resolve through `__('enums.{enum_snake_case}.{value}')`.
 - `messages.php` — cross-cutting strings not owned by one domain (CSV column headers under `messages.csv.*`, `TransactionImportService`'s error messages under `messages.import.*`).
 - `insights.php` — every templated sentence `InsightService` produces.
 - `.env`: `APP_LOCALE=en`, `APP_FALLBACK_LOCALE=en` — English is the source of truth; Spanish is the translation, not the default.

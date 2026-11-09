@@ -1,7 +1,7 @@
 # Jura
 
 Personal finance app: accounts, transactions, budgets, planned and repeating money (plans can record themselves
-on their date), savings goals, reports, and project budgeting with income forecasting. Single-user-per-account data, scoped by the
+on their date), savings buckets with target dates, reports, and project budgeting with income forecasting. Single-user-per-account data, scoped by the
 `BelongsToUser` global scope.
 
 ## Stack (not Livewire/Volt)

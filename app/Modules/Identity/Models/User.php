@@ -6,7 +6,6 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Planning\Models\Bucket;
-use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Shared\Support\UserFormat;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use ArrayObject;
@@ -145,10 +144,5 @@ class User extends Authenticatable implements HasLocalePreference
     public function buckets(): HasMany
     {
         return $this->hasMany(Bucket::class);
-    }
-
-    public function savingsGoals(): HasMany
-    {
-        return $this->hasMany(SavingsGoal::class);
     }
 }

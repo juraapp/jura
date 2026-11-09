@@ -18,7 +18,6 @@ return [
         'buckets' => 'Buckets',
         'wish_list' => 'Wish list',
         'planner' => 'Planner',
-        'savings_goals' => 'Savings goals',
         'monthly' => 'Monthly',
         'annual' => 'Annual',
         'custom' => 'Custom',

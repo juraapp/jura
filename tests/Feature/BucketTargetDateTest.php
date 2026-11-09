@@ -82,4 +82,9 @@ class BucketTargetDateTest extends TestCase
             ->where('buckets.1.target', null)
         );
     }
+
+    public function test_the_old_savings_goals_address_leads_to_the_buckets_page(): void
+    {
+        $this->get('/planning/goals')->assertRedirect('/planning/buckets');
+    }
 }

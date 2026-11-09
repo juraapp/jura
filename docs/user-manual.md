@@ -15,9 +15,9 @@ for everyday use. Sections marked **Advanced** are optional extras.
 6. [Categories](#categories)
 7. [Upcoming & cash flow (planned income and expenses)](#upcoming--cash-flow-planned-income-and-expenses)
 8. [Buckets (budgets and savings)](#buckets-budgets-and-savings)
-9. [Wish list and projects](#wish-list-and-projects)
-10. [Planner](#planner)
-11. [Savings goals](#savings-goals)
+9. [Projects](#projects)
+10. [Wish list and projects](#wish-list-and-projects)
+11. [Planner](#planner)
 12. [Reports](#reports)
 13. [Notifications](#notifications)
 14. [Preferences, profile and appearance](#preferences-profile-and-appearance)
@@ -138,7 +138,7 @@ that plan on the cash flow page).
 
 ## Selecting many rows at once
 
-Long lists (transactions, planned events, wish list, savings goals, buckets) have a checkbox on
+Long lists (transactions, planned events, wish list, buckets) have a checkbox on
 every row and a **Select all** box. Selecting rows opens a bar with **Delete** and **Clear**.
 
 - On **Transactions** the bar also offers **Change category / account** for the selected rows (transfers are never
@@ -580,18 +580,6 @@ shows it struck through and leaves it out of the calculation.
 - If none of your buckets has a fill rule, the planner says so: planned income then stays in ready to assign, which
   still pays for your items.
 
-## Savings goals
-
-Menu: **Planning → Savings goals**.
-
-A goal is something you are saving toward, with a target amount and an optional target date.
-
-- **Add a contribution** whenever you set money aside. A contribution can be linked to a transaction.
-- The goal shows progress toward its target. When contributions reach the target it is marked **completed**.
-- Goals can be **active**, **completed** or **archived**.
-- A deleted goal appears under **Deleted goals** at the bottom, where you can restore it or delete it permanently.
-- If a goal is falling behind its target date you get a notification.
-
 ## Reports
 
 Menu: **Reports**.
@@ -603,7 +591,7 @@ Menu: **Reports**.
 | **Custom** | any date range you choose | CSV |
 | **Forecast** | your real net worth month by month, followed by projected balances | none |
 | **Buckets** | how your buckets are funded, money moving in and out, and where they are heading | none |
-| **Projects** | each project's wanted, bought and funded totals and when it could be completed | none |
+| **Project report** | each project's wanted, bought and funded totals and when it could be completed | none |
 
 Monthly, Annual and Custom show **real, recorded** data. Totals are kept separate per currency. The monthly report splits expenses
 into **fixed** (recorded automatically, or confirmed from a repeating plan) and **variable** (everything else).
@@ -628,7 +616,6 @@ date, whether the last item is bought in time and how much to put aside each mon
 The bell in the top bar collects alerts. Mark one or all as read from there.
 
 - **Budget threshold / exceeded**: you have used most of, or gone over, a spending bucket's limit.
-- **Goal behind schedule**: a savings goal is falling behind its target date.
 - **Savings bucket behind schedule**: a savings bucket with a target date is falling behind it (checked every
   Monday). It warns once, and again only after you have read it and the bucket is still behind.
 - **Upcoming planned payment**: a planned expense is due within 3 days (counted in your time zone). It says whether
@@ -663,6 +650,14 @@ You are notified once per crossing; an unread alert is not repeated.
 - **Export my data**: not available yet.
 
 ## Common questions
+
+**Where did savings goals go?** They are **savings buckets** now (Planning → Buckets), and `/planning/goals` takes
+you there. A goal's target amount and date became the bucket's target and target date, and every contribution became
+money set aside in the bucket on its date, so it counts in the buckets and comes out of *ready to assign*. Goals you
+had completed or archived became completed buckets whose money was released again (their history is kept); goals you
+had deleted were not carried over. Because the contributions were copied in full, *ready to assign* can show that you
+have assigned more than you have: the bell has one notice about it, and the amount shows in red until you take some
+money out of a bucket or add money to your accounts.
 
 **My balance looks wrong.** Balances are calculated from your starting balance and every transaction. Check the
 account's starting balance, then look for a missing or duplicated transaction.

@@ -14,7 +14,6 @@ use App\Modules\Planning\Http\Controllers\PlannedEventController;
 use App\Modules\Planning\Http\Controllers\PlannedSeriesController;
 use App\Modules\Planning\Http\Controllers\PlannerController;
 use App\Modules\Planning\Http\Controllers\ProjectController;
-use App\Modules\Planning\Http\Controllers\SavingsGoalController;
 use App\Modules\Planning\Http\Controllers\WishlistItemController;
 use App\Modules\Reporting\Http\Controllers\DashboardController;
 use App\Modules\Reporting\Http\Controllers\ReportController;
@@ -65,15 +64,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');
     Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
 
-    Route::get('planning/goals', [SavingsGoalController::class, 'index'])->name('savings-goals.index');
-    Route::post('planning/goals', [SavingsGoalController::class, 'store'])->name('savings-goals.store');
-    Route::patch('planning/goals/{savingsGoal}', [SavingsGoalController::class, 'update'])->name('savings-goals.update');
-    Route::delete('planning/goals/{savingsGoal}', [SavingsGoalController::class, 'destroy'])->name('savings-goals.destroy');
-    Route::post('planning/goals/bulk-delete', [SavingsGoalController::class, 'bulkDestroy'])->name('savings-goals.bulk-delete');
-    Route::post('planning/goals/{id}/restore', [SavingsGoalController::class, 'restore'])->name('savings-goals.restore');
-    Route::delete('planning/goals/{id}/force', [SavingsGoalController::class, 'forceDestroy'])->name('savings-goals.force-destroy');
-    Route::post('planning/goals/{savingsGoal}/contributions', [SavingsGoalController::class, 'contribute'])->name('savings-goals.contribute');
     Route::redirect('planning/budgets', '/planning/buckets');
+    Route::redirect('planning/goals', '/planning/buckets');
     Route::get('planning/buckets', [BucketController::class, 'index'])->name('buckets.index');
     Route::post('planning/buckets', [BucketController::class, 'store'])->name('buckets.store');
     Route::get('planning/buckets/spend-options', [BucketController::class, 'spendOptions'])->name('buckets.spend-options');

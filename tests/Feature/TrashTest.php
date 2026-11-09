@@ -6,7 +6,6 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
-use App\Modules\Planning\Models\SavingsGoal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -128,22 +127,5 @@ class TrashTest extends TestCase
 
         $this->assertSoftDeleted('accounts', ['id' => $account->id]);
         $this->assertSoftDeleted('categories', ['id' => $category->id]);
-    }
-
-    public function test_a_deleted_savings_goal_can_be_restored_or_purged_from_the_goals_page(): void
-    {
-        $user = User::factory()->create();
-        $restored = SavingsGoal::factory()->for($user)->create();
-        $purged = SavingsGoal::factory()->for($user)->create();
-        $restored->delete();
-        $purged->delete();
-
-        $this->actingAs($user)->get('/planning/goals')->assertInertia(fn (Assert $page) => $page->has('trashedGoals', 2));
-
-        $this->actingAs($user)->post("/planning/goals/{$restored->id}/restore")->assertRedirect()->assertSessionHas('success');
-        $this->actingAs($user)->delete("/planning/goals/{$purged->id}/force")->assertRedirect()->assertSessionHas('success');
-
-        $this->assertNull($restored->fresh()->deleted_at);
-        $this->assertDatabaseMissing('savings_goals', ['id' => $purged->id]);
     }
 }
