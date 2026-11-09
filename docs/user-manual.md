@@ -629,6 +629,8 @@ The bell in the top bar collects alerts. Mark one or all as read from there.
 
 - **Budget threshold / exceeded**: you have used most of, or gone over, a spending bucket's limit.
 - **Goal behind schedule**: a savings goal is falling behind its target date.
+- **Savings bucket behind schedule**: a savings bucket with a target date is falling behind it (checked every
+  Monday). It warns once, and again only after you have read it and the bucket is still behind.
 - **Upcoming planned payment**: a planned expense is due within 3 days (counted in your time zone). It says whether
   it will be **recorded automatically** or whether you need to **confirm it** once it is paid. Plans on an archived
   account are left out.
