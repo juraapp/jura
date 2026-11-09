@@ -126,10 +126,11 @@ Not covered: the CSV/PDF *content* of report downloads beyond status code + `Con
 ### Forecast checks that do not trust themselves
 A test that recomputes the expected value with the code under test proves nothing. The forecast is checked three
 independent ways:
-- `FreeMoneyReconciliationTest` compares the engine with code written separately: at every month end and in every
-  view, engine cash = `CashFlowForecast::budgetMonthly` closing and engine ready to assign = that closing −
-  `BucketProjection::earmarksAt`; today's ready to assign = `MoneyMap`; with a purchase, cash = closing − what was
-  bought. The first month is also asserted with hand-computed numbers.
+- `FreeMoneyReconciliationTest` compares the engine cash with code written separately: at every month end and in
+  every view, engine cash = `CashFlowForecast::budgetMonthly` closing (which shares only the planned occurrences and
+  the on-budget balances); today's ready to assign = `MoneyMap`; with a purchase, cash = closing − what was bought.
+  The earmark side (`BucketProjection::earmarksAt`) runs the same engine, so it is not independent: three month ends
+  (Nov 30, Dec 31, Jan 31) are asserted with cash, earmarked and ready to assign worked out by hand.
 - `IncomeAllocatorParityTest` lets the forecast predict an income, records the same income for real and compares the
   split bucket by bucket (and with hand-computed amounts).
 - `ForecastEngineInvariantTest` is a property test: 300 seeded random inputs (`mt_srand`, so a failure names its case
