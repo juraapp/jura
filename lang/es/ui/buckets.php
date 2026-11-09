@@ -126,4 +126,13 @@ return [
     'over_assign_confirm' => 'Asignar de todos modos',
     'overspent' => 'Sobregastado',
     'overspent_hint' => 'Se gastó de este balde más de lo que tenía. Mueve dinero a él para cubrir la diferencia.',
+    'target_date' => 'Fecha objetivo (opcional)',
+    'target_date_hint' => 'Necesita un monto objetivo. Jura te avisa cuando te atrases.',
+    'target_by' => 'Objetivo para el {date}',
+    'target_on_track' => 'Al día',
+    'target_behind' => 'Atrasado',
+    'target_overdue' => 'La fecha objetivo ya pasó',
+    'target_reached_on' => 'Tu plan lo llena el {date}',
+    'target_not_reached' => 'Tu plan no lo llena para entonces',
+    'target_needs' => 'Necesita {amount} al mes',
 ];

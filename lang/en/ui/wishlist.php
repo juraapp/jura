@@ -77,7 +77,7 @@ return [
     'quick_project_create' => 'Create project',
     'funding_title' => 'How will you pay for it?',
     'funding_ready' => 'From ready to assign',
-    'funding_project_bucket' => "From the project's bucket (:name)",
+    'funding_project_bucket' => "From the project's bucket ({name})",
     'funding_bucket' => 'From a bucket I already have',
     'funding_new_bucket' => 'Save up for it in a new bucket',
     'funding_new_hint' => 'A bucket named like the item, with the price as its target. It closes when you buy the item and what is left goes back to ready to assign.',
@@ -87,5 +87,5 @@ return [
     'fill_of_remaining' => 'A share of what is left after other buckets',
     'fill_amount' => 'Amount',
     'fill_percentage' => 'Percentage',
-    'cap_below_price' => 'This bucket stops filling at :cap, below the price: the rest will come from ready to assign.',
+    'cap_below_price' => 'This bucket stops filling at {cap}, below the price: the rest will come from ready to assign.',
 ];

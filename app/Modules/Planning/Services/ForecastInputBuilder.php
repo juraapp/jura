@@ -162,6 +162,7 @@ class ForecastInputBuilder
                 stepUpValue: $bucket->step_up_value !== null ? (string) $bucket->step_up_value : null,
                 stepUpAfterBucketId: $bucket->step_up_after_bucket_id,
                 completesOnPurchase: (bool) $bucket->completes_on_purchase,
+                targetDate: $this->date($bucket->target_date),
                 completedOn: $this->date($bucket->completed_on),
                 isFunded: $bucket->funded_since !== null,
                 fundedSince: $this->date($since),

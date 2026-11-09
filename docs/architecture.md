@@ -54,6 +54,7 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
    - `Planning\Contracts\MoneyMap`: per currency, money in on-budget accounts, in funded bucket envelopes, and ready to assign (computed, never stored).
    - `Planning\Contracts\UpcomingPlans`: open plans for other modules' pages: overdue and upcoming bands (`listBands`, 10 rows each plus a count, filterable by account, category and type), which transactions came from a plan (`provenance`), and the needs-review inbox (`needsReview`, `needsReviewCount`: overdue plans and ones that could not auto-post). Ledger may consume Planning contracts like any other module.
    - `Planning\Contracts\PlanningOverview`: bucket balances, allocation history, projected bucket balances and project summaries for reports.
+   - `Planning\Contracts\SavingsTargets`: whether each savings bucket with a target date is on track (scopes by the given user, so alerts can use it from the console).
    - Planning events: `PlannedPostingFailed` (user, planned event id, reason) when an auto-posting plan cannot be recorded; Notifications' `NotifyPlannedPostingFailed` turns it into a `PlannedPostingBlocked` alert. Notifications' daily `app:notify-upcoming-planned-payments` reminds about open planned expenses due within three days of the owner's today.
 4. Contracts are bound in each module's service provider; providers are listed in `bootstrap/providers.php`.
 

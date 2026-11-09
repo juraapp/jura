@@ -295,7 +295,12 @@ never change. There are two kinds:
 - **Spending limit**: pick a category and a limit per month or year. The card shows how much you have spent, what is
   left, and warns you at 80% and when you go over. This is what budgets used to be.
 - **Savings**: a pot for a goal (a car, a trip, an emergency fund), with an optional target. The card shows what is
-  available and how close you are to the target.
+  available and how close you are to the target. Give it a **target date** (it needs a target amount) and the card
+  also says whether you are **On track** or **Behind**, and how much to put aside each month to make it. If your
+  income plan fills the bucket (it has a filling rule, or a planned income puts money into it), the card says the
+  day your plan fills it, and *Behind* means the plan does not get there by the target date. For any other bucket
+  Jura compares the money put aside so far with an even pace from the day you made the bucket to the target date
+  (two percentage points of slack).
 
 **Ready to assign.** The money map at the top of this page (also on the Dashboard and Accounts, and as **Ready to
 assign** in the top bar) shows, per currency, the money **in accounts** (only accounts that count in your budget), the

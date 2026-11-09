@@ -22,4 +22,5 @@ return [
     'from_ready' => 'From ready to assign',
     'to_ready' => 'Back to ready to assign',
     'over_assign' => 'That is :amount more than is ready to assign. Your buckets would hold more money than your accounts.',
+    'target_date_requires_cap' => 'A target date needs a savings bucket with a target amount.',
 ];
