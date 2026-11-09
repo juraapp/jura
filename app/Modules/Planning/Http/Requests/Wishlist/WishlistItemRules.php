@@ -4,6 +4,7 @@ namespace App\Modules\Planning\Http\Requests\Wishlist;
 
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Enums\BucketKind;
+use App\Modules\Planning\Models\Project;
 use App\Modules\Shared\Validation\LedgerRules;
 use App\Modules\Shared\Validation\MoneyRules;
 use Closure;
@@ -27,7 +28,18 @@ trait WishlistItemRules
             'price' => ['required', ...MoneyRules::positive()],
             'currency' => ['nullable', 'string', 'size:3'],
             'importance' => ['nullable', 'integer', 'between:1,5'],
-            'project_id' => ['nullable', 'integer', Rule::exists('projects', 'id')->where('user_id', $userId)],
+            'project_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('projects', 'id')->where('user_id', $userId),
+                function (string $attribute, mixed $value, Closure $fail) use ($userId, $currency) {
+                    $projectCurrency = Project::forUser($userId)->whereKey($value)->value('currency');
+
+                    if ($projectCurrency !== null && $projectCurrency !== $currency) {
+                        $fail(__('wishlist.project_currency_mismatch', ['currency' => $projectCurrency]));
+                    }
+                },
+            ],
             'bucket_id' => [
                 'nullable',
                 'integer',

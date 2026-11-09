@@ -449,10 +449,15 @@ price. Only accounts in the item's currency (and allowed for the item and its bu
 that currency, the dialog says so; add one in **Accounts** first. Account lists across
 Jura show each account's currency, for example "Nu · COP". Jura records the real expense and, if the item has a bucket, spends that money from the bucket in the same step.
 If the bucket holds less than the price, it pays what it has and the rest comes out of ready to assign. The expense is
-marked as paid from the bucket, so it never also comes out of the spending bucket of the category you chose.
+marked as paid from the bucket, so it never also comes out of the spending bucket of the category you chose, and it
+stays marked that way even when the account you paid from is outside your budget for now (when that account joins the
+budget again, the bucket pays then). An item without a bucket of its own uses its project's bucket, if the project has
+one. Because the expense belongs to the purchase, its bucket cannot be changed by editing the expense (the field is
+locked in the edit form); undo the purchase instead.
 **Undo purchase** removes the expense for good (it does not go to the Trash) and returns the money to the bucket.
 Deleting the purchase's expense from the Transactions page does the same, except that the expense waits in the Trash:
-restoring it marks the item as purchased again, unless you have bought it again in the meantime.
+restoring it marks the item as purchased again, unless you have bought it again in the meantime (in that case the
+restored expense is a plain expense paid from that item's bucket).
 
 **Dropping.** The forward button marks an item as *Dropped* (no longer wanted) without deleting it. Tick *Show
 purchased and dropped items* to see them, and use the arrow to want one again.

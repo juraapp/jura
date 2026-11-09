@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Buying a wish-list item: the real expense and the matching spend from its
- * bucket happen together and are undone together. The expense is always linked
+ * bucket (its own, or else its project's) happen together and are undone together. The expense is always linked
  * to that bucket, so it never also counts in a category envelope, even if the account it was paid from is out of
  * the budget for now; the bucket pays what it has (when the account is in the budget) and the rest comes out of
  * ready to assign. Deleting the expense from the
@@ -49,7 +49,7 @@ class WishlistService
                 'date' => $date->toDateString(),
                 'description' => $item->name,
                 'notes' => $item->notes,
-                'bucket_id' => $item->bucket?->id,
+                'bucket_id' => $item->fundingBucket?->id,
             ]));
 
             $this->applyPurchase($item, $transactionId, $amount, $date, (int) $data['account_id']);
@@ -143,7 +143,7 @@ class WishlistService
                     return;
                 }
 
-                if ($item->purchase_allocation_id === null && $item->bucket !== null) {
+                if ($item->purchase_allocation_id === null && $item->fundingBucket !== null) {
                     $item->update(['purchase_allocation_id' => $this->spendFromBucket(
                         $item, $item->purchased_transaction_id, $amounts[$item->purchased_transaction_id], $item->purchased_on,
                     )]);
@@ -157,13 +157,13 @@ class WishlistService
      */
     private function applyPurchase(WishlistItem $item, int $transactionId, Money $amount, Carbon $date, int $accountId): void
     {
-        $allocationId = $item->bucket !== null && $this->ledger->isOnBudget($item->user_id, $accountId)
+        $allocationId = $item->fundingBucket !== null && $this->ledger->isOnBudget($item->user_id, $accountId)
             ? $this->spendFromBucket($item, $transactionId, $amount, $date)
             : null;
 
         $completion = null;
-        if ($item->bucket !== null && $item->bucket->completes_on_purchase && ! $item->bucket->isCompletedOn($date)) {
-            $completion = $this->funds->complete($item->bucket, $date);
+        if ($item->fundingBucket !== null && $item->fundingBucket->completes_on_purchase && ! $item->fundingBucket->isCompletedOn($date)) {
+            $completion = $this->funds->complete($item->fundingBucket, $date);
         }
 
         $item->update([
@@ -180,9 +180,9 @@ class WishlistService
      */
     private function reversePurchase(WishlistItem $item): void
     {
-        if ($item->bucket !== null && $item->bucket->completes_on_purchase
-            && $item->bucket->completed_on?->toDateString() === $item->purchased_on?->toDateString()) {
-            $this->funds->reopen($item->bucket);
+        if ($item->fundingBucket !== null && $item->fundingBucket->completes_on_purchase
+            && $item->fundingBucket->completed_on?->toDateString() === $item->purchased_on?->toDateString()) {
+            $this->funds->reopen($item->fundingBucket);
             $this->takeBackLeftover($item);
         }
 
@@ -222,7 +222,7 @@ class WishlistService
         if ($back->equals($moved->amount)) {
             Allocation::forUser($item->user_id)->whereKey($rows->modelKeys())->delete();
         } elseif ($back->isPositive()) {
-            $this->funds->move($target, $item->bucket, $back, null, AllocationSource::Carry, $item->purchased_on);
+            $this->funds->move($target, $item->fundingBucket, $back, null, AllocationSource::Carry, $item->purchased_on);
         }
     }
 
@@ -231,10 +231,10 @@ class WishlistService
      */
     private function spendFromBucket(WishlistItem $item, int $transactionId, Money $amount, CarbonInterface $date): ?int
     {
-        $covered = $this->smaller($amount, $this->funds->available($item->bucket));
+        $covered = $this->smaller($amount, $this->funds->available($item->fundingBucket));
 
         return $covered->isPositive()
-            ? $this->funds->credit($item->bucket, $covered->negate(), AllocationSource::Spend, $transactionId, $date, $item->name)->id
+            ? $this->funds->credit($item->fundingBucket, $covered->negate(), AllocationSource::Spend, $transactionId, $date, $item->name)->id
             : null;
     }
 
@@ -246,8 +246,8 @@ class WishlistService
 
         Allocation::forUser($item->user_id)->whereKey($item->purchase_allocation_id)->delete();
 
-        if ($item->bucket !== null) {
-            $this->funds->forgetFundingIfUnused($item->bucket);
+        if ($item->fundingBucket !== null) {
+            $this->funds->forgetFundingIfUnused($item->fundingBucket);
         }
     }
 

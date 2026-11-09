@@ -50,6 +50,14 @@ class WishlistItem extends Model
         return $this->belongsTo(Bucket::class);
     }
 
+    /**
+     * The bucket that pays for this item: its own, or else its project's.
+     */
+    protected function fundingBucket(): Attribute
+    {
+        return Attribute::get(fn (): ?Bucket => $this->bucket ?? $this->project?->bucket);
+    }
+
     public function purchasedTransaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class, 'purchased_transaction_id');

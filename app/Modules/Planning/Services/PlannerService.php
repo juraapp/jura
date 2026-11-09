@@ -57,6 +57,7 @@ class PlannerService
     public function lines(User $user, string $currency, PlannerContext $context, array $rows): array
     {
         $items = WishlistItem::forUser($user)
+            ->with('project')
             ->whereIn('id', array_column($rows, 'item_id'))
             ->where('status', WishlistStatus::Wanted->value)
             ->where('currency', $currency)
@@ -75,7 +76,8 @@ class PlannerService
                 continue;
             }
 
-            $bucket = $item->bucket_id !== null ? ($buckets[$item->bucket_id] ?? null) : null;
+            $bucketId = $item->bucket_id ?? $item->project?->bucket_id;
+            $bucket = $bucketId !== null ? ($buckets[$bucketId] ?? null) : null;
             $blocked = null;
             if (! empty($item->allowed_account_ids) && $bucket !== null && ! empty($bucket->allowedAccountIds)
                 && array_intersect($item->allowed_account_ids, $bucket->allowedAccountIds) === []) {
@@ -98,7 +100,7 @@ class PlannerService
                 $item->id,
                 $item->name,
                 $item->price,
-                $item->bucket_id,
+                $bucketId,
                 ! empty($row['not_before']) ? CarbonImmutable::parse($row['not_before']) : null,
                 $item->desired_by ? CarbonImmutable::parse($item->desired_by->toDateString()) : null,
                 $item->importance,
