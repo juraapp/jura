@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Head, usePage, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -69,14 +70,12 @@ const submit = () => {
 <template>
     <Head :title="$t('ui.preferences.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="narrow">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                {{ $t('ui.preferences.title') }}
-            </h2>
+            <PageHeader :title="$t('ui.preferences.title')" />
         </template>
 
-        <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+        <div>
             <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <header class="mb-6">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ $t('ui.preferences.section') }}</h3>

@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 
 const props = defineProps({
@@ -20,14 +21,12 @@ const title = computed(() => t(props.titleKey));
 <template>
     <Head :title="title" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                {{ title }}
-            </h2>
+            <PageHeader :title="title" />
         </template>
 
-        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div>
             <EmptyState
                 icon="cog"
                 :title="$t('ui.common.under_construction')"

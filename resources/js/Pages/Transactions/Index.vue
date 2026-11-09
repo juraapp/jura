@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { Deferred, Head, Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
@@ -19,6 +20,10 @@ import { useBulkSelection } from '@/composables/useBulkSelection';
 import { destroy, bulkDestroy, bulkUpdate } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
 import { useFormat } from '@/composables/useFormat';
 import { index as plannedEventsIndex } from '@/routes/planned-events';
+import { importMethod as transactionsImport, index as transactionsIndex } from '@/routes/transactions';
+import { index as incomesIndex } from '@/routes/incomes';
+import { index as expensesIndex } from '@/routes/expenses';
+import { index as transfersIndex } from '@/routes/transfers';
 
 const format = useFormat();
 const { t } = useI18n();
@@ -38,6 +43,14 @@ const cashFlowUrl = plannedEventsIndex.url();
 const planUrl = (plan) => plannedEventsIndex.url({ query: { highlight: plan.plannedEventId } });
 
 const { open: openTransactionModal } = useTransactionModal();
+
+/** All transactions, or only the incomes, expenses or transfers (each has its own address). */
+const typeTabs = computed(() => [
+    { type: 'all', label: t('ui.shell.nav.transactions'), href: transactionsIndex().url },
+    { type: 'income', label: t('ui.shell.nav.incomes'), href: incomesIndex().url },
+    { type: 'expense', label: t('ui.shell.nav.expenses'), href: expensesIndex().url },
+    { type: 'transfer', label: t('ui.shell.nav.transfers'), href: transfersIndex().url },
+]);
 const confirmingDeleteTransaction = ref(null);
 
 const filters = reactive({
@@ -121,14 +134,37 @@ const bulkEdit = () => {
 <template>
     <Head :title="pageTitle" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                {{ pageTitle }}
-            </h2>
+            <PageHeader :title="pageTitle">
+                <template #actions>
+                    <SecondaryButton :as="Link" :href="transactionsImport().url">
+                        <DynamicIcon name="arrow-up-tray" class="h-4 w-4" />
+                        {{ $t('ui.shell.nav.import_csv') }}
+                    </SecondaryButton>
+                    <PrimaryButton type="button" @click="openTransactionModal(null, typeFilter === 'all' ? 'expense' : typeFilter)">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.transactions.new') }}
+                    </PrimaryButton>
+                </template>
+                <template #meta>
+                    <nav class="flex flex-wrap gap-1" :aria-label="$t('ui.transactions.types')">
+                        <Link
+                            v-for="tab in typeTabs"
+                            :key="tab.type"
+                            :href="tab.href"
+                            class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                            :class="tab.type === typeFilter
+                                ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-400'
+                                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'"
+                            :aria-current="tab.type === typeFilter ? 'page' : undefined"
+                        >{{ tab.label }}</Link>
+                    </nav>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div>
             <div class="mb-4 grid grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-3 lg:grid-cols-6 dark:border-gray-700 dark:bg-gray-800">
                 <div class="col-span-2 sm:col-span-1 lg:col-span-2">
                     <input

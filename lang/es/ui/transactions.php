@@ -39,4 +39,5 @@ return [
     'see_all' => 'Ver los {count}',
     'auto_posted' => 'Registrado automáticamente',
     'from_plan' => 'Desde un plan',
+    'types' => 'Tipos de transacción',
 ];

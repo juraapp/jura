@@ -39,4 +39,5 @@ return [
     'see_all' => 'See all {count}',
     'auto_posted' => 'Auto-posted',
     'from_plan' => 'From plan',
+    'types' => 'Transaction types',
 ];

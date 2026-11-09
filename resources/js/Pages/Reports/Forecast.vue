@@ -2,6 +2,7 @@
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
 import { useDarkMode } from '@/composables/useDarkMode';
@@ -65,12 +66,12 @@ const rowsFor = (currency) => currency.projected.expected.map((row, index) => ({
 <template>
     <Head :title="$t('ui.forecast.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.forecast.heading') }}</h2>
+            <PageHeader :title="$t('ui.forecast.heading')" />
         </template>
 
-        <div class="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <i18n-t keypath="ui.forecast.intro" tag="p" class="max-w-3xl text-sm text-gray-500 dark:text-gray-400" scope="global">
                 <template #solid><strong>{{ $t('ui.forecast.intro_solid') }}</strong></template>
                 <template #dashed><strong>{{ $t('ui.forecast.intro_dashed') }}</strong></template>

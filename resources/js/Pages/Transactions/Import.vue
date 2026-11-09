@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import InputError from '@/Components/InputError.vue';
@@ -133,19 +134,18 @@ const doneDescription = computed(() => {
 <template>
     <Head :title="$t('ui.import.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    {{ $t('ui.import.title') }}
-                </h2>
-                <Link :href="transactionsIndex.url()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                    {{ $t('ui.import.back') }}
-                </Link>
-            </div>
+            <PageHeader :title="$t('ui.import.title')">
+                <template #actions>
+                    <Link :href="transactionsIndex.url()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        {{ $t('ui.import.back') }}
+                    </Link>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-6">
             <div
                 v-if="step === 'idle'"
                 class="rounded-xl border-2 border-dashed px-6 py-16 text-center transition"

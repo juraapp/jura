@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
 import SegmentedControl from '@/Components/SegmentedControl.vue';
@@ -35,12 +36,12 @@ const formatMonth = (date) => format.month(date);
 <template>
     <Head :title="$t('ui.reports_projects.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.reports_projects.title') }}</h2>
+            <PageHeader :title="$t('ui.reports_projects.title')" />
         </template>
 
-        <div class="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-6">
             <EmptyState
                 v-if="projects.length === 0"
                 icon="flag"
