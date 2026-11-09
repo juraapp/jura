@@ -160,16 +160,17 @@ class IncomeAllocatorParityTest extends TestCase
         $this->assertSame($actual, $predicted);
     }
 
-    public function test_a_never_funded_category_bucket_counts_its_spending_against_its_room(): void
+    public function test_a_never_funded_category_bucket_fills_to_its_target_without_refilling_past_spending(): void
     {
-        // Never funded, 120 spent in its category since tracking started: available is -120, so filling to 300 takes 420.
+        // Never funded, 120 spent in its category since tracking started: that spending was a limit, not a hole in an
+        // envelope, so filling to 300 takes 300 (its envelope starts from zero that day).
         $this->bucket('Dining', 0, ['kind' => BucketKind::Spending, 'category_id' => $this->food->id, 'cycle' => 'monthly',
             'fill_rule' => FillRule::FillToTarget, 'cap_amount' => 300, 'carry_over' => CarryOverPolicy::Carry]);
         Transaction::factory()->for($this->user)->for($this->debit)->create(['type' => 'expense', 'category_id' => $this->food->id, 'amount' => 120, 'date' => '2026-10-15']);
 
         [$predicted, $actual] = $this->predictAndRecord(1000, $this->debit);
 
-        $this->assertSame(['Dining' => '420.00'], $actual);
+        $this->assertSame(['Dining' => '300.00'], $actual);
         $this->assertSame($actual, $predicted);
     }
 

@@ -58,7 +58,8 @@ class IncomeAllocator
      * Splits an income across the buckets; what no bucket claims simply stays ready to assign. Income in an
      * off-budget account is never allocated. When the income is allocated again (an edit, a restore, a linked
      * plan), the cover its earlier release left behind is taken back first and only what is still missing is
-     * covered again, so re-running an unchanged income gives exactly the state it had before.
+     * covered again, so re-running an unchanged income gives exactly the state it had before. A bucket that was
+     * never funded counts as holding nothing: its category spending so far is a limit, not a hole to refill.
      */
     public function allocate(User $user, int $transactionId, int $accountId, Money $amount, string $currency, CarbonInterface $date): void
     {
@@ -82,7 +83,7 @@ class IncomeAllocator
                     $this->funds->fillValueFor($bucket, $date),
                     $bucket->effectiveCap($date),
                     $bucket->fill_rule === FillRule::FillToTarget || $bucket->kind === BucketKind::Savings,
-                    $this->funds->available($bucket),
+                    $bucket->funded_since === null ? Money::zero() : $this->funds->available($bucket),
                     $this->funds->receivedInCycle($bucket, $date),
                     true,
                 ))

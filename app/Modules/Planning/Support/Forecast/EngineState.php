@@ -266,7 +266,7 @@ final class EngineState
     }
 
     /**
-     * Records how the bucket's current window ends (called on its last day, after the cycle closes).
+     * Records how the bucket's current window ends (called the day after its last day, once its carry-over moved).
      */
     public function closeWindow(int $bucketId): void
     {
