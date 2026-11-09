@@ -62,7 +62,7 @@ The app runs at `http://localhost`. The seeder creates a test user:
 
 ## Documentation
 
-Deeper reference docs live in [`docs/`](docs/):
+Deeper reference docs live in [`docs/`](docs/) (English) and [`docs/es/`](docs/es/) (Español, same file names):
 
 - [`architecture.md`](docs/architecture.md) — stack, request lifecycle, shared Inertia props, frontend directory layout.
 - [`domain-model.md`](docs/domain-model.md) — the models, the `BelongsToUser` scoping pattern, key services, `Money`.
