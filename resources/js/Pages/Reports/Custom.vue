@@ -2,6 +2,7 @@
 import { computed, reactive } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -41,14 +42,12 @@ const formatDate = (date) => format.date(date);
 <template>
     <Head :title="$t('ui.reports.custom_title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                {{ $t('ui.reports.custom_title') }}
-            </h2>
+            <PageHeader :title="$t('ui.reports.custom_title')" />
         </template>
 
-        <div class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-6">
             <div class="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div>
                     <InputLabel for="from" :value="$t('ui.reports.from')" />

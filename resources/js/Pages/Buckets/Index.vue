@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
@@ -333,18 +334,19 @@ const deleteBucket = () => {
 <template>
     <Head :title="$t('ui.buckets.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.buckets.title') }}</h2>
-                <PrimaryButton type="button" @click="openCreateModal">
-                    <DynamicIcon name="plus" class="h-4 w-4" />
-                    {{ $t('ui.buckets.new') }}
-                </PrimaryButton>
-            </div>
+            <PageHeader :title="$t('ui.buckets.title')">
+                <template #actions>
+                    <PrimaryButton type="button" @click="openCreateModal">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.buckets.new') }}
+                    </PrimaryButton>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <div>
             <p v-if="buckets.length" class="mb-6 max-w-3xl text-sm text-gray-500 dark:text-gray-400">
                 {{ $t('ui.buckets.intro') }}
             </p>
@@ -455,14 +457,13 @@ const deleteBucket = () => {
                             <span v-else class="text-gray-400"><Money :amount="bucket.remaining" :currency="bucket.currency" /> {{ $t('ui.buckets.left') }}</span>
                         </div>
                         <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-xs dark:border-gray-700">
-                            <button
-                                type="button"
+                            <Link
+                                :href="plannedEventsIndex.url()"
                                 class="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                                @click="router.visit(plannedEventsIndex.url())"
                             >
                                 <template v-if="bucket.projected > 0"><Money :amount="bucket.projected" :currency="bucket.currency" /> {{ $t('ui.buckets.planned') }}</template>
                                 <template v-else>{{ $t('ui.buckets.plan_spending') }}</template>
-                            </button>
+                            </Link>
                             <span v-if="bucket.projected > 0" class="text-gray-400">
                                 {{ $t('ui.buckets.after_plans') }} <Money :amount="bucket.effectiveRemaining" :currency="bucket.currency" />
                             </span>

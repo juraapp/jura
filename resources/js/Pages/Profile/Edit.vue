@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
@@ -18,17 +19,13 @@ defineProps({
 <template>
     <Head :title="$t('ui.profile.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="narrow">
         <template #header>
-            <h2
-                class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200"
-            >
-                {{ $t('ui.profile.title') }}
-            </h2>
+            <PageHeader :title="$t('ui.profile.title')" />
         </template>
 
-        <div class="py-12">
-            <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
+        <div>
+            <div class="space-y-6">
                 <div
                     class="bg-white p-4 shadow sm:rounded-lg sm:p-8 dark:bg-gray-800"
                 >

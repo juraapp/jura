@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
@@ -152,18 +153,19 @@ const deleteEvent = () => {
 <template>
     <Head :title="$t('ui.cash_flow.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.cash_flow.title') }}</h2>
-                <PrimaryButton type="button" @click="openPlanned(null, { type: 'expense' })">
-                    <DynamicIcon name="plus" class="h-4 w-4" />
-                    {{ $t('ui.cash_flow.add') }}
-                </PrimaryButton>
-            </div>
+            <PageHeader :title="$t('ui.cash_flow.title')">
+                <template #actions>
+                    <PrimaryButton type="button" @click="openPlanned(null, { type: 'expense' })">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.cash_flow.add') }}
+                    </PrimaryButton>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <section v-if="review.count > 0 || section === 'review'" id="review" class="scroll-mt-20">
                 <h3 class="mb-3 text-sm font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">{{ $t('ui.cash_flow.review_title', { count: review.count }) }}</h3>
                 <NeedsReviewList :review="review" />

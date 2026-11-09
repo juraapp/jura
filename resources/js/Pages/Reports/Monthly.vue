@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -38,29 +39,28 @@ const pdfUrl = computed(() => monthlyPdf.url({ query: { year: props.year, month:
 <template>
     <Head :title="$t('ui.reports.monthly_title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    {{ $t('ui.reports.monthly_title') }}
-                </h2>
-                <div class="flex items-center gap-2">
-                    <button type="button" :title="$t('ui.common.previous')" :aria-label="$t('ui.common.previous')" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="previousMonth">
-                        <DynamicIcon name="chevron-right" class="h-4 w-4 -scale-x-100" />
-                    </button>
-                    <span class="min-w-[9rem] text-center text-sm font-medium capitalize text-gray-700 dark:text-gray-300">{{ periodLabel }}</span>
-                    <button type="button" :title="$t('ui.common.next')" :aria-label="$t('ui.common.next')" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="nextMonth">
-                        <DynamicIcon name="chevron-right" class="h-4 w-4" />
-                    </button>
-                    <PrimaryButton as="a" :href="pdfUrl" target="_blank" class="ms-2">
-                        <DynamicIcon name="arrow-down-tray" class="h-4 w-4" />
-                        {{ $t('ui.reports.export_pdf') }}
-                    </PrimaryButton>
-                </div>
-            </div>
+            <PageHeader :title="$t('ui.reports.monthly_title')">
+                <template #actions>
+                    <div class="flex items-center gap-2">
+                        <button type="button" :title="$t('ui.common.previous')" :aria-label="$t('ui.common.previous')" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="previousMonth">
+                            <DynamicIcon name="chevron-right" class="h-4 w-4 -scale-x-100" />
+                        </button>
+                        <span class="min-w-[9rem] text-center text-sm font-medium capitalize text-gray-700 dark:text-gray-300">{{ periodLabel }}</span>
+                        <button type="button" :title="$t('ui.common.next')" :aria-label="$t('ui.common.next')" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="nextMonth">
+                            <DynamicIcon name="chevron-right" class="h-4 w-4" />
+                        </button>
+                        <PrimaryButton as="a" :href="pdfUrl" target="_blank" class="ms-2">
+                            <DynamicIcon name="arrow-down-tray" class="h-4 w-4" />
+                            {{ $t('ui.reports.export_pdf') }}
+                        </PrimaryButton>
+                    </div>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <div v-for="currencySummary in currencies" :key="currencySummary.currency" class="space-y-6">
                 <h3 v-if="currencies.length > 1" class="border-t border-gray-200 pt-6 text-sm font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-700">
                     {{ currencySummary.currency }}

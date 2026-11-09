@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
@@ -91,20 +92,19 @@ const deleteCategory = () => {
 <template>
     <Head :title="$t('ui.categories.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    {{ $t('ui.categories.title') }}
-                </h2>
-                <PrimaryButton type="button" @click="openCreateModal">
-                    <DynamicIcon name="plus" class="h-4 w-4" />
-                    {{ $t('ui.categories.new') }}
-                </PrimaryButton>
-            </div>
+            <PageHeader :title="$t('ui.categories.title')">
+                <template #actions>
+                    <PrimaryButton type="button" @click="openCreateModal">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.categories.new') }}
+                    </PrimaryButton>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <EmptyState
                 v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
                 icon="tag"

@@ -1,8 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -60,20 +61,16 @@ const saveLimit = (value) => router.post(cycleLimit.url(props.bucket.id), { cap_
 <template>
     <Head :title="$t('ui.bucket_history.title', { name: bucket.name })" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.bucket_history.heading', { name: bucket.name }) }}</h2>
-                    <p v-if="bucket.cycleDescription" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {{ $t('ui.bucket_history.cycle_end', { description: bucket.cycleDescription, policy: bucket.carryOverLabel.toLowerCase() }) }}<template v-if="bucket.overflowBucket"> ({{ bucket.overflowBucket }})</template>.
-                    </p>
-                </div>
-                <Link :href="bucketsIndex.url()" class="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400">{{ $t('ui.bucket_history.back') }}</Link>
-            </div>
+            <PageHeader :title="$t('ui.bucket_history.heading', { name: bucket.name })" :back="{ href: bucketsIndex.url(), label: $t('ui.bucket_history.back') }">
+                <template v-if="bucket.cycleDescription" #meta>
+                    {{ $t('ui.bucket_history.cycle_end', { description: bucket.cycleDescription, policy: bucket.carryOverLabel.toLowerCase() }) }}<template v-if="bucket.overflowBucket"> ({{ bucket.overflowBucket }})</template>.
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <EmptyState
                 v-if="!bucket.cycleDescription"
                 icon="arrow-path"

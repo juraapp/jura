@@ -1,8 +1,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Modal from '@/Components/Modal.vue';
@@ -296,24 +297,25 @@ onMounted(() => {
 <template>
     <Head :title="$t('ui.wishlist.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.wishlist.title') }}</h2>
-                <div class="flex items-center gap-2">
-                    <SecondaryButton type="button" @click="openProjectModal()">
-                        <DynamicIcon name="flag" class="h-4 w-4" />
-                        {{ $t('ui.wishlist.new_project') }}
-                    </SecondaryButton>
-                    <PrimaryButton type="button" @click="openItemModal()">
-                        <DynamicIcon name="plus" class="h-4 w-4" />
-                        {{ $t('ui.wishlist.new_item') }}
-                    </PrimaryButton>
-                </div>
-            </div>
+            <PageHeader :title="$t('ui.wishlist.title')">
+                <template #actions>
+                    <div class="flex items-center gap-2">
+                        <SecondaryButton type="button" @click="openProjectModal()">
+                            <DynamicIcon name="flag" class="h-4 w-4" />
+                            {{ $t('ui.wishlist.new_project') }}
+                        </SecondaryButton>
+                        <PrimaryButton type="button" @click="openItemModal()">
+                            <DynamicIcon name="plus" class="h-4 w-4" />
+                            {{ $t('ui.wishlist.new_item') }}
+                        </PrimaryButton>
+                    </div>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <EmptyState
                 v-if="items.length === 0 && projects.length === 0"
                 icon="flag"
@@ -388,9 +390,12 @@ onMounted(() => {
                                             <span v-for="n in 5" :key="n" class="h-1.5 w-1.5 rounded-full" :class="n <= item.importance ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-600'"></span>
                                         </span>
                                         <span v-if="item.desiredBy">{{ $t('ui.wishlist.by', { date: formatDate(item.desiredBy) }) }}</span>
-                                        <button v-if="item.bucket" type="button" class="font-medium text-primary-600 hover:underline dark:text-primary-400" @click="router.visit(bucketsIndex.url())">
+                                        <Link v-if="item.bucket" :href="bucketsIndex.url()" class="font-medium text-primary-600 hover:underline dark:text-primary-400">
                                             {{ item.bucket.name }}
-                                        </button>
+                                        </Link>
+                                        <Link v-else-if="item.projectBucket" :href="bucketsIndex.url()" class="font-medium text-primary-600 hover:underline dark:text-primary-400">
+                                            {{ item.projectBucket.name }} ({{ $t('ui.projects.from_project_bucket') }})
+                                        </Link>
                                         <span v-if="item.allowedAccountIds.length">
                                             {{ $t('ui.wishlist.only_with') }}
                                             <span v-for="id in item.allowedAccountIds" :key="id" class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 dark:bg-gray-700">{{ accounts.find((a) => a.id === id)?.name ?? '?' }}</span>
