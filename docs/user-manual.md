@@ -28,6 +28,8 @@ for everyday use. Sections marked **Advanced** are optional extras.
 
 ## Getting started
 
+Visitors who are not signed in see a landing page at the site root with **Log in** and **Get started free** buttons; signed-in users go straight to the dashboard.
+
 1. **Register** and verify your email address. Most pages need a verified account.
 2. **Create your first account** (a bank account, wallet, cash, and so on) with its current balance.
 3. **Record your first transaction.** The dashboard asks you to create an account when you have none. Once you
