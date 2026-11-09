@@ -66,6 +66,13 @@ trait BucketRules
             'cycle_anchor' => ['nullable', 'date'],
             'cycle_goal' => ['nullable', ...MoneyRules::positive()],
             'cap_amount' => [Rule::requiredIf(fn () => $spending() || $needsTarget()), 'nullable', ...MoneyRules::positive()],
+            'target_date' => [
+                'nullable',
+                'date',
+                fn (string $attribute, mixed $value, Closure $fail) => $spending() || ! $this->filled('cap_amount')
+                    ? $fail(__('buckets.target_date_requires_cap'))
+                    : null,
+            ],
             'fill_rule' => ['nullable', Rule::enum(FillRule::class)],
             'fill_value' => [
                 Rule::requiredIf(fn () => in_array($this->input('fill_rule'), [FillRule::Fixed->value, FillRule::Percent->value, FillRule::PercentOfRemaining->value], true)),

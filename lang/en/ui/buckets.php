@@ -126,4 +126,13 @@ return [
     'over_assign_confirm' => 'Assign anyway',
     'overspent' => 'Overspent',
     'overspent_hint' => 'More was spent from this bucket than it held. Move money into it to cover the difference.',
+    'target_date' => 'Target date (optional)',
+    'target_date_hint' => 'Needs a target amount. Jura tells you when you fall behind.',
+    'target_by' => 'Target by {date}',
+    'target_on_track' => 'On track',
+    'target_behind' => 'Behind',
+    'target_overdue' => 'The target date has passed',
+    'target_reached_on' => 'Your plan fills it on {date}',
+    'target_not_reached' => 'Your plan does not fill it by then',
+    'target_needs' => 'Needs {amount} a month',
 ];

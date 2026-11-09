@@ -22,4 +22,5 @@ return [
     'from_ready' => 'Desde disponible para asignar',
     'to_ready' => 'Devuelto a disponible para asignar',
     'over_assign' => 'Son :amount más de lo disponible para asignar. Tus baldes tendrían más dinero que tus cuentas.',
+    'target_date_requires_cap' => 'Una fecha objetivo necesita un balde de ahorro con un monto objetivo.',
 ];

@@ -4,6 +4,7 @@ namespace App\Modules\Planning\Http\Controllers;
 
 use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Ledger\Enums\CategoryType;
+use App\Modules\Planning\Contracts\SavingsTargets;
 use App\Modules\Planning\Enums\AllocationSource;
 use App\Modules\Planning\Enums\BucketKind;
 use App\Modules\Planning\Enums\BudgetPeriodType;
@@ -38,7 +39,7 @@ use Inertia\Response;
 
 class BucketController extends Controller
 {
-    public function index(BucketService $limits, BucketLedger $funds, PlannedEventService $planned, LedgerQuery $ledger, BucketProjection $projector): Response
+    public function index(BucketService $limits, BucketLedger $funds, PlannedEventService $planned, LedgerQuery $ledger, BucketProjection $projector, SavingsTargets $savingsTargets): Response
     {
         $this->authorize('viewAny', Bucket::class);
 
@@ -50,8 +51,9 @@ class BucketController extends Controller
         $projections = $buckets->pluck('currency')->unique()->mapWithKeys(fn (string $currency) => [$currency => $projector->project(Auth::user(), $currency)]);
 
         $availableById = $funds->availableMany($buckets);
+        $targets = collect($savingsTargets->targets(Auth::user()))->keyBy('bucketId');
 
-        $cards = $buckets->map(function (Bucket $bucket) use ($limits, $funds, $planned, $accountNames, $recent, $projections, $availableById) {
+        $cards = $buckets->map(function (Bucket $bucket) use ($limits, $funds, $planned, $accountNames, $recent, $projections, $availableById, $targets) {
             $available = $availableById[$bucket->id];
             $funded = $bucket->funded_since !== null;
             $card = [
@@ -74,6 +76,8 @@ class BucketController extends Controller
                 'cycleDescription' => $bucket->cyclePeriod()?->describe(),
                 'cycleGoal' => $bucket->cycle_goal?->toFloat(),
                 'cap' => $bucket->cap_amount?->toFloat(),
+                'targetDate' => $bucket->target_date?->toDateString(),
+                'target' => $targets->get($bucket->id),
                 'fillRule' => $bucket->fill_rule?->value,
                 'fillRuleLabel' => $bucket->fill_rule?->label(),
                 'fillValue' => $bucket->fill_value !== null ? (float) $bucket->fill_value : null,

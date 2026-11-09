@@ -77,7 +77,7 @@ return [
     'quick_project_create' => 'Crear proyecto',
     'funding_title' => '¿Cómo lo vas a pagar?',
     'funding_ready' => 'De disponible para asignar',
-    'funding_project_bucket' => 'Del balde del proyecto (:name)',
+    'funding_project_bucket' => 'Del balde del proyecto ({name})',
     'funding_bucket' => 'De un balde que ya tengo',
     'funding_new_bucket' => 'Ahorrar para esto en un balde nuevo',
     'funding_new_hint' => 'Un balde con el nombre del artículo y su precio como meta. Se cierra cuando compras el artículo y lo que sobre vuelve a disponible para asignar.',
@@ -87,5 +87,5 @@ return [
     'fill_of_remaining' => 'Una parte de lo que sobra tras los demás baldes',
     'fill_amount' => 'Monto',
     'fill_percentage' => 'Porcentaje',
-    'cap_below_price' => 'Este balde deja de llenarse en :cap, por debajo del precio: el resto saldrá de disponible para asignar.',
+    'cap_below_price' => 'Este balde deja de llenarse en {cap}, por debajo del precio: el resto saldrá de disponible para asignar.',
 ];

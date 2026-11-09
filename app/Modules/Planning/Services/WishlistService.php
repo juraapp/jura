@@ -51,6 +51,7 @@ class WishlistService
             'kind' => BucketKind::Savings->value,
             'currency' => strtoupper($data['currency'] ?? $user->currency_default),
             'cap_amount' => Money::of($data['price'])->toDecimalString(),
+            'target_date' => $data['desired_by'] ?? null,
             'fill_rule' => $rule->value,
             'fill_value' => $data['new_bucket_fill_value'],
             'cycle' => $rule === FillRule::Fixed ? 'monthly' : null,

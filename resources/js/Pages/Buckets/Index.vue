@@ -89,6 +89,7 @@ const blank = () => ({
     cycle_anchor: '',
     cycle_goal: '',
     cap_amount: '',
+    target_date: '',
     priority: '',
     opening_balance: '',
     fill_rule: '',
@@ -104,6 +105,11 @@ const blank = () => ({
 
 const form = useForm(blank());
 const isSpending = computed(() => form.kind === 'spending');
+
+/* A target date only makes sense for a savings bucket with a target amount: the field is hidden otherwise, so drop its value. */
+watch(() => [form.cap_amount, isSpending.value], ([cap, spending]) => {
+    if (!cap || spending) form.target_date = '';
+});
 // A spending bucket always has a cycle; a savings bucket may have none.
 watch(() => form.kind, (kind) => {
     if (kind === 'spending' && !form.cycle) form.cycle = 'monthly';
@@ -146,6 +152,7 @@ const openEditModal = (bucket) => {
     form.cycle_anchor = bucket.cycleAnchor ?? '';
     form.cycle_goal = bucket.cycleGoal !== null && bucket.cycleGoal !== undefined ? String(bucket.cycleGoal) : '';
     form.cap_amount = bucket.cap !== null ? String(bucket.cap) : '';
+    form.target_date = bucket.targetDate ?? '';
     form.priority = String(bucket.priority);
     form.opening_balance = bucket.openingBalance > 0 ? String(bucket.openingBalance) : '';
     form.fill_rule = bucket.fillRule ?? '';
@@ -414,6 +421,22 @@ const deleteBucket = () => {
                             <p class="mt-1 text-xs text-gray-400">
                                 {{ $t('ui.buckets.percent_of', { percent: format.number(targetPercent(bucket), 0) }) }} <Money :amount="bucket.cap" :currency="bucket.currency" />
                             </p>
+                            <div v-if="bucket.target" class="mt-2 space-y-0.5 text-xs">
+                                <p class="flex flex-wrap items-center gap-2">
+                                    <span class="text-gray-500 dark:text-gray-400">{{ $t('ui.buckets.target_by', { date: format.date(bucket.target.targetDate) }) }}</span>
+                                    <span
+                                        class="rounded-full px-2 py-0.5 font-medium"
+                                        :class="bucket.target.behind ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'"
+                                    >{{ bucket.target.behind ? $t('ui.buckets.target_behind') : $t('ui.buckets.target_on_track') }}</span>
+                                </p>
+                                <p v-if="bucket.target.overdue" class="text-red-600 dark:text-red-400">{{ $t('ui.buckets.target_overdue') }}</p>
+                                <p v-else-if="bucket.target.basis === 'plan'" class="text-gray-500 dark:text-gray-400">
+                                    {{ bucket.target.projectedOn ? $t('ui.buckets.target_reached_on', { date: format.date(bucket.target.projectedOn) }) : $t('ui.buckets.target_not_reached') }}
+                                </p>
+                                <p v-if="!bucket.target.overdue && bucket.target.neededPerMonth > 0" class="text-gray-500 dark:text-gray-400">
+                                    {{ $t('ui.buckets.target_needs', { amount: format.money(bucket.target.neededPerMonth, bucket.currency) }) }}
+                                </p>
+                            </div>
                         </template>
                     </div>
 
@@ -533,6 +556,13 @@ const deleteBucket = () => {
                         </SelectInput>
                         <InputError class="mt-1" :message="form.errors.currency" />
                     </div>
+                </div>
+
+                <div v-if="!isSpending && form.cap_amount">
+                    <InputLabel for="target_date" :value="$t('ui.buckets.target_date')" />
+                    <TextInput id="target_date" v-model="form.target_date" type="date" class="mt-1 block w-full" />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.buckets.target_date_hint') }}</p>
+                    <InputError class="mt-1" :message="form.errors.target_date" />
                 </div>
 
                 <div>

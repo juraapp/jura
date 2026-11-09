@@ -84,6 +84,7 @@ class ProjectManager
             'kind' => BucketKind::Savings->value,
             'currency' => $project->currency,
             'cap_amount' => $target?->toDecimalString(),
+            'target_date' => $target !== null ? $project->target_date?->toDateString() : null,
             'fill_rule' => $rule->value,
             'fill_value' => $fill['fill_value'],
             'cycle' => $rule === FillRule::Fixed ? 'monthly' : null,
