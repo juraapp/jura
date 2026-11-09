@@ -59,7 +59,7 @@ Amounts in different currencies are never added together; each currency is shown
 
 ## Accounts (Banks & wallets)
 
-Menu: **Accounts → Banks & wallets**.
+Menu: **Money → Banks & wallets**.
 
 An account is any place that holds money: a bank account, digital wallet, cash, credit card or savings account.
 
@@ -86,7 +86,7 @@ An account is any place that holds money: a bank account, digital wallet, cash, 
 
 ## Transactions
 
-Menu: **Finances → Transactions** (and the **Incomes**, **Expenses** and **Transfers** shortcuts).
+Menu: **Money → Transactions**. The tabs under the page title (**Transactions**, **Incomes**, **Expenses**, **Transfers**) filter the list by type, and the page header has **New transaction** and **Import CSV**.
 
 There are three kinds:
 
@@ -150,7 +150,7 @@ every row and a **Select all** box. Selecting rows opens a bar with **Delete** a
 
 ## Importing from CSV
 
-Menu: **Finances → Import CSV**.
+Menu: **Money → Import CSV** (also a button on the Transactions page).
 
 Use this to bring in history from a spreadsheet or bank export.
 
@@ -186,7 +186,7 @@ categories** shared by everyone, and you can add your own.
 
 ## Upcoming & cash flow (planned income and expenses)
 
-Menu: **Planning → Upcoming & cash flow**.
+Menu: **Plan → Upcoming & cash flow**.
 
 Use this page to write down money you expect to receive or spend in the future, however irregular or regular
 (rent, salary, subscriptions), and see what your balance could look like. Planned events are **estimates**: they never change your real balances or reports
@@ -287,7 +287,7 @@ separately and never added together.
 
 ## Buckets (budgets and savings)
 
-Menu: **Planning → Buckets**. (The old **Budgets** page now lives here; its address redirects.)
+Menu: **Plan → Buckets**. (The old **Budgets** page now lives here; its address redirects.)
 
 A **bucket** is money you set aside for something. Buckets only *earmark* money: your real accounts and balances
 never change. There are two kinds:
@@ -434,7 +434,7 @@ Then add a **Renault 21** to the wish list at 10,000,000 using the *Purchase fun
 
 ## Projects
 
-Menu: **Planning → Projects**.
+Menu: **Plan → Projects**.
 
 A project is a goal made of several things you want, for example a home studio or a trip, with its own money plan.
 Press **New project** and fill in:
@@ -465,12 +465,12 @@ Items that belong to no project appear in a last card, **Not in a project**.
 
 ## Wish list and projects
 
-Menu: **Planning → Wish list**.
+Menu: **Plan → Wish list**.
 
 A place for everything you would like to get. Group things into **projects** (a home studio, a trip), **hobbies**
 (cycling) or any other grouping, and rate how much you want each one.
 
-- **New project** (also in **Planning → Projects**, see above) creates a group. Deleting a project keeps its items
+- **New project** (also in **Plan → Projects**, see above) creates a group. Deleting a project keeps its items
   under "No project". On the Projects page, a project's **New item** button comes back here with the item form open
   and the project already chosen.
 - **New item** needs a name and a price. Set **how much you want it** (1 to 5) and choose a **project** (or press
@@ -512,7 +512,7 @@ purchased and dropped items* to see them, and use the arrow to want one again.
 
 ## Planner
 
-Menu: **Planning → Planner**.
+Menu: **Plan → Planner**.
 
 The planner answers "what should I buy first, and when can I afford each thing?". It plays your planned income and
 expenses forward, through your buckets' filling rules, and tells you the earliest date each wish-list item can be paid
@@ -582,7 +582,7 @@ shows it struck through and leaves it out of the calculation.
 
 ## Reports
 
-Menu: **Reports**.
+Menu: **Insights** (Monthly, Annual, Custom, Forecast, Bucket report, Project report).
 
 | Report | What it shows | Export |
 |---|---|---|
@@ -590,7 +590,7 @@ Menu: **Reports**.
 | **Annual** | the year month by month, with trends | PDF |
 | **Custom** | any date range you choose | CSV |
 | **Forecast** | your real net worth month by month, followed by projected balances | none |
-| **Buckets** | how your buckets are funded, money moving in and out, and where they are heading | none |
+| **Bucket report** | how your buckets are funded, money moving in and out, and where they are heading | none |
 | **Project report** | each project's wanted, bought and funded totals and when it could be completed | none |
 
 Monthly, Annual and Custom show **real, recorded** data. Totals are kept separate per currency. The monthly report splits expenses
@@ -604,7 +604,7 @@ below lists the planned income, planned expenses and each view's balance per mon
 spending from buckets over six months, and the table projects each bucket 12 months ahead using the view you choose at
 the top (it replays your planned income through your fill rules, like the planner).
 
-**Project report** (Reports → Project report). For each project (and items with no project): what is still wanted, what you already bought, how
+**Project report** (Insights → Project report). For each project (and items with no project): what is still wanted, what you already bought, how
 much is funded today, and the month everything could be bought if you follow the planner's best order over the next 24
 months, using the chosen view of your income. Shared buckets are counted once (the most wanted item first), and the
 dates come from one plan for all your wanted items, so two projects never count on the same free money. A project
@@ -651,7 +651,7 @@ You are notified once per crossing; an unread alert is not repeated.
 
 ## Common questions
 
-**Where did savings goals go?** They are **savings buckets** now (Planning → Buckets), and `/planning/goals` takes
+**Where did savings goals go?** They are **savings buckets** now (Plan → Buckets), and `/planning/goals` takes
 you there. A goal's target amount and date became the bucket's target and target date, and every contribution became
 money set aside in the bucket on its date, so it counts in the buckets and comes out of *ready to assign*. Goals you
 had completed or archived became completed buckets whose money was released again (their history is kept); goals you
@@ -684,7 +684,7 @@ bucket (*Move money → Ready to assign*) or record the income that is missing.
 **A bucket says Overspent.** More was paid from it than it held. Move money into it, from another bucket or from ready
 to assign.
 
-**Where did Recurring transactions go?** They became repeating plans on **Planning → Upcoming & cash flow**, under
+**Where did Recurring transactions go?** They became repeating plans on **Plan → Upcoming & cash flow**, under
 **Repeating plans**. Each one kept its account, category, amount and rhythm and records itself on its date
 (**Record it automatically on the date** is on), keeping the next date it was due on (one on the 29th to 31st whose
 next date had slipped to the 28th, or to the 30th, went back to its own day in that month; this also happens if you

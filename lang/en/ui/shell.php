@@ -2,10 +2,10 @@
 
 return [
     'nav' => [
-        'finances' => 'Finances',
-        'accounts' => 'Accounts',
-        'planning' => 'Planning',
-        'reports' => 'Reports',
+        'money' => 'Money',
+        'plan' => 'Plan',
+        'insights' => 'Insights',
+        'reports_buckets' => 'Bucket report',
         'settings' => 'Settings',
         'dashboard' => 'Dashboard',
         'transactions' => 'Transactions',

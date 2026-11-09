@@ -70,8 +70,13 @@ A page puts `<PageHeader>` in the layout's `#header` slot: `title`, optional `su
 label }`, a link above the title), an `#actions` slot (right-aligned, wraps under the title on phones) and a `#meta` row.
 `<AuthenticatedLayout width="wide">` (max-w-7xl: lists, tables, dashboards) or `width="narrow"` (max-w-3xl: forms and
 settings) makes the layout own the width: the header and the body share one container with the page padding, so the
-page body drops its own `mx-auto max-w-* px-*` wrapper. Without `width` a page still sizes its own body (older pages
-until they adopt it).
+page body drops its own `mx-auto max-w-* px-*` wrapper. Every page now does this; `width` stays optional only for the
+guest/auth screens. A page's primary action (New account, New transaction, an export) goes in `#actions`; use
+`PrimaryButton`/`SecondaryButton` (with `:as="Link"` for a link), never hand-styled buttons.
+
+The sidebar has four groups: Money (dashboard, accounts, transactions, import), Plan (upcoming & cash flow, buckets,
+projects, wish list, planner), Insights (the reports) and Settings. An item can list `also` routes that belong to it:
+the incomes, expenses and transfers lists are tabs on the Transactions page, so Transactions stays highlighted on them.
 
 ## Empty states
 
