@@ -46,6 +46,53 @@ class NotificationsTest extends TestCase
         $this->assertNotNull($notification->fresh()->read_at);
     }
 
+    public function test_opening_a_notification_marks_it_read_and_goes_to_its_page_on_this_site(): void
+    {
+        $user = User::factory()->create();
+        $notification = $this->makeNotification($user);
+        $notification->update(['data' => [...$notification->data, 'url' => 'https://old-host.example/accounts']]);
+
+        $response = $this->actingAs($user)->patch("/notifications/{$notification->id}/read");
+
+        $response->assertRedirect('/accounts');
+        $this->assertNotNull($notification->fresh()->read_at);
+    }
+
+    public function test_opening_a_notification_keeps_the_query_of_its_page(): void
+    {
+        $user = User::factory()->create();
+        $notification = $this->makeNotification($user);
+        $notification->update(['data' => [...$notification->data, 'url' => route('planned-events.index', ['section' => 'review'])]]);
+
+        $response = $this->actingAs($user)->patch("/notifications/{$notification->id}/read");
+
+        $response->assertRedirect(route('planned-events.index', ['section' => 'review'], false));
+    }
+
+    public function test_a_protocol_relative_url_opens_its_path_on_this_site(): void
+    {
+        $user = User::factory()->create();
+        $notification = $this->makeNotification($user);
+        $notification->update(['data' => [...$notification->data, 'url' => '//evil.example/accounts']]);
+
+        $this->actingAs($user)->patch("/notifications/{$notification->id}/read")->assertRedirect('/accounts');
+    }
+
+    public function test_opening_a_notification_without_a_page_on_this_site_goes_back(): void
+    {
+        $user = User::factory()->create();
+
+        foreach (['#', '', 'https://site.example//evil.example', 'https://site.example/\\evil.example'] as $url) {
+            $notification = $this->makeNotification($user);
+            $notification->update(['data' => [...$notification->data, 'url' => $url]]);
+
+            $this->actingAs($user)
+                ->from(route('dashboard'))
+                ->patch("/notifications/{$notification->id}/read")
+                ->assertRedirect(route('dashboard'));
+        }
+    }
+
     public function test_user_cannot_mark_another_users_notification_as_read(): void
     {
         $owner = User::factory()->create();
