@@ -32,9 +32,15 @@ para el uso diario. Las secciones marcadas como **Avanzado** son extras opcional
 Los visitantes que no han iniciado sesión ven una página de bienvenida en la raíz del sitio con los botones **Iniciar sesión** y **Empieza gratis**; los usuarios con sesión iniciada van directo al panel.
 
 1. **Regístrate** y verifica tu correo electrónico. La mayoría de las páginas requieren una cuenta verificada.
-2. **Crea tu primera cuenta** (una cuenta bancaria, una billetera, efectivo, etc.) con su saldo actual.
-3. **Registra tu primera transacción.** El panel te lleva por ambos pasos cuando aún no tienes datos.
-4. Opcionalmente, define tu **moneda, idioma y zona horaria** en Configuración → Preferencias.
+2. **Responde el asistente de configuración.** La primera vez que entras a Jura te hace cuatro preguntas cortas, y puedes saltar cualquiera:
+   - tu idioma, moneda principal y zona horaria;
+   - tu primera cuenta y su saldo actual;
+   - tu ingreso principal, cada cuánto llega y la próxima fecha de pago (se guarda como ingreso planeado en Flujo de caja, así alimenta la proyección sin cambiar ningún saldo);
+   - las categorías que quieres presupuestar cada mes, con un límite para cada una (se guardan como baldes), y una meta de ahorro opcional.
+
+   **Saltar configuración** cierra el asistente en cualquier momento. Cuando lo terminas o lo saltas, no vuelve a aparecer; todo lo que pregunta se puede cambiar después desde su propia página. Si cierras el navegador a medias, se abre de nuevo la próxima vez que entres.
+3. **Registra tu primera transacción.** El panel te guía cuando aún no tienes datos.
+4. Puedes cambiar tu **moneda, idioma y zona horaria** cuando quieras en Configuración → Preferencias.
 
 Tus datos son privados. Nadie más puede ver ni abrir tus cuentas, transacciones o presupuestos.
 

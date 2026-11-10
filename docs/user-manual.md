@@ -31,10 +31,15 @@ for everyday use. Sections marked **Advanced** are optional extras.
 Visitors who are not signed in see a landing page at the site root with **Log in** and **Get started free** buttons; signed-in users go straight to the dashboard.
 
 1. **Register** and verify your email address. Most pages need a verified account.
-2. **Create your first account** (a bank account, wallet, cash, and so on) with its current balance.
-3. **Record your first transaction.** The dashboard asks you to create an account when you have none. Once you
-   have one it shows your balances, with a prompt and a **New transaction** button until you record the first one.
-4. Optionally set your **currency, language and time zone** under Settings → Preferences.
+2. **Answer the setup wizard.** The first time you enter Jura it asks four short questions, each one skippable:
+   - your language, main currency and time zone;
+   - your first account and its current balance;
+   - your main income, how often it arrives and the next payment date (saved as a planned income in Cash flow, so it feeds the forecast without changing any balance);
+   - the categories you want to budget each month, with a limit for each (saved as buckets), and an optional savings goal.
+
+   **Skip setup** leaves the wizard at any point. Once you finish or skip it, it never appears again; everything it asks can be changed later from its own page. If you close the browser halfway, it opens again the next time you enter.
+3. **Record your first transaction.** The dashboard prompts you when you have no data yet.
+4. You can change your **currency, language and time zone** at any time under Settings → Preferences.
 
 Your data is private to you. Nobody else can see or open your accounts, transactions or budgets.
 
