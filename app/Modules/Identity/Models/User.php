@@ -52,6 +52,7 @@ class User extends Authenticatable implements HasLocalePreference
     {
         return [
             'email_verified_at' => 'datetime',
+            'onboarding_completed_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

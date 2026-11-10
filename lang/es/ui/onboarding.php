@@ -1,0 +1,47 @@
+<?php
+
+return [
+    'progress' => 'Paso {current} de {total}',
+    'skip_step' => 'Saltar este paso',
+    'skip_all' => 'Saltar configuración',
+    'back' => 'Atrás',
+    'continue' => 'Continuar',
+    'finish' => 'Terminar',
+    'error' => 'No se pudo guardar algo. Revisa los montos e inténtalo de nuevo.',
+    'preferences' => [
+        'title' => 'Lo básico',
+        'text' => 'Elige tu idioma, tu moneda principal y tu zona horaria. Puedes cambiarlos después en Preferencias.',
+        'language' => 'Idioma',
+        'currency' => 'Moneda principal',
+        'timezone' => 'Zona horaria',
+    ],
+    'account' => [
+        'title' => 'Tu primera cuenta',
+        'text' => '¿Dónde guardas tu dinero? Empieza con la cuenta que más usas.',
+        'type' => 'Tipo',
+        'name' => 'Nombre',
+        'balance' => 'Saldo actual',
+    ],
+    'income' => [
+        'title' => 'Tu ingreso principal',
+        'text' => '¿Cuánto ganas y cuándo? Jura lo usa para proyectar tu mes; no cambia tus saldos.',
+        'amount' => 'Monto',
+        'frequency' => 'Cada cuánto',
+        'monthly' => 'Mensual',
+        'biweekly' => 'Quincenal',
+        'weekly' => 'Semanal',
+        'next_date' => 'Próxima fecha de pago',
+        'account' => 'Cuenta donde lo recibes',
+        'no_account' => 'Sin cuenta',
+        'description' => 'Sueldo',
+    ],
+    'budgets' => [
+        'title' => 'Presupuestos y una meta',
+        'text' => 'Elige las categorías que quieres vigilar y ponle un límite mensual a cada una.',
+        'monthly_limit' => 'Límite mensual para {category}',
+        'goal_toggle' => 'También quiero ahorrar para algo',
+        'goal_name' => '¿Para qué estás ahorrando?',
+        'goal_amount' => 'Cuánto',
+        'goal_date' => 'Para cuándo (opcional)',
+    ],
+];

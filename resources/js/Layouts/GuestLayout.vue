@@ -54,6 +54,7 @@ const { isDark, toggle } = useDarkMode();
             <main class="flex flex-1 items-center justify-center px-4 pb-12 pt-2 sm:px-8">
                 <section aria-labelledby="auth-title" class="auth-enter w-full max-w-md">
                     <div class="mb-8">
+                        <slot name="top" />
                         <h1 id="auth-title" class="text-3xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">{{ title }}</h1>
                         <p v-if="description" class="mt-3 text-base leading-7 text-gray-500 dark:text-gray-400">{{ description }}</p>
                     </div>

@@ -3,7 +3,9 @@ import { computed, onMounted, ref } from 'vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import InputError from '@/Components/InputError.vue';
 
-const model = defineModel({ type: String, required: true });
+defineOptions({ inheritAttrs: false });
+
+const model = defineModel({ type: [String, Number], required: true });
 
 const props = defineProps({
     id: { type: String, required: true },
@@ -38,6 +40,7 @@ onMounted(() => {
                 :id="id"
                 ref="input"
                 v-model="model"
+                v-bind="$attrs"
                 :name="id"
                 :type="inputType"
                 :required="required"

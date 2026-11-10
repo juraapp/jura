@@ -1,0 +1,47 @@
+<?php
+
+return [
+    'progress' => 'Step {current} of {total}',
+    'skip_step' => 'Skip this step',
+    'skip_all' => 'Skip setup',
+    'back' => 'Back',
+    'continue' => 'Continue',
+    'finish' => 'Finish',
+    'error' => 'Something could not be saved. Check the amounts and try again.',
+    'preferences' => [
+        'title' => 'The basics',
+        'text' => 'Choose your language, main currency and time zone. You can change them later in Preferences.',
+        'language' => 'Language',
+        'currency' => 'Main currency',
+        'timezone' => 'Time zone',
+    ],
+    'account' => [
+        'title' => 'Your first account',
+        'text' => 'Where do you keep your money? Start with the account you use the most.',
+        'type' => 'Type',
+        'name' => 'Name',
+        'balance' => 'Current balance',
+    ],
+    'income' => [
+        'title' => 'Your main income',
+        'text' => 'How much do you earn and when? Jura uses it to forecast your month; it does not change your balances.',
+        'amount' => 'Amount',
+        'frequency' => 'How often',
+        'monthly' => 'Monthly',
+        'biweekly' => 'Every two weeks',
+        'weekly' => 'Weekly',
+        'next_date' => 'Next payment date',
+        'account' => 'Paid into',
+        'no_account' => 'No account',
+        'description' => 'Salary',
+    ],
+    'budgets' => [
+        'title' => 'Budgets and a goal',
+        'text' => 'Pick the categories you want to keep an eye on and set a monthly limit for each.',
+        'monthly_limit' => 'Monthly limit for {category}',
+        'goal_toggle' => 'I also want to save for something',
+        'goal_name' => 'What are you saving for?',
+        'goal_amount' => 'How much',
+        'goal_date' => 'By when (optional)',
+    ],
+];

@@ -12,7 +12,7 @@ use Inertia\Response;
 
 class PreferenceController extends Controller
 {
-    private const TIMEZONES = [
+    public const TIMEZONES = [
         'America/Bogota', 'America/Mexico_City', 'America/Lima',
         'America/Santiago', 'America/Argentina/Buenos_Aires', 'UTC',
     ];
