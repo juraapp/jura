@@ -39,6 +39,8 @@ group="topbar">`, so a page only drops `<MoneyMapStrip />` in; never recompute r
 - **`Components/`** — anything reused across ≥2 Pages, or a self-contained UI primitive (`Modal`, `ModalForm`, `InputLabel`, `TextInput`, `InputError`, `PrimaryButton`/`SecondaryButton`/`DangerButton`, `EmptyState`, `StatCard`, `Money`, `CategoryIcon`, `DynamicIcon`, `Pagination`, `SelectInput`, `SegmentedControl`). Check here before writing a new one — most CRUD pages are built almost entirely out of existing components (see any `Pages/*/Index.vue` for the pattern: `ModalForm` for create/edit, a plain `Modal` for delete confirmation, `EmptyState` for the zero-rows case).
 - **`Layouts/`** — `AuthenticatedLayout.vue` (sidebar + topbar + toast container + the global transaction modal) and `GuestLayout.vue`. A Page picks one; layouts never know about a specific Page's data.
 
+**Auth screens.** Build them from `GuestLayout` (split layout: green brand panel on desktop with only the logo and an animated illustration (`illustration` prop: `wallet` or `envelope`; `AuthIllustration` morphs between them across pages), no slogans or feature lists; `#footer` slot for links) plus `AuthField` (label, leading icon, error and a show/hide toggle for passwords), `AuthButton` and `AuthStatus`, not the generic `TextInput`/`PrimaryButton`.
+
 ## The established CRUD-page shape
 
 Every domain `Index.vue` (Accounts, Categories, Buckets) follows the same shape — copy the closest existing one rather than inventing a new structure:

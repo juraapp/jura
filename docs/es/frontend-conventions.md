@@ -19,6 +19,8 @@ imports de ningún framework y se prueba con `npm run test:js` (`node --test`).
 - **`Components/`** — todo lo que se reutiliza en ≥2 Pages, o una primitiva de UI autocontenida (`Modal`, `ModalForm`, `InputLabel`, `TextInput`, `InputError`, `PrimaryButton`/`SecondaryButton`/`DangerButton`, `EmptyState`, `StatCard`, `Money`, `CategoryIcon`, `DynamicIcon`, `Pagination`, `SelectInput`, `SegmentedControl`). Revisa aquí antes de escribir uno nuevo: la mayoría de las páginas CRUD se construyen casi por completo con componentes existentes (mira cualquier `Pages/*/Index.vue` para ver el patrón: `ModalForm` para crear/editar, un `Modal` simple para confirmar el borrado, `EmptyState` para el caso de cero filas).
 - **`Layouts/`** — `AuthenticatedLayout.vue` (barra lateral + barra superior + contenedor de toasts + el modal global de transacciones) y `GuestLayout.vue`. Una Page elige uno; los layouts nunca conocen los datos de una Page específica.
 
+**Pantallas de autenticación.** Constrúyelas con `GuestLayout` (layout dividido: panel de marca verde en escritorio solo con el logo y una ilustración animada (prop `illustration`: `wallet` o `envelope`; `AuthIllustration` hace la transición entre ellas al cambiar de página), sin eslóganes ni listas de funciones; slot `#footer` para enlaces) más `AuthField` (etiqueta, icono inicial, error y botón mostrar/ocultar para contraseñas), `AuthButton` y `AuthStatus`, no con los genéricos `TextInput`/`PrimaryButton`.
+
 ## La estructura establecida de las páginas CRUD
 
 Cada `Index.vue` de dominio (Accounts, Categories, Budgets, SavingsGoals, RecurringTransactions) sigue la misma estructura: copia la más parecida existente en lugar de inventar una nueva:
