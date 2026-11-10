@@ -13,6 +13,8 @@ const props = defineProps({
     id: { type: String, default: null },
     placeholder: { type: String, default: null },
     disabled: { type: Boolean, default: false },
+    /** Replaces the default input look (for example the larger auth-screen fields); the currency padding is kept. */
+    inputClass: { type: String, default: null },
 });
 
 const emit = defineEmits(['update:modelValue', 'blur']);
@@ -66,8 +68,7 @@ defineExpose({ focus: () => input.value.focus() });
             :aria-describedby="currency ? prefixId : undefined"
             :placeholder="placeholder"
             :disabled="disabled"
-            class="block w-full rounded-lg border-gray-300 text-sm tabular-nums shadow-sm focus:border-primary-500 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
-            :class="currency ? 'pl-12' : ''"
+            :class="[inputClass ?? 'block w-full rounded-lg border-gray-300 text-sm tabular-nums shadow-sm focus:border-primary-500 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400', currency ? 'pl-12' : '']"
             @input="onInput"
             @blur="onBlur"
         />

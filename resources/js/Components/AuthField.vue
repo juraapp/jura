@@ -2,8 +2,11 @@
 import { computed, onMounted, ref } from 'vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import InputError from '@/Components/InputError.vue';
+import MoneyInput from '@/Components/MoneyInput.vue';
 
-const model = defineModel({ type: String, required: true });
+defineOptions({ inheritAttrs: false });
+
+const model = defineModel({ type: [String, Number], required: true });
 
 const props = defineProps({
     id: { type: String, required: true },
@@ -14,7 +17,11 @@ const props = defineProps({
     autocomplete: { type: String, default: undefined },
     autofocus: { type: Boolean, default: false },
     required: { type: Boolean, default: true },
+    /** Makes this a money field: a MoneyInput with this currency in place of the icon (the user's own separators work). */
+    currency: { type: String, default: null },
 });
+
+const fieldClass = 'peer block min-h-[48px] w-full rounded-xl border border-gray-300 bg-white py-3 text-base text-gray-900 shadow-sm transition duration-200 placeholder:text-gray-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/15 aria-[invalid=true]:border-red-400 aria-[invalid=true]:focus:border-red-500 aria-[invalid=true]:focus:ring-red-500/15 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-primary-400 dark:focus:ring-primary-400/20 dark:aria-[invalid=true]:border-red-500';
 
 const input = ref(null);
 const revealed = ref(false);
@@ -33,19 +40,27 @@ onMounted(() => {
     <div>
         <label :for="id" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">{{ label }}</label>
 
-        <div class="relative">
+        <MoneyInput
+            v-if="currency"
+            :id="id"
+            v-model="model"
+            :currency="currency"
+            :input-class="`${fieldClass} pe-4 tabular-nums`"
+        />
+
+        <div v-else class="relative">
             <input
                 :id="id"
                 ref="input"
                 v-model="model"
+                v-bind="$attrs"
                 :name="id"
                 :type="inputType"
                 :required="required"
                 :autocomplete="autocomplete"
                 :aria-invalid="Boolean(error)"
                 :aria-describedby="error ? `${id}-error` : undefined"
-                :class="[icon ? 'ps-11' : 'ps-4', isPassword ? 'pe-12' : 'pe-4']"
-                class="peer block min-h-[48px] w-full rounded-xl border border-gray-300 bg-white py-3 text-base text-gray-900 shadow-sm transition duration-200 placeholder:text-gray-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/15 aria-[invalid=true]:border-red-400 aria-[invalid=true]:focus:border-red-500 aria-[invalid=true]:focus:ring-red-500/15 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-primary-400 dark:focus:ring-primary-400/20 dark:aria-[invalid=true]:border-red-500"
+                :class="[fieldClass, icon ? 'ps-11' : 'ps-4', isPassword ? 'pe-12' : 'pe-4']"
             />
 
             <span
