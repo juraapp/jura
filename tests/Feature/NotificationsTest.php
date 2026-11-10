@@ -46,6 +46,18 @@ class NotificationsTest extends TestCase
         $this->assertNotNull($notification->fresh()->read_at);
     }
 
+    public function test_opening_a_notification_marks_it_read_and_goes_to_its_page_on_this_site(): void
+    {
+        $user = User::factory()->create();
+        $notification = $this->makeNotification($user);
+        $notification->update(['data' => [...$notification->data, 'url' => 'https://old-host.example/accounts']]);
+
+        $response = $this->actingAs($user)->patch("/notifications/{$notification->id}/read");
+
+        $response->assertRedirect('/accounts');
+        $this->assertNotNull($notification->fresh()->read_at);
+    }
+
     public function test_user_cannot_mark_another_users_notification_as_read(): void
     {
         $owner = User::factory()->create();

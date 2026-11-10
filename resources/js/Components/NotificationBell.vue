@@ -14,10 +14,6 @@ const root = ref(null);
 
 onClickOutside(root, () => (open.value = false));
 
-const markAsRead = (notificationId) => {
-    router.patch(read.url(notificationId), {}, { preserveScroll: true, only: ['notifications'] });
-};
-
 const markAllAsRead = () => {
     router.patch(readAll.url(), {}, { preserveScroll: true, only: ['notifications'] });
 };
@@ -66,10 +62,13 @@ const markAllAsRead = () => {
                         <Link
                             v-for="notification in page.props.notifications.items"
                             :key="notification.id"
-                            :href="notification.url"
-                            class="flex gap-3 border-b border-gray-50 px-4 py-3 last:border-0 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/40"
+                            :href="read.url(notification.id)"
+                            method="patch"
+                            as="button"
+                            type="button"
+                            class="flex w-full gap-3 border-b border-gray-50 px-4 py-3 text-left last:border-0 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/40"
                             :class="{ 'opacity-60': notification.readAt }"
-                            @click="markAsRead(notification.id)"
+                            @click="open = false"
                         >
                             <span
                                 class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"

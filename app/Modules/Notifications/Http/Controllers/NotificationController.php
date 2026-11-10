@@ -8,11 +8,19 @@ use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
+    /**
+     * Marks the notification as read and opens the page it points to, in one visit. Only the
+     * path of the stored URL is used, so the redirect always stays on this site even if the
+     * notification was created under another host (for example, before APP_URL changed).
+     */
     public function markAsRead(Request $request, string $notification): RedirectResponse
     {
-        $request->user()->notifications()->findOrFail($notification)->markAsRead();
+        $notification = $request->user()->notifications()->findOrFail($notification);
+        $notification->markAsRead();
 
-        return back();
+        $path = parse_url((string) ($notification->data['url'] ?? ''), PHP_URL_PATH);
+
+        return is_string($path) && str_starts_with($path, '/') ? redirect($path) : back();
     }
 
     public function markAllAsRead(Request $request): RedirectResponse
