@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue';
+import AuthButton from '@/Components/AuthButton.vue';
+import AuthStatus from '@/Components/AuthStatus.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { send } from '@/routes/verification';
 import { logout } from '@/routes';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -24,36 +25,17 @@ const verificationLinkSent = computed(
 </script>
 
 <template>
-    <GuestLayout>
+    <GuestLayout illustration="envelope" :title="$t('ui.auth.verify.title')" :description="$t('ui.auth.verify.text')">
         <Head :title="$t('ui.auth.verify.title')" />
 
-        <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            {{ $t('ui.auth.verify.text') }}
-        </div>
-
-        <div
-            class="mb-4 text-sm font-medium text-green-600 dark:text-green-400"
-            v-if="verificationLinkSent"
-        >
-            {{ $t('ui.auth.verify.sent') }}
-        </div>
+        <AuthStatus v-if="verificationLinkSent">{{ $t('ui.auth.verify.sent') }}</AuthStatus>
 
         <form @submit.prevent="submit">
-            <div class="mt-4 flex items-center justify-between">
-                <PrimaryButton
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    {{ $t('ui.auth.verify.resend') }}
-                </PrimaryButton>
-
-                <Link
-                    :href="logout()"
-                    as="button"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
-                    >{{ $t('ui.auth.verify.logout') }}</Link
-                >
-            </div>
+            <AuthButton :processing="form.processing">{{ $t('ui.auth.verify.resend') }}</AuthButton>
         </form>
+
+        <template #footer>
+            <Link :href="logout()" as="button">{{ $t('ui.auth.verify.logout') }}</Link>
+        </template>
     </GuestLayout>
 </template>

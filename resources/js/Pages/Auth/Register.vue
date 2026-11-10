@@ -1,9 +1,7 @@
 <script setup>
+import AuthButton from '@/Components/AuthButton.vue';
+import AuthField from '@/Components/AuthField.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { store } from '@/actions/App/Modules/Identity/Http/Controllers/Auth/RegisteredUserController';
 import { login } from '@/routes';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -23,93 +21,56 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
+    <GuestLayout :title="$t('ui.auth.register.title')">
         <Head :title="$t('ui.auth.register.title')" />
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="name" :value="$t('ui.auth.name')" />
+        <form class="space-y-5" @submit.prevent="submit">
+            <AuthField
+                id="name"
+                v-model="form.name"
+                icon="user"
+                :label="$t('ui.auth.name')"
+                :error="form.errors.name"
+                autocomplete="name"
+                autofocus
+            />
 
-                <TextInput
-                    id="name"
-                    type="text"
-                    class="mt-1 block w-full"
-                    v-model="form.name"
-                    required
-                    autofocus
-                    autocomplete="name"
-                />
+            <AuthField
+                id="email"
+                v-model="form.email"
+                type="email"
+                icon="envelope"
+                :label="$t('ui.auth.email')"
+                :error="form.errors.email"
+                autocomplete="username"
+            />
 
-                <InputError class="mt-2" :message="form.errors.name" />
-            </div>
+            <AuthField
+                id="password"
+                v-model="form.password"
+                type="password"
+                icon="lock-closed"
+                :label="$t('ui.auth.password')"
+                :error="form.errors.password"
+                autocomplete="new-password"
+            />
 
-            <div class="mt-4">
-                <InputLabel for="email" :value="$t('ui.auth.email')" />
+            <AuthField
+                id="password_confirmation"
+                v-model="form.password_confirmation"
+                type="password"
+                icon="lock-closed"
+                :label="$t('ui.auth.confirm_password')"
+                :error="form.errors.password_confirmation"
+                autocomplete="new-password"
+            />
 
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autocomplete="username"
-                />
-
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" :value="$t('ui.auth.password')" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel
-                    for="password_confirmation"
-                    :value="$t('ui.auth.confirm_password')"
-                />
-
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError
-                    class="mt-2"
-                    :message="form.errors.password_confirmation"
-                />
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <Link
-                    :href="login()"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
-                >
-                    {{ $t('ui.auth.register.already') }}
-                </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    {{ $t('ui.auth.register.title') }}
-                </PrimaryButton>
-            </div>
+            <AuthButton :processing="form.processing">{{ $t('ui.auth.register.title') }}</AuthButton>
         </form>
+
+        <template #footer>
+            <span>{{ $t('ui.auth.register.already') }}</span>
+            <Link :href="login()" class="ms-1">{{ $t('ui.auth.login.title') }}</Link>
+        </template>
     </GuestLayout>
 </template>
