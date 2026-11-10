@@ -1,11 +1,17 @@
 <?php
 
 return [
+    'processing' => 'Procesando…',
+    'back_to_login' => 'Volver a iniciar sesión',
     'email' => 'Correo electrónico',
     'password' => 'Contraseña',
     'name' => 'Nombre',
+    'show_password' => 'Mostrar contraseña',
+    'hide_password' => 'Ocultar contraseña',
     'confirm_password' => 'Confirmar contraseña',
     'login' => [
+        'description' => 'Qué bueno verte de nuevo. Inicia sesión para continuar con tus finanzas.',
+        'no_account' => '¿No tienes cuenta?',
         'title' => 'Iniciar sesión',
         'remember' => 'Recordarme',
         'forgot' => '¿Olvidaste tu contraseña?',

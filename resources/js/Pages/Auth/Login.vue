@@ -1,11 +1,11 @@
 <script setup>
+import AuthButton from '@/Components/AuthButton.vue';
+import AuthField from '@/Components/AuthField.vue';
+import AuthStatus from '@/Components/AuthStatus.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { store } from '@/actions/App/Modules/Identity/Http/Controllers/Auth/AuthenticatedSessionController';
+import { register } from '@/routes';
 import { request } from '@/routes/password';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
@@ -32,71 +32,53 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
+    <GuestLayout :title="$t('ui.auth.login.title')" :description="$t('ui.auth.login.description')">
         <Head :title="$t('ui.auth.login.title')" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
-            {{ status }}
-        </div>
+        <AuthStatus v-if="status">{{ status }}</AuthStatus>
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" :value="$t('ui.auth.email')" />
+        <form class="space-y-5" @submit.prevent="submit">
+            <AuthField
+                id="email"
+                v-model="form.email"
+                type="email"
+                icon="envelope"
+                :label="$t('ui.auth.email')"
+                :error="form.errors.email"
+                autocomplete="username"
+                autofocus
+            />
 
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
+            <AuthField
+                id="password"
+                v-model="form.password"
+                type="password"
+                icon="lock-closed"
+                :label="$t('ui.auth.password')"
+                :error="form.errors.password"
+                autocomplete="current-password"
+            />
 
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" :value="$t('ui.auth.password')" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="current-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4 block">
-                <label class="flex items-center">
+            <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <label class="flex min-h-[44px] cursor-pointer items-center gap-2.5">
                     <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600 dark:text-gray-400"
-                        >{{ $t('ui.auth.login.remember') }}</span
-                    >
+                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ $t('ui.auth.login.remember') }}</span>
                 </label>
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
                 <Link
                     v-if="canResetPassword"
                     :href="request()"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
+                    class="inline-flex min-h-[44px] items-center rounded-md text-sm font-semibold text-primary-700 hover:text-primary-800 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:text-primary-300 dark:hover:text-primary-200 dark:focus:ring-offset-gray-900"
                 >
                     {{ $t('ui.auth.login.forgot') }}
                 </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    {{ $t('ui.auth.login.title') }}
-                </PrimaryButton>
             </div>
+
+            <AuthButton :processing="form.processing">{{ $t('ui.auth.login.title') }}</AuthButton>
         </form>
+
+        <template #footer>
+            <span>{{ $t('ui.auth.login.no_account') }}</span>
+            <Link :href="register()" class="ms-1">{{ $t('ui.auth.register.title') }}</Link>
+        </template>
     </GuestLayout>
 </template>

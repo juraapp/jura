@@ -1,11 +1,17 @@
 <?php
 
 return [
+    'processing' => 'Processing…',
+    'back_to_login' => 'Back to log in',
     'email' => 'Email',
     'password' => 'Password',
     'name' => 'Name',
+    'show_password' => 'Show password',
+    'hide_password' => 'Hide password',
     'confirm_password' => 'Confirm Password',
     'login' => [
+        'description' => 'Welcome back. Log in to continue managing your finances.',
+        'no_account' => 'Don’t have an account?',
         'title' => 'Log in',
         'remember' => 'Remember me',
         'forgot' => 'Forgot your password?',
