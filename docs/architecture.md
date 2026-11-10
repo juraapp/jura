@@ -78,6 +78,8 @@ To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to 
 resources/js/
   Pages/            One .vue file per Inertia::render() target. Directory structure mirrors
                      the "domain module" (Pages/Accounts/Index.vue, Pages/Reports/Monthly.vue, ...).
+                     Pages/Welcome.vue is the guest landing page: the `home` route (`/`) renders it
+                     for guests and redirects signed-in users to the dashboard.
   Components/       Shared, reusable Vue components (ModalForm, EmptyState, StatCard, Money,
                      CategoryIcon, DynamicIcon, GlobalTransactionModal, Sidebar, Topbar, ...).
   Layouts/           AuthenticatedLayout.vue, GuestLayout.vue — mounted by each Page via
