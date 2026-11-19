@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Identity\Http\Controllers\LocaleController;
+use App\Modules\Identity\Http\Controllers\OnboardingController;
 use App\Modules\Identity\Http\Controllers\PreferenceController;
 use App\Modules\Identity\Http\Controllers\ProfileController;
 use App\Modules\Ledger\Http\Controllers\AccountController;
@@ -32,10 +33,13 @@ Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : Iner
 Route::put('locale', [LocaleController::class, 'update'])->middleware('throttle:30,1')->name('locale.update');
 
 Route::get('dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'onboarded'])
     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
+    Route::post('onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
+
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -44,7 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::get('finances/transactions', [TransactionController::class, 'index'])->name('transactions.index');
     Route::post('finances/transactions', [TransactionController::class, 'store'])->name('transactions.store');
     Route::post('finances/transactions/bulk-delete', [TransactionController::class, 'bulkDestroy'])->name('transactions.bulk-delete');

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Identity\Http\Middleware\EnsureOnboarded;
 use App\Modules\Shared\Http\Middleware\HandleInertiaRequests;
 use App\Modules\Shared\Http\Middleware\SetUserLocale;
 use Illuminate\Foundation\Application;
@@ -21,7 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //
+        $middleware->alias([
+            'onboarded' => EnsureOnboarded::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

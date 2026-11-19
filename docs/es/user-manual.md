@@ -31,10 +31,24 @@ para el uso diario. Las secciones marcadas como **Avanzado** son extras opcional
 Los visitantes que no han iniciado sesión ven una página de bienvenida en la raíz del sitio con los botones **Iniciar sesión** y **Empieza gratis**; los usuarios con sesión iniciada van directo al panel.
 
 1. **Regístrate** y verifica tu correo electrónico. La mayoría de las páginas requieren una cuenta verificada.
-2. **Crea tu primera cuenta** (una cuenta bancaria, una billetera, efectivo, etc.) con su saldo actual.
-3. **Registra tu primera transacción.** El panel te pide crear una cuenta cuando no tienes ninguna. Cuando ya
-   tienes una, muestra tus saldos, con un aviso y un botón **Nueva transacción** hasta que registres la primera.
-4. Opcionalmente, define tu **moneda, idioma y zona horaria** en Configuración → Preferencias.
+2. **Responde el asistente de configuración.** La primera vez que entras a Jura te hace cuatro preguntas cortas, y
+   puedes saltarte cualquiera:
+   - tu idioma, tu moneda principal y tu zona horaria;
+   - tu primera cuenta y su saldo actual;
+   - tu ingreso principal, cada cuánto llega y la próxima fecha de pago (por defecto, hoy). Se guarda como un plan
+     repetido en **Próximos y flujo de caja**, así que alimenta la proyección sin cambiar ningún saldo, a menos que
+     marques **Registrarlo automáticamente el día de pago** (aparece cuando tiene una cuenta), que lo registra como un
+     ingreso real en cada fecha de pago;
+   - las categorías que quieres vigilar cada mes, con un límite para cada una (se guardan como baldes de límite de
+     gasto), y un balde de ahorro opcional con una meta y una fecha meta.
+
+   Los montos usan tus propios separadores (por ejemplo `1.234,50`). Los baldes nuevos empiezan vacíos, así que todo tu
+   saldo aparece como **disponible para asignar** hasta que les pongas dinero desde **Baldes**. **Saltar configuración**
+   sale del asistente en cualquier momento, y **Cerrar sesión** está al final de cada paso. Cuando lo terminas o lo
+   saltas, no vuelve a aparecer; todo lo que pregunta se puede cambiar después desde su propia página. Si cierras el
+   navegador a mitad de camino, se abre de nuevo la próxima vez que entres.
+3. **Registra tu primera transacción.** El panel te avisa cuando todavía no tienes datos.
+4. Puedes cambiar tu **moneda, idioma y zona horaria** en cualquier momento en Configuración → Preferencias.
 
 Tus datos son privados. Nadie más puede ver ni abrir tus cuentas, transacciones o presupuestos.
 
