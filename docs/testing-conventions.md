@@ -5,7 +5,7 @@ PHPUnit only — **no Pest**, per project convention. Every test class extends `
 ```bash
 vendor/bin/sail artisan test --compact                              # full suite
 vendor/bin/sail artisan test --compact tests/Feature/BucketsTest.php # one file
-vendor/bin/sail artisan test --compact --filter=test_user_can_create_a_budget
+vendor/bin/sail artisan test --compact --filter=test_user_can_create_a_spending_bucket
 ```
 
 ## The clock
@@ -23,14 +23,14 @@ moment calls `$this->travelTo(...)` itself; assert expected dates as literal, ha
 ```php
 use Inertia\Testing\AssertableInertia as Assert;
 
-$response = $this->actingAs($user)->get('/planning/budgets');
+$response = $this->actingAs($user)->get('/planning/buckets');
 
 $response->assertOk();
 $response->assertInertia(fn (Assert $page) => $page
     ->component('Buckets/Index')
-    ->has('budgets', 2)          // exact count
-    ->where('typeFilter', 'all') // exact value
-    ->has('currencies')          // just presence
+    ->has('buckets', 2)                 // exact count
+    ->where('buckets.0.kind', 'savings') // exact value
+    ->has('currencies')                 // just presence
 );
 ```
 
@@ -63,7 +63,7 @@ public function test_user_cannot_update_another_users_bucket(): void
 
 ```php
 $this->assertSoftDeleted('accounts', ['id' => $account->id]);   // soft-delete models
-$this->assertDatabaseMissing('budgets', ['id' => $budget->id]); // hard-delete models
+$this->assertDatabaseMissing('buckets', ['id' => $bucket->id]); // hard-delete models
 ```
 
 `assertDatabaseMissing` on a soft-deleted row fails (the row is still physically present with `deleted_at` set) — this is the most common false failure when writing a new delete test; check the model's traits before assuming which assertion applies.

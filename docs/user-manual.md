@@ -146,7 +146,7 @@ every row and a **Select all** box. Selecting rows opens a bar with **Delete** a
   all N that match** to act on every row your filters match, not just this page.
 - After deleting transactions a toast offers **Undo**; deleted transactions also wait in **Settings → Trash**.
 - Deleting planned events removes only the chosen occurrences of a repeating event. Deleting buckets makes their money
-  ready to assign again. Deleted goals go to **Deleted goals** where they can be restored.
+  ready to assign again.
 
 ## Importing from CSV
 
