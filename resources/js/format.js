@@ -39,18 +39,17 @@ function localeSeparators(locale) {
 /**
  * Reads an amount typed by the user into a plain decimal string with two decimals ("1234.50"), the shape the server
  * expects. Accepts either separator: with both, the last one is the decimal separator; a lone separator followed by
- * one or two digits is decimal, one repeated or followed by exactly three digits is a thousands separator unless it is
- * the user's decimal separator (so "1.234" is 1234 for a comma-decimal user and 1.234 is invalid for a dot-decimal one
- * only when it has three decimals). Currency symbols, a three-letter currency code before or after the amount, spaces
+ * one or two digits is decimal, one repeated or followed by exactly three digits is a thousands separator, even when it
+ * is the user's decimal separator: money never has three decimals, so "500.000" is 500000 for every user (and the
+ * field shows it back grouped on blur). Currency symbols, a three-letter currency code before or after the amount, spaces
  * and apostrophes are ignored; a minus (also U+2212) before the digits or parentheses make it negative. Any other
  * letter, a minus inside the number or thousands groups that are not three digits make it unreadable. Returns '' for a
  * blank input and null when it cannot be read.
  *
  * @param {string|number|null|undefined} text
- * @param {{ decimal?: string }} separators  the user's decimal separator ('.' or ',')
  * @returns {string|null}
  */
-export function parseMoneyInput(text, { decimal = '.' } = {}) {
+export function parseMoneyInput(text) {
     if (text === null || text === undefined) return '';
     if (typeof text === 'number') return Number.isFinite(text) ? text.toFixed(2) : null;
 
@@ -82,8 +81,6 @@ export function parseMoneyInput(text, { decimal = '.' } = {}) {
 
         if (occurrences === 1 && digitsAfter !== 3) {
             decimalMark = mark;
-        } else if (occurrences === 1 && digitsAfter === 3) {
-            decimalMark = mark === decimal ? mark : null;
         }
     }
 
@@ -226,7 +223,7 @@ export function createFormat(preferences = {}, locale = 'en') {
     };
 
     const separators = { decimal, group };
-    const parseMoney = (text) => parseMoneyInput(text, separators);
+    const parseMoney = (text) => parseMoneyInput(text);
     const formatMoney = (value) => formatMoneyInput(value, separators);
 
     return { number, date, month, time, dateTime, money, separators, parseMoney, formatMoney };

@@ -18,7 +18,8 @@ Money fields use `<MoneyInput v-model="form.amount" :currency="form.currency" />
 currency prefix and `inputmode="decimal"`, accepts either separator and always emits a plain decimal string
 (`"1234.50"`, `''` when blank, the raw text when it cannot be read so the server's validation message shows). The
 parsing and display rules are `parseMoneyInput`/`formatMoneyInput` in `format.js` (also `useFormat().parseMoney` /
-`formatMoney` with the user's separators). Currency pickers use `<CurrencySelect>`: the user's default first, then
+`formatMoney`, which shows the user's separators). A lone separator before exactly three digits always groups
+thousands (`500.000` is 500000 for every user), since money never has three decimals. Currency pickers use `<CurrencySelect>`: the user's default first, then
 `account-currencies`, then the common ISO list from `resources/js/currencies.js` (kept in step with
 `Shared/Support/Currencies.php`), optionally `restrict-to` a few codes.
 

@@ -91,10 +91,11 @@ test('money input reads either separator into a plain decimal', () => {
     assert.equal(parseMoneyInput('$ 3.000.000', comma), '3000000.00', 'symbols and spaces are ignored');
 });
 
-test('a lone separator before three digits follows the user decimal separator', () => {
+test('a lone separator before three digits groups thousands for every user', () => {
     assert.equal(parseMoneyInput('1.234', { decimal: ',' }), '1234.00');
     assert.equal(parseMoneyInput('1,234', { decimal: '.' }), '1234.00');
-    assert.equal(parseMoneyInput('1.234', { decimal: '.' }), null, 'three decimals are not money');
+    assert.equal(parseMoneyInput('1.234', { decimal: '.' }), '1234.00', 'money never has three decimals: a lone separator before three digits groups');
+    assert.equal(parseMoneyInput('500,000', { decimal: ',' }), '500000.00');
 });
 
 test('money input keeps the sign, and blanks and junk are told apart', () => {
