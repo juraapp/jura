@@ -42,7 +42,7 @@ group="topbar">`, así que una página solo coloca `<MoneyMapStrip />`; nunca re
 
 **Pantallas de autenticación.** Constrúyelas con `GuestLayout` (layout dividido: panel de marca verde en escritorio solo con el logo y una ilustración animada (prop `illustration`: `wallet` o `envelope`; `AuthIllustration` hace la transición entre ellas al cambiar de página), sin eslóganes ni listas de funciones; slot `#footer` para enlaces) más `AuthField` (etiqueta, icono inicial, error y botón mostrar/ocultar para contraseñas), `AuthButton` y `AuthStatus`, no con los genéricos `TextInput`/`PrimaryButton`.
 
-**Página de inicio.** `Pages/Welcome.vue` es lo que ven los invitados en `/` (la ruta `home`; los usuarios con sesión iniciada se redirigen al dashboard). Tiene su propio layout de página completa, no `GuestLayout`. Enlaza a ella con el `home()` de Wayfinder desde `@/routes`, nunca con un `"/"` escrito a mano, y muestra el nombre de la marca desde `$page.props.appName`, nunca un "Jura" literal.
+**Página de inicio.** `Pages/Welcome.vue` es lo que ven los invitados en `/` (la ruta `home`; los usuarios con sesión iniciada se redirigen al dashboard). Tiene su propio layout de página completa, no `GuestLayout`. Enlaza a ella con el `home()` de Wayfinder desde `@/routes`, nunca con un `"/"` escrito a mano, y muestra el nombre de la marca desde `$page.props.appName`, nunca un "Jura" literal. Ambos layouts de invitado (la cabecera de `GuestLayout` y la navegación de `Welcome`) llevan `<LocaleSwitcher>`, el selector EN / ES con el que los invitados eligen un idioma (ver `i18n-conventions.md`).
 
 ## La estructura establecida de las páginas CRUD
 

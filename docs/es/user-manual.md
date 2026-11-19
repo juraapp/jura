@@ -717,3 +717,6 @@ Lo que tenía ahora simplemente está disponible para asignar, y los baldes que 
   transacción y luego agrega un plan repetido que empiece en la siguiente fecha.
 - Los artículos que comparten un balde se comparan cada uno con el mismo fondo, así que sus barras de "financiado" pueden superponerse.
 - Las pantallas, mensajes, etiquetas, exportaciones y PDF siguen tu preferencia de idioma (inglés o español). Los nombres que escribes tú mismo (cuentas, categorías, baldes) se muestran tal como los escribiste.
+- Antes de iniciar sesión, el selector **EN / ES** en la parte superior de las páginas de bienvenida, inicio de sesión
+  y registro elige el idioma. Este navegador lo recuerda, una cuenta nueva empieza en él, y guardar un idioma en
+  Configuración → Preferencias (o iniciar sesión) lo actualiza, así que las páginas que ves al cerrar sesión siguen en tu idioma.

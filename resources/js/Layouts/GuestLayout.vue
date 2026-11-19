@@ -2,6 +2,7 @@
 import logoIcon from '../../img/logo-icon.png';
 import AuthIllustration from '@/Components/AuthIllustration.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
+import LocaleSwitcher from '@/Components/LocaleSwitcher.vue';
 import { home } from '@/routes';
 import { useDarkMode } from '@/composables/useDarkMode';
 import { Link } from '@inertiajs/vue3';
@@ -41,15 +42,18 @@ const { isDark, toggle } = useDarkMode();
                     <span class="text-xl font-semibold tracking-tight text-primary-800 dark:text-primary-300">{{ $page.props.appName }}</span>
                 </Link>
 
-                <button
-                    type="button"
-                    class="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:text-gray-400 dark:hover:bg-gray-800"
-                    :aria-label="$t('ui.shell.topbar.toggle_theme')"
-                    :aria-pressed="isDark"
-                    @click="toggle"
-                >
-                    <DynamicIcon :name="isDark ? 'sun' : 'moon'" class="h-5 w-5" aria-hidden="true" />
-                </button>
+                <div class="flex items-center gap-2">
+                    <LocaleSwitcher />
+                    <button
+                        type="button"
+                        class="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:text-gray-400 dark:hover:bg-gray-800"
+                        :aria-label="$t('ui.shell.topbar.toggle_theme')"
+                        :aria-pressed="isDark"
+                        @click="toggle"
+                    >
+                        <DynamicIcon :name="isDark ? 'sun' : 'moon'" class="h-5 w-5" aria-hidden="true" />
+                    </button>
+                </div>
             </header>
 
             <main class="flex flex-1 items-center justify-center px-4 pb-12 pt-2 sm:px-8">

@@ -42,7 +42,7 @@ group="topbar">`, so a page only drops `<MoneyMapStrip />` in; never recompute r
 
 **Auth screens.** Build them from `GuestLayout` (split layout: green brand panel on desktop with only the logo and an animated illustration (`illustration` prop: `wallet` or `envelope`; `AuthIllustration` morphs between them across pages), no slogans or feature lists; `#footer` slot for links) plus `AuthField` (label, leading icon, error and a show/hide toggle for passwords), `AuthButton` and `AuthStatus`, not the generic `TextInput`/`PrimaryButton`.
 
-**Landing page.** `Pages/Welcome.vue` is what guests see at `/` (the `home` route; signed-in users are redirected to the dashboard). It has its own full-page layout, not `GuestLayout`. Link to it with Wayfinder's `home()` from `@/routes`, never a hard-coded `"/"`, and show the brand name from `$page.props.appName`, never a literal "Jura".
+**Landing page.** `Pages/Welcome.vue` is what guests see at `/` (the `home` route; signed-in users are redirected to the dashboard). It has its own full-page layout, not `GuestLayout`. Link to it with Wayfinder's `home()` from `@/routes`, never a hard-coded `"/"`, and show the brand name from `$page.props.appName`, never a literal "Jura". Both guest layouts (`GuestLayout`'s header and `Welcome`'s nav) carry `<LocaleSwitcher>`, the EN / ES switch that guests use to pick a language (see `i18n-conventions.md`).
 
 ## The established CRUD-page shape
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Identity\Http\Controllers\LocaleController;
 use App\Modules\Identity\Http\Controllers\PreferenceController;
 use App\Modules\Identity\Http\Controllers\ProfileController;
 use App\Modules\Ledger\Http\Controllers\AccountController;
@@ -27,6 +28,8 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : Inertia::render('Welcome'))->name('home');
+
+Route::put('locale', [LocaleController::class, 'update'])->middleware('throttle:30,1')->name('locale.update');
 
 Route::get('dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])

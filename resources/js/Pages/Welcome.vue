@@ -1,6 +1,7 @@
 <script setup>
 import logoIcon from '../../img/logo-icon.png';
 import { home, login, register } from '@/routes';
+import LocaleSwitcher from '@/Components/LocaleSwitcher.vue';
 import { useToday } from '@/composables/useToday';
 import { Head, Link } from '@inertiajs/vue3';
 
@@ -55,6 +56,7 @@ const features = [
                 </Link>
 
                 <nav class="flex items-center gap-2 sm:gap-3">
+                    <LocaleSwitcher />
                     <Link
                         :href="login().url"
                         class="rounded-lg px-4 py-2 text-sm font-medium text-primary-800 hover:bg-primary-100 dark:text-primary-200 dark:hover:bg-gray-800"
