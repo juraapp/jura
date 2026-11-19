@@ -1,11 +1,11 @@
 <script setup>
+import AuthButton from '@/Components/AuthButton.vue';
+import AuthField from '@/Components/AuthField.vue';
+import AuthStatus from '@/Components/AuthStatus.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
+import { login } from '@/routes';
 import { email } from '@/routes/password';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 
 defineProps({
     status: {
@@ -23,45 +23,28 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
+    <GuestLayout illustration="envelope" :title="$t('ui.auth.forgot.title')" :description="$t('ui.auth.forgot.text')">
         <Head :title="$t('ui.auth.forgot.title')" />
 
-        <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            {{ $t('ui.auth.forgot.text') }}
-        </div>
+        <AuthStatus v-if="status">{{ status }}</AuthStatus>
 
-        <div
-            v-if="status"
-            class="mb-4 text-sm font-medium text-green-600 dark:text-green-400"
-        >
-            {{ status }}
-        </div>
+        <form class="space-y-5" @submit.prevent="submit">
+            <AuthField
+                id="email"
+                v-model="form.email"
+                type="email"
+                icon="envelope"
+                :label="$t('ui.auth.email')"
+                :error="form.errors.email"
+                autocomplete="username"
+                autofocus
+            />
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" :value="$t('ui.auth.email')" />
-
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
-
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <PrimaryButton
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    {{ $t('ui.auth.forgot.button') }}
-                </PrimaryButton>
-            </div>
+            <AuthButton :processing="form.processing">{{ $t('ui.auth.forgot.button') }}</AuthButton>
         </form>
+
+        <template #footer>
+            <Link :href="login()">{{ $t('ui.auth.back_to_login') }}</Link>
+        </template>
     </GuestLayout>
 </template>

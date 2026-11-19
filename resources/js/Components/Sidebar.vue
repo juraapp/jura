@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import logoIcon from '../../img/logo-icon.png';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import { useSidebar } from '@/composables/useSidebar';
 import { index as accountsIndex } from '@/routes/accounts';
@@ -102,7 +102,7 @@ const isActive = (item) => pathsOf(item).includes(activeUrl.value);
         :class="isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     >
         <div class="flex h-16 items-center gap-2 border-b border-gray-200 px-5 dark:border-gray-700">
-            <ApplicationLogo class="h-8 w-8 fill-current text-primary-600 dark:text-primary-400" />
+            <img :src="logoIcon" alt="" class="h-8 w-auto" />
             <span class="text-lg font-semibold text-gray-900 dark:text-white">{{ $page.props.appName }}</span>
         </div>
 

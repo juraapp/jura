@@ -28,6 +28,8 @@ for everyday use. Sections marked **Advanced** are optional extras.
 
 ## Getting started
 
+Visitors who are not signed in see a landing page at the site root with **Log in** and **Get started free** buttons; signed-in users go straight to the dashboard.
+
 1. **Register** and verify your email address. Most pages need a verified account.
 2. **Create your first account** (a bank account, wallet, cash, and so on) with its current balance.
 3. **Record your first transaction.** The dashboard asks you to create an account when you have none. Once you
@@ -710,3 +712,6 @@ What it held is now simply ready to assign, and buckets that sent leftovers to i
   transaction, then add a repeating plan starting on the next date.
 - Items that share a bucket each compare themselves with the same pot, so their "funded" bars can overlap.
 - Screens, messages, labels, exports and PDFs follow your language preference (English or Spanish). Names you type yourself (accounts, categories, buckets) are shown as you wrote them.
+- Before you sign in, the **EN / ES** switch at the top of the welcome, sign-in and sign-up pages picks the language.
+  This browser remembers it, a new account starts in it, and saving a language in Settings → Preferences (or
+  signing in) updates it, so the pages you see after signing out stay in your language.

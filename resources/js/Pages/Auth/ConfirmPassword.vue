@@ -1,9 +1,7 @@
 <script setup>
+import AuthButton from '@/Components/AuthButton.vue';
+import AuthField from '@/Components/AuthField.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { store } from '@/actions/App/Modules/Identity/Http/Controllers/Auth/ConfirmablePasswordController';
 import { Head, useForm } from '@inertiajs/vue3';
 
@@ -19,37 +17,22 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
+    <GuestLayout :title="$t('ui.auth.confirm.title')" :description="$t('ui.auth.confirm.text')">
         <Head :title="$t('ui.auth.confirm.title')" />
 
-        <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            {{ $t('ui.auth.confirm.text') }}
-        </div>
+        <form class="space-y-5" @submit.prevent="submit">
+            <AuthField
+                id="password"
+                v-model="form.password"
+                type="password"
+                icon="lock-closed"
+                :label="$t('ui.auth.password')"
+                :error="form.errors.password"
+                autocomplete="current-password"
+                autofocus
+            />
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="password" :value="$t('ui.auth.password')" />
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="current-password"
-                    autofocus
-                />
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4 flex justify-end">
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    {{ $t('ui.auth.confirm.button') }}
-                </PrimaryButton>
-            </div>
+            <AuthButton :processing="form.processing">{{ $t('ui.auth.confirm.button') }}</AuthButton>
         </form>
     </GuestLayout>
 </template>

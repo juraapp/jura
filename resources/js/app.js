@@ -43,6 +43,7 @@ createInertiaApp({
             if (next && i18n.global.locale.value !== next.locale) {
                 i18n.global.setLocaleMessage(next.locale, next.messages);
                 i18n.global.locale.value = next.locale;
+                document.documentElement.lang = next.locale;
             }
         };
         router.on('navigate', syncLanguage);

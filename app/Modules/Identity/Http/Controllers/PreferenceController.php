@@ -5,6 +5,7 @@ namespace App\Modules\Identity\Http\Controllers;
 use App\Modules\Identity\Http\Requests\Preferences\UpdatePreferencesRequest;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Support\Currencies;
+use App\Modules\Shared\Support\Locale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -28,6 +29,7 @@ class PreferenceController extends Controller
     public function update(UpdatePreferencesRequest $request): RedirectResponse
     {
         Auth::user()->update($request->validated());
+        Locale::remember($request, $request->validated('locale'));
 
         return back()->with('success', __('preferences.saved'));
     }

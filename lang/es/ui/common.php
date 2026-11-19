@@ -20,4 +20,5 @@ return [
     'next' => 'Siguiente',
     'back' => 'Volver',
     'actions' => 'Acciones',
+    'language' => 'Idioma',
 ];

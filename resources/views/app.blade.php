@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+        <link rel="icon" type="image/png" href="/favicon.png">
+        <meta name="theme-color" content="#146a50">
+
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Avoids a theme flash (FOUC) before Vue takes over -->

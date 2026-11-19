@@ -2,6 +2,7 @@
 
 namespace App\Modules\Identity\Http\Requests\Preferences;
 
+use App\Modules\Shared\Support\Locale;
 use App\Modules\Shared\Support\UserFormat;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,7 +18,7 @@ class UpdatePreferencesRequest extends FormRequest
     {
         return [
             'currency_default' => ['required', 'string', 'size:3'],
-            'locale' => ['required', 'in:es,en'],
+            'locale' => ['required', Rule::in(Locale::SUPPORTED)],
             'timezone' => ['required', 'timezone'],
             'date_format' => ['required', Rule::in(UserFormat::DATE_FORMATS)],
             'time_format' => ['required', Rule::in(UserFormat::TIME_FORMATS)],

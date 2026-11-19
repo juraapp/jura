@@ -6,6 +6,7 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Planning\Models\Bucket;
+use App\Modules\Shared\Support\Locale;
 use App\Modules\Shared\Support\UserFormat;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use ArrayObject;
@@ -73,7 +74,7 @@ class User extends Authenticatable implements HasLocalePreference
      */
     public function preferredLocale(): string
     {
-        return in_array($this->locale, ['en', 'es'], true) ? $this->locale : 'en';
+        return Locale::isSupported($this->locale) ? $this->locale : 'en';
     }
 
     /**
