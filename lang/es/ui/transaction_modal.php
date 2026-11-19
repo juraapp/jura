@@ -40,7 +40,7 @@ return [
     'auto_post' => 'Registrarlo automáticamente en la fecha',
     'auto_post_hint' => 'Necesita una cuenta y una categoría. Se registra como transacción real en su fecha.',
     'where_income' => '¿A dónde va este ingreso? (opcional)',
-    'where_income_hint' => 'Montos fijos por balde, usados cuando llegue en lugar de tus reglas de baldes. Lo que sobra queda listo para asignar.',
+    'where_income_hint' => 'Montos fijos por balde, usados cuando llegue en lugar de tus reglas de baldes. Lo que sobra queda disponible para asignar.',
     'future_prompt' => 'Esta fecha es posterior a hoy. Una transacción real con fecha futura ya cuenta en tu saldo.',
     'plan_instead' => 'Planearlo en su lugar',
     'it_happened' => 'Ya ocurrió, guardarlo',
