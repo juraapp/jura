@@ -3,9 +3,11 @@ import { computed, ref, watch } from 'vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
+import MoneyMapStrip from '@/Components/MoneyMapStrip.vue';
 import Modal from '@/Components/Modal.vue';
 import ModalForm from '@/Components/ModalForm.vue';
 import Money from '@/Components/Money.vue';
@@ -88,6 +90,7 @@ const blank = () => ({
     cycle_anchor: '',
     cycle_goal: '',
     cap_amount: '',
+    target_date: '',
     priority: '',
     opening_balance: '',
     fill_rule: '',
@@ -95,14 +98,19 @@ const blank = () => ({
     step_up_after_bucket_id: '',
     step_up_value: '',
     completes_on_purchase: false,
+    confirm_over_assign: false,
     carry_over: 'carry',
     overflow_bucket_id: '',
     allowed_account_ids: [],
-    is_default: false,
 });
 
 const form = useForm(blank());
 const isSpending = computed(() => form.kind === 'spending');
+
+/* A target date only makes sense for a savings bucket with a target amount: the field is hidden otherwise, so drop its value. */
+watch(() => [form.cap_amount, isSpending.value], ([cap, spending]) => {
+    if (!cap || spending) form.target_date = '';
+});
 // A spending bucket always has a cycle; a savings bucket may have none.
 watch(() => form.kind, (kind) => {
     if (kind === 'spending' && !form.cycle) form.cycle = 'monthly';
@@ -117,6 +125,13 @@ const fillValueLabel = computed(() => {
 const canStepUp = computed(() => needsValue.value);
 const stepUpChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === form.currency && bucket.id !== editingBucket.value?.id && bucket.cap && bucket.kind === 'savings'));
 const overflowChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === form.currency && bucket.id !== editingBucket.value?.id));
+const accountChoices = computed(() => props.accounts.filter((account) => account.currency === form.currency));
+
+/* An account in another currency would stay ticked but invisible, and could never pay from this bucket. */
+watch(() => form.currency, () => {
+    form.allowed_account_ids = form.allowed_account_ids
+        .filter((id) => accountChoices.value.some((account) => account.id === id));
+});
 
 const openCreateModal = () => {
     editingBucket.value = null;
@@ -138,6 +153,7 @@ const openEditModal = (bucket) => {
     form.cycle_anchor = bucket.cycleAnchor ?? '';
     form.cycle_goal = bucket.cycleGoal !== null && bucket.cycleGoal !== undefined ? String(bucket.cycleGoal) : '';
     form.cap_amount = bucket.cap !== null ? String(bucket.cap) : '';
+    form.target_date = bucket.targetDate ?? '';
     form.priority = String(bucket.priority);
     form.opening_balance = bucket.openingBalance > 0 ? String(bucket.openingBalance) : '';
     form.fill_rule = bucket.fillRule ?? '';
@@ -148,7 +164,6 @@ const openEditModal = (bucket) => {
     form.carry_over = bucket.carryOver;
     form.overflow_bucket_id = bucket.overflowBucketId ?? '';
     form.allowed_account_ids = [...bucket.allowedAccountIds];
-    form.is_default = bucket.isDefault;
     showModal.value = true;
 };
 
@@ -156,14 +171,37 @@ const closeModal = () => {
     showModal.value = false;
 };
 
+/* ---- putting money in a bucket that is not ready to assign asks for confirmation first ---- */
+const overAssign = ref(null);
+const submitGuarded = (target, action, onSuccess) => {
+    target.submit(action, {
+        preserveScroll: true,
+        onSuccess,
+        onError: (errors) => {
+            if (errors.over_assign) {
+                overAssign.value = { message: errors.over_assign, retry: () => {
+                    target.confirm_over_assign = true;
+                    submitGuarded(target, action, onSuccess);
+                } };
+            }
+        },
+        onFinish: () => (target.confirm_over_assign = false),
+    });
+};
+const confirmOverAssign = () => {
+    const retry = overAssign.value.retry;
+    overAssign.value = null;
+    retry();
+};
+
 const submit = () => {
     const action = editingBucket.value ? update(editingBucket.value.id) : store();
-    form.submit(action, { preserveScroll: true, onSuccess: () => closeModal() });
+    submitGuarded(form, action, () => closeModal());
 };
 
 /* ---- move / adjust / delete ---- */
 const movingFrom = ref(null);
-const moveForm = useForm({ to_bucket_id: '', amount: '', description: '' });
+const moveForm = useForm({ from_ready: false, to_bucket_id: '', amount: '', description: '', confirm_over_assign: false });
 const moveTargets = computed(() => props.buckets.filter((bucket) => movingFrom.value && bucket.currency === movingFrom.value.currency && bucket.id !== movingFrom.value.id));
 
 const openMove = (bucket) => {
@@ -173,40 +211,106 @@ const openMove = (bucket) => {
 };
 
 const submitMove = () => {
-    moveForm.submit(move(movingFrom.value.id), { preserveScroll: true, onSuccess: () => (movingFrom.value = null) });
+    submitGuarded(moveForm, move(movingFrom.value.id), () => (movingFrom.value = null));
 };
 
 /* ---- full history: every allocation, removable when entered by hand ---- */
 const historyBucket = ref(null);
 const historyRows = ref([]);
 const historyLoading = ref(false);
+const historyError = ref(false);
+const historyBusy = ref(false);
+const confirmingRemove = ref(null);
 
 const loadHistory = async () => {
+    const bucketId = historyBucket.value?.id;
+    if (!bucketId) {
+        return;
+    }
+
     historyLoading.value = true;
+    historyError.value = false;
     try {
-        const response = await fetch(allocations.url(historyBucket.value.id), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
-        historyRows.value = (await response.json()).allocations;
+        const response = await fetch(allocations.url(bucketId), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        if (historyBucket.value?.id === bucketId) {
+            historyRows.value = data.allocations;
+        }
+    } catch {
+        if (historyBucket.value?.id === bucketId) {
+            historyError.value = true;
+        }
     } finally {
-        historyLoading.value = false;
+        if (historyBucket.value?.id === bucketId) {
+            historyLoading.value = false;
+        }
     }
 };
 
 const openHistory = (bucket) => {
     historyBucket.value = bucket;
     historyRows.value = [];
+    confirmingRemove.value = null;
+    historyOverAssign.value = null;
     loadHistory();
 };
 
-const removeEntry = (row) => {
-    router.delete(destroyAllocation.url({ bucket: historyBucket.value.id, allocation: row.id }), { preserveScroll: true, onSuccess: loadHistory });
+/* The modal stays open while a removal or reset is in flight, so its reload lands on the right bucket. */
+const closeHistory = () => {
+    if (historyBusy.value) {
+        return;
+    }
+    historyBucket.value = null;
+    confirmingRemove.value = null;
+};
+
+/* After a reload, show the fresh bucket (name, currency) rather than the snapshot taken when the modal opened. */
+watch(() => props.buckets, (buckets) => {
+    if (historyBucket.value) {
+        historyBucket.value = buckets.find((bucket) => bucket.id === historyBucket.value.id) ?? null;
+    }
+});
+
+const historyRequestOptions = {
+    preserveScroll: true,
+    onStart: () => (historyBusy.value = true),
+    onFinish: () => (historyBusy.value = false),
+    onSuccess: () => loadHistory(),
+};
+
+/* Removing an entry or resetting can put money back in the bucket from ready to assign: confirm it here, like a move. */
+const historyOverAssign = ref(null);
+const sendGuarded = (send, confirm = false) => {
+    historyOverAssign.value = null;
+    send(confirm ? { confirm_over_assign: true } : {}, (errors) => {
+        if (errors.over_assign) {
+            historyOverAssign.value = { message: errors.over_assign, retry: () => sendGuarded(send, true) };
+        }
+    });
+};
+
+const removeEntry = () => {
+    const row = confirmingRemove.value;
+    sendGuarded((data, onError) => router.delete(destroyAllocation.url({ bucket: historyBucket.value.id, allocation: row.id }), {
+        ...historyRequestOptions,
+        data,
+        onError,
+        onFinish: () => {
+            historyBusy.value = false;
+            confirmingRemove.value = null;
+        },
+    }));
 };
 
 const resetToZero = () => {
-    router.post(reset.url(historyBucket.value.id), {}, { preserveScroll: true, onSuccess: loadHistory });
+    sendGuarded((data, onError) => router.post(reset.url(historyBucket.value.id), data, { ...historyRequestOptions, onError }));
 };
 
 const adjusting = ref(null);
-const adjustForm = useForm({ amount: '', description: '' });
+const adjustForm = useForm({ amount: '', description: '', confirm_over_assign: false });
 
 const openAdjust = (bucket) => {
     adjusting.value = bucket;
@@ -215,7 +319,7 @@ const openAdjust = (bucket) => {
 };
 
 const submitAdjust = () => {
-    adjustForm.submit(adjust(adjusting.value.id), { preserveScroll: true, onSuccess: () => (adjusting.value = null) });
+    submitGuarded(adjustForm, adjust(adjusting.value.id), () => (adjusting.value = null));
 };
 
 const confirmingDelete = ref(null);
@@ -230,21 +334,24 @@ const deleteBucket = () => {
 <template>
     <Head :title="$t('ui.buckets.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.buckets.title') }}</h2>
-                <PrimaryButton type="button" @click="openCreateModal">
-                    <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                    {{ $t('ui.buckets.new') }}
-                </PrimaryButton>
-            </div>
+            <PageHeader :title="$t('ui.buckets.title')">
+                <template #actions>
+                    <PrimaryButton type="button" @click="openCreateModal">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.buckets.new') }}
+                    </PrimaryButton>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <div>
             <p v-if="buckets.length" class="mb-6 max-w-3xl text-sm text-gray-500 dark:text-gray-400">
                 {{ $t('ui.buckets.intro') }}
             </p>
+
+            <MoneyMapStrip class="mb-6" />
 
             <EmptyState
                 v-if="buckets.length === 0"
@@ -254,7 +361,7 @@ const deleteBucket = () => {
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.buckets.create_first') }}
                     </PrimaryButton>
                 </template>
@@ -284,21 +391,21 @@ const deleteBucket = () => {
                                     <span>{{ bucket.kindLabel }}</span>
                                     <span v-if="bucket.cycleLabel">&middot; {{ bucket.cycleLabel }}</span>
                                     <span class="rounded-full bg-gray-100 px-1.5 py-0.5 font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-300" :title="$t('ui.buckets.priority_hint')">P{{ bucket.priority }}</span>
-                                    <span v-if="bucket.isDefault" class="rounded-full bg-primary-50 px-1.5 py-0.5 font-medium text-primary-700 dark:bg-primary-500/10 dark:text-primary-400" :title="$t('ui.buckets.default_hint')">{{ $t('ui.buckets.default') }}</span>
+                                    <span v-if="bucket.overspent" class="rounded-full bg-red-50 px-1.5 py-0.5 font-medium text-red-700 dark:bg-red-500/10 dark:text-red-400" :title="$t('ui.buckets.overspent_hint')">{{ $t('ui.buckets.overspent') }}</span>
                                 </p>
                             </div>
                         </div>
                         <div class="flex shrink-0 items-center gap-0.5">
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.move_money')" @click="openMove(bucket)">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.move_money')" :aria-label="$t('ui.buckets.move_money')" @click="openMove(bucket)">
                                 <DynamicIcon name="arrows-right-left" class="h-4 w-4" />
                             </button>
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.add_remove')" @click="openAdjust(bucket)">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.add_remove')" :aria-label="$t('ui.buckets.add_remove')" @click="openAdjust(bucket)">
                                 <DynamicIcon name="banknotes" class="h-4 w-4" />
                             </button>
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.edit_tip')" @click="openEditModal(bucket)">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.buckets.edit_tip')" :aria-label="$t('ui.buckets.edit_tip')" @click="openEditModal(bucket)">
                                 <DynamicIcon name="pencil" class="h-4 w-4" />
                             </button>
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="confirmingDelete = bucket">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="confirmingDelete = bucket">
                                 <DynamicIcon name="trash" class="h-4 w-4" />
                             </button>
                         </div>
@@ -316,6 +423,22 @@ const deleteBucket = () => {
                             <p class="mt-1 text-xs text-gray-400">
                                 {{ $t('ui.buckets.percent_of', { percent: format.number(targetPercent(bucket), 0) }) }} <Money :amount="bucket.cap" :currency="bucket.currency" />
                             </p>
+                            <div v-if="bucket.target" class="mt-2 space-y-0.5 text-xs">
+                                <p class="flex flex-wrap items-center gap-2">
+                                    <span class="text-gray-500 dark:text-gray-400">{{ $t('ui.buckets.target_by', { date: format.date(bucket.target.targetDate) }) }}</span>
+                                    <span
+                                        class="rounded-full px-2 py-0.5 font-medium"
+                                        :class="bucket.target.behind ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'"
+                                    >{{ bucket.target.behind ? $t('ui.buckets.target_behind') : $t('ui.buckets.target_on_track') }}</span>
+                                </p>
+                                <p v-if="bucket.target.overdue" class="text-red-600 dark:text-red-400">{{ $t('ui.buckets.target_overdue') }}</p>
+                                <p v-else-if="bucket.target.basis === 'plan'" class="text-gray-500 dark:text-gray-400">
+                                    {{ bucket.target.projectedOn ? $t('ui.buckets.target_reached_on', { date: format.date(bucket.target.projectedOn) }) : $t('ui.buckets.target_not_reached') }}
+                                </p>
+                                <p v-if="!bucket.target.overdue && bucket.target.neededPerMonth > 0" class="text-gray-500 dark:text-gray-400">
+                                    {{ $t('ui.buckets.target_needs', { amount: format.money(bucket.target.neededPerMonth, bucket.currency) }) }}
+                                </p>
+                            </div>
                         </template>
                     </div>
 
@@ -334,14 +457,13 @@ const deleteBucket = () => {
                             <span v-else class="text-gray-400"><Money :amount="bucket.remaining" :currency="bucket.currency" /> {{ $t('ui.buckets.left') }}</span>
                         </div>
                         <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-xs dark:border-gray-700">
-                            <button
-                                type="button"
+                            <Link
+                                :href="plannedEventsIndex.url()"
                                 class="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
-                                @click="router.visit(plannedEventsIndex.url())"
                             >
                                 <template v-if="bucket.projected > 0"><Money :amount="bucket.projected" :currency="bucket.currency" /> {{ $t('ui.buckets.planned') }}</template>
                                 <template v-else>{{ $t('ui.buckets.plan_spending') }}</template>
-                            </button>
+                            </Link>
                             <span v-if="bucket.projected > 0" class="text-gray-400">
                                 {{ $t('ui.buckets.after_plans') }} <Money :amount="bucket.effectiveRemaining" :currency="bucket.currency" />
                             </span>
@@ -369,7 +491,7 @@ const deleteBucket = () => {
                             <DynamicIcon name="check-circle" class="h-3.5 w-3.5" /> {{ $t('ui.buckets.completed_on', { date: formatDate(bucket.completedOn) }) }}
                             <button type="button" class="font-medium underline" @click="router.post(reopen.url(bucket.id), {}, { preserveScroll: true })">{{ $t('ui.buckets.reopen') }}</button>
                         </li>
-                        <li v-else-if="bucket.kind === 'savings' && !bucket.isDefault">
+                        <li v-else-if="bucket.kind === 'savings'">
                             <button type="button" class="font-medium text-primary-600 hover:underline dark:text-primary-400" @click="router.post(complete.url(bucket.id), {}, { preserveScroll: true })">{{ $t('ui.buckets.mark_completed') }}</button>
                         </li>
                         <li v-if="bucket.cycle">
@@ -437,6 +559,13 @@ const deleteBucket = () => {
                     </div>
                 </div>
 
+                <div v-if="!isSpending && form.cap_amount">
+                    <InputLabel for="target_date" :value="$t('ui.buckets.target_date')" />
+                    <TextInput id="target_date" v-model="form.target_date" type="date" class="mt-1 block w-full" />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.buckets.target_date_hint') }}</p>
+                    <InputError class="mt-1" :message="form.errors.target_date" />
+                </div>
+
                 <div>
                     <InputLabel for="cycle_every" :value="$t(isSpending ? 'ui.buckets.cycle_label' : 'ui.buckets.cycle_label_optional')" />
                     <div class="mt-1 flex gap-2">
@@ -463,7 +592,7 @@ const deleteBucket = () => {
                     <InputError class="mt-1" :message="form.errors.cycle_anchor" />
                 </div>
 
-                <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700" :open="Boolean(form.fill_rule) || form.is_default">
+                <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700" :open="Boolean(form.fill_rule)">
                     <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200">{{ $t('ui.buckets.advanced') }}</summary>
                     <div class="mt-3 space-y-4">
                         <div>
@@ -534,20 +663,15 @@ const deleteBucket = () => {
                             <InputError class="mt-1" :message="form.errors.overflow_bucket_id" />
                         </div>
 
-                        <fieldset v-if="accounts.length">
+                        <fieldset v-if="accountChoices.length">
                             <legend class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('ui.buckets.only_accounts') }}</legend>
                             <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.buckets.only_accounts_hint') }}</p>
-                            <label v-for="account in accounts" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
+                            <label v-for="account in accountChoices" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
                                 <input v-model="form.allowed_account_ids" type="checkbox" :value="account.id" class="rounded border-gray-300 text-primary-600" />
-                                {{ account.name }}
+                                {{ account.name }} · {{ account.currency }}
                             </label>
                             <InputError class="mt-1" :message="form.errors['allowed_account_ids.0']" />
                         </fieldset>
-
-                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                            <input v-model="form.is_default" type="checkbox" class="rounded border-gray-300 text-primary-600" />
-                            {{ $t('ui.buckets.is_default') }}
-                        </label>
                     </div>
                 </details>
             </form>
@@ -566,16 +690,23 @@ const deleteBucket = () => {
         >
             <form id="move-form" class="space-y-4" @submit.prevent="submitMove">
                 <div>
+                    <InputLabel for="move_direction" :value="$t('ui.buckets.move_direction')" />
+                    <SelectInput id="move_direction" v-model="moveForm.from_ready">
+                        <option :value="false">{{ $t('ui.buckets.move_out') }}</option>
+                        <option :value="true">{{ $t('ui.buckets.move_in_from_ready') }}</option>
+                    </SelectInput>
+                </div>
+                <div v-if="!moveForm.from_ready">
                     <InputLabel for="to_bucket_id" :value="$t('ui.buckets.to')" />
                     <SelectInput id="to_bucket_id" v-model="moveForm.to_bucket_id">
                         <option value="">{{ $t('ui.buckets.select_bucket') }}</option>
+                        <option value="ready">{{ $t('ui.money_map.ready_to_assign') }}</option>
                         <option v-for="bucket in moveTargets" :key="bucket.id" :value="bucket.id">{{ bucket.name }}</option>
                     </SelectInput>
                     <InputError class="mt-1" :message="moveForm.errors.to_bucket_id" />
-                    <p v-if="movingFrom && moveTargets.length === 0" class="mt-1 text-xs text-gray-500">{{ $t('ui.buckets.need_another', { currency: movingFrom.currency }) }}</p>
                 </div>
                 <div>
-                    <InputLabel for="move_amount" :value="movingFrom ? $t('ui.buckets.amount_available', { amount: money(movingFrom.available, movingFrom.currency) }) : $t('ui.buckets.amount')" />
+                    <InputLabel for="move_amount" :value="movingFrom && !moveForm.from_ready ? $t('ui.buckets.amount_available', { amount: money(movingFrom.available, movingFrom.currency) }) : $t('ui.buckets.amount')" />
                     <TextInput id="move_amount" v-model="moveForm.amount" type="number" step="0.01" min="0.01" class="mt-1 block w-full" />
                     <InputError class="mt-1" :message="moveForm.errors.amount" />
                 </div>
@@ -590,6 +721,17 @@ const deleteBucket = () => {
             </template>
         </ModalForm>
 
+        <Modal :show="overAssign !== null" max-width="md" @close="overAssign = null">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.buckets.over_assign_title') }}</h2>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ overAssign?.message }}</p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <SecondaryButton type="button" @click="overAssign = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    <PrimaryButton type="button" @click="confirmOverAssign">{{ $t('ui.buckets.over_assign_confirm') }}</PrimaryButton>
+                </div>
+            </div>
+        </Modal>
+
         <ModalForm
             :show="adjusting !== null"
             :title="adjusting ? $t('ui.buckets.adjust_title', { name: adjusting.name }) : $t('ui.buckets.add_remove')"
@@ -599,7 +741,7 @@ const deleteBucket = () => {
             <form id="adjust-form" class="space-y-4" @submit.prevent="submitAdjust">
                 <div>
                     <InputLabel for="adjust_amount" :value="$t('ui.buckets.amount')" />
-                    <TextInput id="adjust_amount" v-model="adjustForm.amount" type="number" step="0.01" class="mt-1 block w-full" placeholder="250000 or -50000" />
+                    <TextInput id="adjust_amount" v-model="adjustForm.amount" type="number" step="0.01" class="mt-1 block w-full" :placeholder="$t('ui.buckets.adjust_placeholder')" />
                     <InputError class="mt-1" :message="adjustForm.errors.amount" />
                 </div>
                 <div>
@@ -626,14 +768,37 @@ const deleteBucket = () => {
             </div>
         </Modal>
 
-        <Modal :show="historyBucket !== null" max-width="lg" @close="historyBucket = null">
+        <Modal :show="historyBucket !== null" max-width="lg" @close="closeHistory">
             <div v-if="historyBucket" class="p-6">
                 <div class="flex items-start justify-between gap-3">
                     <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.buckets.all_activity', { name: historyBucket.name }) }}</h2>
-                    <SecondaryButton type="button" @click="resetToZero">{{ $t('ui.buckets.reset_zero') }}</SecondaryButton>
+                    <SecondaryButton type="button" :disabled="historyBusy" @click="resetToZero">{{ $t('ui.buckets.reset_zero') }}</SecondaryButton>
                 </div>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.buckets.history_hint') }}</p>
+                <div v-if="confirmingRemove" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-500/30 dark:bg-red-500/10">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $t('ui.buckets.remove_entry_title') }}</p>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        {{ $t('ui.buckets.remove_entry_hint') }}
+                        <template v-if="confirmingRemove.source === 'transfer'">{{ $t('ui.buckets.remove_entry_transfer') }}</template>
+                    </p>
+                    <div class="mt-3 flex justify-end gap-3">
+                        <SecondaryButton type="button" :disabled="historyBusy" @click="confirmingRemove = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                        <DangerButton type="button" :disabled="historyBusy" @click="removeEntry">{{ $t('ui.buckets.remove_entry') }}</DangerButton>
+                    </div>
+                </div>
+                <div v-if="historyOverAssign" class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $t('ui.buckets.over_assign_title') }}</p>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ historyOverAssign.message }}</p>
+                    <div class="mt-3 flex justify-end gap-3">
+                        <SecondaryButton type="button" :disabled="historyBusy" @click="historyOverAssign = null">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                        <PrimaryButton type="button" :disabled="historyBusy" @click="historyOverAssign.retry()">{{ $t('ui.buckets.over_assign_confirm') }}</PrimaryButton>
+                    </div>
+                </div>
                 <p v-if="historyLoading" class="mt-4 text-sm text-gray-400">{{ $t('ui.common.loading') }}</p>
+                <div v-else-if="historyError" class="mt-4 flex items-center justify-between gap-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400">
+                    {{ $t('ui.buckets.history_error') }}
+                    <SecondaryButton type="button" @click="loadHistory">{{ $t('ui.buckets.retry') }}</SecondaryButton>
+                </div>
                 <ul v-else class="mt-3 max-h-96 divide-y divide-gray-100 overflow-y-auto dark:divide-gray-700">
                     <li v-for="row in historyRows" :key="row.id" class="flex items-center justify-between gap-3 py-2 text-sm">
                         <span class="min-w-0 text-gray-600 dark:text-gray-300">
@@ -644,7 +809,7 @@ const deleteBucket = () => {
                             <span class="tabular-nums" :class="row.amount < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
                                 <Money :amount="row.amount" :currency="historyBucket.currency" signed />
                             </span>
-                            <button v-if="row.deletable" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.buckets.remove_entry')" @click="removeEntry(row)">
+                            <button v-if="row.deletable" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-500/10" :title="$t('ui.buckets.remove_entry')" :aria-label="$t('ui.buckets.remove_entry')" :disabled="historyBusy" @click="confirmingRemove = row">
                                 <DynamicIcon name="trash" class="h-4 w-4" />
                             </button>
                         </span>
@@ -652,7 +817,7 @@ const deleteBucket = () => {
                     <li v-if="!historyRows.length" class="py-4 text-center text-sm text-gray-400">{{ $t('ui.buckets.no_activity') }}</li>
                 </ul>
                 <div class="mt-4 flex justify-end">
-                    <SecondaryButton type="button" @click="historyBucket = null">{{ $t('ui.common.close') }}</SecondaryButton>
+                    <SecondaryButton type="button" :disabled="historyBusy" @click="closeHistory">{{ $t('ui.common.close') }}</SecondaryButton>
                 </div>
             </div>
         </Modal>

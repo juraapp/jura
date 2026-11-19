@@ -79,4 +79,19 @@ class ModuleBoundariesTest extends TestCase
             $this->assertDirectoryDoesNotExist("{$app}/{$legacy}", "app/{$legacy} should live inside a module");
         }
     }
+
+    public function test_planning_support_stays_free_of_the_framework_and_the_database(): void
+    {
+        $root = dirname(__DIR__, 2).'/app/Modules/Planning/Support';
+        $offenders = [];
+
+        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
+        foreach ($files as $file) {
+            if ($file->getExtension() === 'php' && preg_match('/\\b(Illuminate\\\\|App\\\\Modules\\\\\\w+\\\\Models\\\\)/', (string) file_get_contents($file->getPathname()))) {
+                $offenders[] = substr($file->getPathname(), strlen($root) + 1);
+            }
+        }
+
+        $this->assertSame([], $offenders, 'Planning/Support must stay pure (no Illuminate or model imports).');
+    }
 }

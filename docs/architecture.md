@@ -26,7 +26,7 @@ Browser → routes/web.php → Controller → Form Request (validation + authori
 - Controllers stay thin: validation lives in each module's `Http/Requests/{Domain}/{Store,Update}...Request.php`, business logic lives in the module's `Services/*Service.php`. Livewire's per-component validation had no controller equivalent, so every domain module got a matching Form Request pair during the migration.
 - `Inertia::render()` return values become the page's `props`. Props are plain arrays/collections of primitives — Eloquent models and `App\Modules\Shared\Support\Money` value objects are never passed directly; controllers map them to floats/strings first (`$money->toFloat()`, `$model->toArray()`-style shaping). See any `*Controller@index` for the pattern.
 - Mutating actions (`store`/`update`/`destroy`) return `back()->with('success', __('domain.saved'))` rather than an Inertia redirect to a different page — the current page's props are simply re-fetched.
-- A handful of JSON (non-Inertia) endpoints exist alongside the Inertia ones, for data a page needs to fetch on demand rather than as a prop: `TransactionController@formOptions`/`editData` (feeds the global transaction modal, see `frontend-conventions.md`) and `TransactionImportController@parse`/`store` (feeds the CSV import wizard). These are plain `response()->json(...)` responses hit via `fetch()`, not `router.get()`/`useForm()`.
+- A handful of JSON (non-Inertia) endpoints exist alongside the Inertia ones, for data a page needs to fetch on demand rather than as a prop: `TransactionController@formOptions`/`editData` (feeds the global transaction modal, see `frontend-conventions.md`) and `TransactionImportController@parse`/`store` (feeds the CSV import wizard) and `PlannedEventController@formOptions` and `PlannedSeriesController@editData` (the form's plan options and a repeating plan to edit), `BucketController@spendOptions` (the modal's *Pay from bucket* picker; `?include=<id>` adds the bucket an edited expense is already linked to, flagged `current`). These are plain `response()->json(...)` responses hit via `fetch()`, not `router.get()`/`useForm()`.
 
 ## Modules
 
@@ -36,8 +36,8 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
 |---|---|
 | `Shared` | `Money`, `AsMoney`, `BelongsToUser`, base `Controller`, `HandleInertiaRequests` |
 | `Identity` | `User`, auth, profile, preferences |
-| `Ledger` | `Account`, `Category`, `Transaction`, balances, CSV import, `TransactionsMutated`. Source of truth for **actual** data. |
-| `Planning` | `PlannedEvent`, `Bucket`, `Allocation`, `SavingsGoal`, `RecurringTransaction` (and, next, wish list and scenarios). Owns **projected** and **earmarked** (virtual) money. |
+| `Ledger` | `Account`, `Category`, `Transaction`, balances, CSV import, the `TransactionsMutated`, `Income*`, `Expense*` and `Transaction{Deleted,Restored,Purged}` events. Source of truth for **actual** data. |
+| `Planning` | `PlannedEvent`, `PlannedEventSeries` (repeating plans, which can record themselves), `Bucket`, `Allocation`, `Project`, wish list and scenarios. Owns **projected** and **earmarked** (virtual) money. |
 | `Reporting` | dashboard, reports, insights, PDF/CSV export (read-side) |
 | `Notifications` | alert notifications, their listeners and scheduled commands, the notification inbox (read-side) |
 
@@ -46,12 +46,16 @@ Backend code lives in `app/Modules/<Module>/` (plain `App\Modules\<Module>\...` 
 1. Always allowed across modules: `Shared`, another module's `Contracts`, `Events`, `Enums`, and `Identity\Models\User`.
 2. Another module's `Models` may be referenced only from files under a `Models/` directory (relationships) or from the read-side modules `Reporting` and `Notifications`.
 3. Nothing else (`Services`, `Http`, `Policies`, `Jobs`, ...) of another module may be imported. Cross-module calls go through contracts:
-   - `Ledger\Contracts\Balances`: account balances and net worth.
-   - `Ledger\Contracts\LedgerQuery`: expense totals, account/category option lists, account currency and similar-transaction lookups.
-   - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record`, `recordRecurring`).
+   - `Ledger\Contracts\Balances`: account balances, net worth and `budgetBalances` (active, on-budget accounts).
+   - `Ledger\Contracts\LedgerQuery`: expense totals (open-ended and on-budget-only for bucket envelopes), on-budget account checks, account/category option lists, account currency and similar-transaction lookups. Every method takes the user id explicitly, so it stays scoped in jobs and console commands.
+   - `Ledger\Contracts\RecordsTransactions`: the only way other modules create transactions (`record` and `recordTransfer`, which returns the outgoing leg's id); `autoPosted: true` marks a transaction the app recorded by itself (`is_recurring_generated`).
    - `Planning\Contracts\BucketProgress`: spending-bucket spent/remaining/status.
-   - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances and planned money in a date window.
+   - `Planning\Contracts\CashFlowForecast`: projected month-by-month balances, projected on-budget cash (`budgetMonthly`) and planned money in a date window.
+   - `Planning\Contracts\MoneyMap`: per currency, money in on-budget accounts, in funded bucket envelopes, and ready to assign (computed, never stored).
+   - `Planning\Contracts\UpcomingPlans`: open plans for other modules' pages: overdue and upcoming bands (`listBands`, 10 rows each plus a count, filterable by account, category and type), which transactions came from a plan (`provenance`), and the needs-review inbox (`needsReview`, `needsReviewCount`: overdue plans and ones that could not auto-post). Ledger may consume Planning contracts like any other module.
    - `Planning\Contracts\PlanningOverview`: bucket balances, allocation history, projected bucket balances and project summaries for reports.
+   - `Planning\Contracts\SavingsTargets`: whether each savings bucket with a target date is on track (scopes by the given user, so alerts can use it from the console).
+   - Planning events: `PlannedPostingFailed` (user, planned event id, reason) when an auto-posting plan cannot be recorded; Notifications' `NotifyPlannedPostingFailed` turns it into a `PlannedPostingBlocked` alert. Notifications' daily `app:notify-upcoming-planned-payments` reminds about open planned expenses due within three days of the owner's today.
 4. Contracts are bound in each module's service provider; providers are listed in `bootstrap/providers.php`.
 
 To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to `bootstrap/providers.php` if it binds contracts or registers listeners/commands, and run the architecture test. Listeners and commands inside modules are **not auto-discovered**; register them in the module provider.
@@ -63,8 +67,10 @@ To add a module: create `app/Modules/<Name>/`, add a `<Name>ServiceProvider` to 
 - `appName` — from `config('app.name')`.
 - `i18n` — `{ locale, messages }`, the single source of truth for both server- and client-rendered strings (see `i18n-conventions.md`).
 - `auth.user` — the authenticated user, or `null`.
+- `today` — the user's current date (`Y-m-d`) in their timezone (`$user->today()`), or `null` for guests. Vue reads it through `useToday()` (see `frontend-conventions.md`).
 - `flash` — `{ success, error, warning }`, read by pages that want to react to a flash message (most currently rely on the flash surfacing naturally via a full Inertia re-render rather than reading this explicitly).
-- `netWorth` / `notifications` — deferred (`Inertia::defer(..., 'topbar')`) since the topbar needs them on every page but they're not worth blocking the initial render for. The Vue-side `NetWorthBadge`/`NotificationBell` components consume them; see `frontend-conventions.md`.
+- `reviewCount` — deferred in the `topbar` group: how many plans need review (`UpcomingPlans::needsReviewCount`), shown as a badge on the sidebar's *Upcoming & cash flow* item.
+- `netWorth` / `moneyMap` / `notifications` — deferred (`Inertia::defer(..., 'topbar')`) since the topbar needs them on every page but they're not worth blocking the initial render for. The Vue-side `NetWorthBadge`/`ReadyToAssignBadge`/`NotificationBell` components consume them, and `MoneyMapStrip` shows `moneyMap` (`[{currency, inAccounts, inBuckets, readyToAssign, overAssigned}]`) on the Dashboard, Accounts and Buckets pages; see `frontend-conventions.md`.
 
 ## Frontend directory layout
 

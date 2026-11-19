@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Modal from '@/Components/Modal.vue';
@@ -45,12 +46,12 @@ const formatDate = (date) => format.date(date);
 <template>
     <Head :title="$t('ui.trash.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.trash.title') }}</h2>
+            <PageHeader :title="$t('ui.trash.title')" />
         </template>
 
-        <div class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-6">
             <p class="text-sm text-gray-500 dark:text-gray-400">
                 {{ $t('ui.trash.intro') }}
             </p>
@@ -67,10 +68,10 @@ const formatDate = (date) => format.date(date);
                         </div>
                         <Money :amount="transaction.amount" :currency="transaction.currency" class="text-sm font-semibold text-gray-700 dark:text-gray-200" />
                         <div class="flex items-center gap-1">
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.common.restore')" @click="restore(restoreTransaction, transaction.id)">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.common.restore')" :aria-label="$t('ui.common.restore')" @click="restore(restoreTransaction, transaction.id)">
                                 <DynamicIcon name="arrow-path" class="h-4 w-4" />
                             </button>
-                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete_permanently')" @click="purge(purgeTransaction, transaction.id, t('ui.trash.this_transaction'))">
+                            <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete_permanently')" :aria-label="$t('ui.common.delete_permanently')" @click="purge(purgeTransaction, transaction.id, t('ui.trash.this_transaction'))">
                                 <DynamicIcon name="trash" class="h-4 w-4" />
                             </button>
                         </div>
@@ -83,10 +84,10 @@ const formatDate = (date) => format.date(date);
                 <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
                     <li v-for="account in accounts" :key="account.id" class="flex items-center gap-3 px-4 py-3">
                         <p class="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">{{ account.name }} <span class="text-xs text-gray-400">{{ account.currency }}</span></p>
-                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.common.restore')" @click="restore(restoreAccount, account.id)">
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.common.restore')" :aria-label="$t('ui.common.restore')" @click="restore(restoreAccount, account.id)">
                             <DynamicIcon name="arrow-path" class="h-4 w-4" />
                         </button>
-                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete_permanently')" @click="purge(purgeAccount, account.id, account.name)">
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete_permanently')" :aria-label="$t('ui.common.delete_permanently')" @click="purge(purgeAccount, account.id, account.name)">
                             <DynamicIcon name="trash" class="h-4 w-4" />
                         </button>
                     </li>
@@ -97,11 +98,11 @@ const formatDate = (date) => format.date(date);
                 <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">{{ $t('ui.trash.categories') }}</h3>
                 <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
                     <li v-for="category in categories" :key="category.id" class="flex items-center gap-3 px-4 py-3">
-                        <p class="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">{{ category.name }} <span class="text-xs capitalize text-gray-400">{{ category.type }}</span></p>
-                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.common.restore')" @click="restore(restoreCategory, category.id)">
+                        <p class="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">{{ category.name }} <span class="text-xs text-gray-400">{{ category.type === 'income' ? $t('ui.trash.type_income') : $t('ui.trash.type_expense') }}</span></p>
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.common.restore')" :aria-label="$t('ui.common.restore')" @click="restore(restoreCategory, category.id)">
                             <DynamicIcon name="arrow-path" class="h-4 w-4" />
                         </button>
-                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete_permanently')" @click="purge(purgeCategory, category.id, category.name)">
+                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete_permanently')" :aria-label="$t('ui.common.delete_permanently')" @click="purge(purgeCategory, category.id, category.name)">
                             <DynamicIcon name="trash" class="h-4 w-4" />
                         </button>
                     </li>

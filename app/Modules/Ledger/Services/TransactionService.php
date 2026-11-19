@@ -5,8 +5,13 @@ namespace App\Modules\Ledger\Services;
 use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Contracts\RecordsTransactions;
 use App\Modules\Ledger\Enums\TransactionType;
+use App\Modules\Ledger\Events\ExpenseRecorded;
+use App\Modules\Ledger\Events\ExpenseRemoved;
 use App\Modules\Ledger\Events\IncomeRecorded;
 use App\Modules\Ledger\Events\IncomeRemoved;
+use App\Modules\Ledger\Events\TransactionDeleted;
+use App\Modules\Ledger\Events\TransactionPurged;
+use App\Modules\Ledger\Events\TransactionRestored;
 use App\Modules\Ledger\Events\TransactionsMutated;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
@@ -34,8 +39,10 @@ class TransactionService implements RecordsTransactions
         return $this->createSimple($user, TransactionType::Expense, $data);
     }
 
-    public function record(User $user, TransactionType $type, array $data): int
+    public function record(User $user, TransactionType $type, array $data, bool $autoPosted = false): int
     {
+        $data['is_recurring_generated'] = $autoPosted;
+
         return match ($type) {
             TransactionType::Income => $this->createIncome($user, $data)->id,
             TransactionType::Expense => $this->createExpense($user, $data)->id,
@@ -43,25 +50,26 @@ class TransactionService implements RecordsTransactions
         };
     }
 
+    public function recordTransfer(User $user, array $data, bool $autoPosted = false): int
+    {
+        [$out] = $this->createTransfer($user, $data + ['is_recurring_generated' => $autoPosted]);
+
+        return $out->id;
+    }
+
+    /**
+     * Removes a transaction for good (a system undo, so it does not land in the Trash).
+     */
     public function forget(User $user, int $transactionId): void
     {
         $transaction = Transaction::forUser($user)->find($transactionId);
 
         if ($transaction !== null) {
-            $this->delete($transaction);
+            DB::transaction(function () use ($transaction) {
+                $this->delete($transaction);
+                $this->forceDelete($transaction);
+            });
         }
-    }
-
-    public function recordRecurring(User $user, TransactionType $type, array $data, int $recurringTransactionId): void
-    {
-        $transaction = $type === TransactionType::Income
-            ? $this->createIncome($user, $data)
-            : $this->createExpense($user, $data);
-
-        $transaction->update([
-            'is_recurring_generated' => true,
-            'recurring_transaction_id' => $recurringTransactionId,
-        ]);
     }
 
     /**
@@ -83,6 +91,7 @@ class TransactionService implements RecordsTransactions
                 'description' => $data['description'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'transfer_group_id' => $groupId,
+                'is_recurring_generated' => (bool) ($data['is_recurring_generated'] ?? false),
             ]);
 
             $in = $user->transactions()->create([
@@ -95,6 +104,7 @@ class TransactionService implements RecordsTransactions
                 'description' => $data['description'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'transfer_group_id' => $groupId,
+                'is_recurring_generated' => (bool) ($data['is_recurring_generated'] ?? false),
             ]);
 
             $this->announce($user, collect([$out->account, $in->account]));
@@ -103,37 +113,66 @@ class TransactionService implements RecordsTransactions
         });
     }
 
+    /**
+     * Fields whose change means an income has to be released and allocated to buckets again.
+     * Editing only the description, notes, time, category or payment method leaves its buckets alone.
+     */
+    private const MONEY_FIELDS = ['account_id', 'amount', 'date', 'type'];
+
+    /**
+     * Fields whose change means an expense's spend from its bucket has to be redone.
+     */
+    private const EXPENSE_LINK_FIELDS = ['account_id', 'amount', 'date', 'type', 'bucket_id'];
+
     public function updateSimple(Transaction $transaction, array $data): Transaction
     {
-        $affectedAccounts = collect([$transaction->account]);
-        $isIncome = $transaction->type === TransactionType::Income;
+        return DB::transaction(function () use ($transaction, $data) {
+            $affectedAccounts = collect([$transaction->account]);
 
-        if ($isIncome) {
-            IncomeRemoved::dispatch($transaction->user, $transaction->id);
-        }
+            $transaction->fill([
+                'account_id' => $data['account_id'],
+                'category_id' => $data['category_id'],
+                'amount' => Money::of($data['amount']),
+                'date' => $data['date'],
+                'time' => $data['time'] ?? null,
+                'description' => $data['description'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'payment_method' => $data['payment_method'] ?? null,
+                // Left out (a bulk move), the expense keeps the bucket it was paid from.
+                'bucket_id' => $transaction->type === TransactionType::Expense
+                    ? (array_key_exists('bucket_id', $data) ? $data['bucket_id'] : $transaction->bucket_id)
+                    : null,
+            ]);
 
-        $transaction->update([
-            'account_id' => $data['account_id'],
-            'category_id' => $data['category_id'],
-            'amount' => Money::of($data['amount']),
-            'date' => $data['date'],
-            'time' => $data['time'] ?? null,
-            'description' => $data['description'] ?? null,
-            'notes' => $data['notes'] ?? null,
-            'payment_method' => $data['payment_method'] ?? null,
-        ]);
+            $reallocate = $transaction->type === TransactionType::Income && $transaction->isDirty(self::MONEY_FIELDS);
+            $respend = $transaction->type === TransactionType::Expense && $transaction->isDirty(self::EXPENSE_LINK_FIELDS);
 
-        if ($transaction->wasChanged('account_id')) {
-            $affectedAccounts->push($transaction->account);
-        }
+            if ($reallocate) {
+                IncomeRemoved::dispatch($transaction->user, $transaction->id);
+            }
 
-        $this->announce($transaction->user, $affectedAccounts);
+            if ($respend) {
+                ExpenseRemoved::dispatch($transaction->user, $transaction->id, $transaction->getOriginal('bucket_id'));
+            }
 
-        if ($isIncome) {
-            $this->announceIncome($transaction->refresh());
-        }
+            $transaction->save();
 
-        return $transaction;
+            if ($transaction->wasChanged('account_id')) {
+                $affectedAccounts->push($transaction->account()->first());
+            }
+
+            $this->announce($transaction->user, $affectedAccounts);
+
+            if ($reallocate) {
+                $this->announceIncome($transaction->refresh());
+            }
+
+            if ($respend) {
+                $this->announceExpense($transaction->refresh());
+            }
+
+            return $transaction;
+        });
     }
 
     /**
@@ -176,13 +215,19 @@ class TransactionService implements RecordsTransactions
                 if ($sibling) {
                     $affectedAccounts->push($sibling->account);
                     $sibling->delete();
+                    $this->announceLeg(TransactionDeleted::class, $sibling);
                 }
             }
 
             $transaction->delete();
+            $this->announceLeg(TransactionDeleted::class, $transaction);
 
             if ($transaction->type === TransactionType::Income) {
                 IncomeRemoved::dispatch($transaction->user, $transaction->id);
+            }
+
+            if ($transaction->type === TransactionType::Expense) {
+                ExpenseRemoved::dispatch($transaction->user, $transaction->id, $transaction->bucket_id);
             }
 
             $this->announce($transaction->user, $affectedAccounts);
@@ -190,8 +235,8 @@ class TransactionService implements RecordsTransactions
     }
 
     /**
-     * Moves a simple transaction to another account and/or category. Transfers, and a
-     * category of the wrong kind, are left alone. Returns whether anything changed.
+     * Moves a simple transaction to another account and/or category. Transfers, a category of
+     * the wrong kind and an account in another currency are left alone. Returns whether anything changed.
      */
     public function reassign(Transaction $transaction, ?int $accountId, ?Category $category): bool
     {
@@ -202,6 +247,13 @@ class TransactionService implements RecordsTransactions
         if ($category !== null && $category->type->value !== $transaction->type->value) {
             $category = null;
         }
+
+        if ($accountId !== null && Account::whereKey($accountId)->value('currency') !== $transaction->account->currency) {
+            $accountId = null;
+        }
+
+        // An off-budget account's money is not in any bucket, so an expense moved there is no longer paid from one.
+        $bucketId = $accountId !== null && Account::whereKey($accountId)->value('on_budget') === false ? null : $transaction->bucket_id;
 
         $newAccountId = $accountId ?? $transaction->account_id;
         $newCategoryId = $category?->id ?? $transaction->category_id;
@@ -219,6 +271,7 @@ class TransactionService implements RecordsTransactions
             'description' => $transaction->description,
             'notes' => $transaction->notes,
             'payment_method' => $transaction->payment_method?->value,
+            'bucket_id' => $bucketId,
         ]);
 
         return true;
@@ -232,11 +285,14 @@ class TransactionService implements RecordsTransactions
         DB::transaction(function () use ($transaction) {
             $legs = $this->trashedLegs($transaction);
             $legs->each->restore();
+            $legs->each(fn (Transaction $leg) => $this->announceLeg(TransactionRestored::class, $leg));
 
             $this->announce($transaction->user, $legs->map->account);
 
             $legs->filter(fn (Transaction $leg) => $leg->type === TransactionType::Income)
                 ->each(fn (Transaction $leg) => $this->announceIncome($leg->refresh()));
+            $legs->filter(fn (Transaction $leg) => $leg->type === TransactionType::Expense)
+                ->each(fn (Transaction $leg) => $this->announceExpense($leg->refresh()));
         });
     }
 
@@ -245,7 +301,10 @@ class TransactionService implements RecordsTransactions
      */
     public function forceDelete(Transaction $transaction): void
     {
-        DB::transaction(fn () => $this->trashedLegs($transaction)->each->forceDelete());
+        DB::transaction(fn () => $this->trashedLegs($transaction)->each(function (Transaction $leg) {
+            $this->announceLeg(TransactionPurged::class, $leg);
+            $leg->forceDelete();
+        }));
     }
 
     /**
@@ -266,22 +325,27 @@ class TransactionService implements RecordsTransactions
 
     private function createSimple(User $user, TransactionType $type, array $data): Transaction
     {
-        $transaction = $user->transactions()->create([
-            'account_id' => $data['account_id'],
-            'type' => $type,
-            'category_id' => $data['category_id'],
-            'amount' => Money::of($data['amount']),
-            'date' => $data['date'],
-            'time' => $data['time'] ?? null,
-            'description' => $data['description'] ?? null,
-            'notes' => $data['notes'] ?? null,
-            'payment_method' => $data['payment_method'] ?? null,
-        ]);
+        return DB::transaction(function () use ($user, $type, $data) {
+            $transaction = $user->transactions()->create([
+                'account_id' => $data['account_id'],
+                'type' => $type,
+                'category_id' => $data['category_id'],
+                'amount' => Money::of($data['amount']),
+                'date' => $data['date'],
+                'time' => $data['time'] ?? null,
+                'description' => $data['description'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'payment_method' => $data['payment_method'] ?? null,
+                'bucket_id' => $type === TransactionType::Expense ? ($data['bucket_id'] ?? null) : null,
+                'is_recurring_generated' => (bool) ($data['is_recurring_generated'] ?? false),
+            ]);
 
-        $this->announce($user, collect([$transaction->account]));
-        $this->announceIncome($transaction);
+            $this->announce($user, collect([$transaction->account]));
+            $this->announceIncome($transaction);
+            $this->announceExpense($transaction);
 
-        return $transaction;
+            return $transaction;
+        });
     }
 
     private function announceIncome(Transaction $transaction): void
@@ -298,6 +362,31 @@ class TransactionService implements RecordsTransactions
             $transaction->account->currency,
             $transaction->date,
         );
+    }
+
+    private function announceExpense(Transaction $transaction): void
+    {
+        if ($transaction->type !== TransactionType::Expense) {
+            return;
+        }
+
+        ExpenseRecorded::dispatch(
+            $transaction->user,
+            $transaction->id,
+            $transaction->account_id,
+            $transaction->amount,
+            $transaction->account->currency,
+            $transaction->date,
+            $transaction->bucket_id,
+        );
+    }
+
+    /**
+     * @param  class-string<TransactionDeleted|TransactionRestored|TransactionPurged>  $event
+     */
+    private function announceLeg(string $event, Transaction $leg): void
+    {
+        $event::dispatch($leg->user, $leg->id, $leg->type, $leg->account_id, $leg->amount, $leg->date);
     }
 
     /**

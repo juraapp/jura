@@ -3,16 +3,19 @@ import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { withCsrfHeader } from '@/csrf';
+import { useToast } from '@/composables/useToast';
 import { parse as parseImport, store as storeImport } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionImportController';
 import { index as transactionsIndex } from '@/routes/transactions';
 import { template as importTemplate } from '@/routes/transactions/import';
 
 const { t } = useI18n();
+const { push: pushToast } = useToast();
 
 const step = ref('idle');
 const dragging = ref(false);
@@ -88,8 +91,21 @@ const confirmImport = async () => {
             }),
         });
 
-        result.value = await response.json();
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data) {
+            /* Only a 422 carries a message meant for the user; anything else is Laravel's generic English text. */
+            const validationMessage = response.status === 422
+                ? data?.error ?? Object.values(data?.errors ?? {}).flat()[0] ?? data?.message
+                : null;
+            pushToast({ type: 'error', message: validationMessage ?? t('ui.common.request_failed') });
+            return;
+        }
+
+        result.value = data;
         step.value = 'done';
+    } catch {
+        pushToast({ type: 'error', message: t('ui.common.request_failed') });
     } finally {
         processing.value = false;
     }
@@ -118,19 +134,18 @@ const doneDescription = computed(() => {
 <template>
     <Head :title="$t('ui.import.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    {{ $t('ui.import.title') }}
-                </h2>
-                <Link :href="transactionsIndex.url()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                    {{ $t('ui.import.back') }}
-                </Link>
-            </div>
+            <PageHeader :title="$t('ui.import.title')">
+                <template #actions>
+                    <Link :href="transactionsIndex.url()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        {{ $t('ui.import.back') }}
+                    </Link>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-6">
             <div
                 v-if="step === 'idle'"
                 class="rounded-xl border-2 border-dashed px-6 py-16 text-center transition"
@@ -247,7 +262,7 @@ const doneDescription = computed(() => {
                 <template #action>
                     <div class="flex items-center gap-3">
                         <PrimaryButton type="button" @click="startOver">
-                            <DynamicIcon name="arrow-up-tray" class="mr-1.5 h-4 w-4" />
+                            <DynamicIcon name="arrow-up-tray" class="h-4 w-4" />
                             {{ $t('ui.import.another') }}
                         </PrimaryButton>
                         <Link :href="transactionsIndex.url()" class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">

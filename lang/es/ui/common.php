@@ -14,4 +14,10 @@ return [
     'net_worth' => 'Patrimonio neto',
     'under_construction' => 'Esta función está en construcción',
     'under_construction_hint' => 'La estamos construyendo en una fase posterior de la hoja de ruta.',
+    'request_failed' => 'Algo salió mal. Inténtalo de nuevo.',
+    'edit' => 'Editar',
+    'previous' => 'Anterior',
+    'next' => 'Siguiente',
+    'back' => 'Volver',
+    'actions' => 'Acciones',
 ];

@@ -1,8 +1,9 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Modal from '@/Components/Modal.vue';
@@ -10,6 +11,7 @@ import ModalForm from '@/Components/ModalForm.vue';
 import Money from '@/Components/Money.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
+import MoneyInput from '@/Components/MoneyInput.vue';
 import TextInput from '@/Components/TextInput.vue';
 import SelectInput from '@/Components/SelectInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -25,15 +27,14 @@ import {
     unpurchase,
     bulkDestroy,
 } from '@/actions/App/Modules/Planning/Http/Controllers/WishlistItemController';
-import {
-    store as storeProject,
-    update as updateProject,
-    destroy as destroyProject,
-} from '@/actions/App/Modules/Planning/Http/Controllers/ProjectController';
+import { destroy as destroyProject, quickStore as quickStoreProject } from '@/actions/App/Modules/Planning/Http/Controllers/ProjectController';
+import { withCsrfHeader } from '@/csrf';
+import ProjectModal from '@/Components/ProjectModal.vue';
 import { useFormat } from '@/composables/useFormat';
 import BulkCheckbox from '@/Components/BulkCheckbox.vue';
 import BulkDeleteBar from '@/Components/BulkDeleteBar.vue';
 import { useBulkSelection } from '@/composables/useBulkSelection';
+import { useToday } from '@/composables/useToday';
 
 const format = useFormat();
 const { t } = useI18n();
@@ -46,16 +47,16 @@ const props = defineProps({
     categories: { type: Array, required: true },
     currencies: { type: Array, required: true },
     projectKinds: { type: Array, required: true },
+    /** A project to start a new item in (from that project's page), or null. */
+    newItemProject: { type: Number, default: null },
 });
-
-const bulk = useBulkSelection(() => groups.value.flatMap((group) => group.items));
-watch(() => groups.value.flatMap((group) => group.items), () => bulk.clear());
 
 const page = usePage();
 const locale = () => page.props.auth.user?.locale ?? 'en';
 const money = (value, currency) => formatMoney(value, currency, locale());
 const formatDate = (date) => format.date(date);
-const today = new Date().toISOString().slice(0, 10);
+const todayDate = useToday();
+const today = todayDate();
 
 const showClosed = ref(false);
 
@@ -74,6 +75,10 @@ const groups = computed(() => {
     return result.filter((group) => group.items.length || group.project);
 });
 
+/* Declared after `groups`: the watch getter runs during setup. Clearing on every change also drops items that just got hidden. */
+const bulk = useBulkSelection(() => groups.value.flatMap((group) => group.items));
+watch(() => groups.value.flatMap((group) => group.items.map((item) => item.id)).join(','), () => bulk.clear());
+
 const totalsByCurrency = (items) => {
     const totals = {};
     items.filter((item) => item.status === 'wanted').forEach((item) => {
@@ -86,21 +91,10 @@ const totalsByCurrency = (items) => {
 /* ---- project modal ---- */
 const showProjectModal = ref(false);
 const editingProject = ref(null);
-const projectForm = useForm({ name: '', kind: 'project', color: '#2563eb', notes: '' });
 
 const openProjectModal = (project = null) => {
     editingProject.value = project;
-    projectForm.clearErrors();
-    projectForm.name = project?.name ?? '';
-    projectForm.kind = project?.kind ?? 'project';
-    projectForm.color = project?.color ?? '#2563eb';
-    projectForm.notes = project?.notes ?? '';
     showProjectModal.value = true;
-};
-
-const submitProject = () => {
-    const action = editingProject.value ? updateProject(editingProject.value.id) : storeProject();
-    projectForm.submit(action, { preserveScroll: true, onSuccess: () => (showProjectModal.value = false) });
 };
 
 const confirmingDeleteProject = ref(null);
@@ -121,7 +115,10 @@ const blankItem = (projectId = '') => ({
     currency: props.currencies[0],
     importance: 3,
     project_id: projectId,
+    funding: 'ready',
     bucket_id: '',
+    new_bucket_fill_rule: 'fixed',
+    new_bucket_fill_value: '',
     desired_by: '',
     allowed_account_ids: [],
     url: '',
@@ -131,6 +128,70 @@ const blankItem = (projectId = '') => ({
 
 const itemForm = useForm(blankItem());
 const bucketChoices = computed(() => props.buckets.filter((bucket) => bucket.currency === itemForm.currency));
+
+/* The chosen bucket stops filling at its limit: below the price, the rest of the price comes from ready to assign. */
+const chosenBucket = computed(() => bucketChoices.value.find((bucket) => bucket.id === Number(itemForm.bucket_id)) ?? null);
+const capBelowPrice = computed(() => itemForm.funding === 'bucket' && chosenBucket.value?.cap !== null && chosenBucket.value?.cap !== undefined
+    && Number(itemForm.price) > 0 && chosenBucket.value.cap < Number(itemForm.price));
+
+/* Projects made from this form show up before the page reloads. A project has one currency, so only the ones that
+   match the item's are offered. */
+const extraProjects = ref([]);
+const allProjects = computed(() => [...props.projects, ...extraProjects.value.filter((added) => !props.projects.some((project) => project.id === added.id))]);
+const projectChoices = computed(() => allProjects.value.filter((project) => !project.currency || project.currency === itemForm.currency));
+const selectedProject = computed(() => allProjects.value.find((project) => project.id === Number(itemForm.project_id)) ?? null);
+
+const newProject = reactive({ open: false, name: '', error: '', processing: false });
+
+watch(() => itemForm.project_id, (value) => {
+    if (value === '__new__') {
+        itemForm.project_id = '';
+        newProject.open = true;
+        newProject.error = '';
+    }
+});
+
+const createProject = async () => {
+    newProject.processing = true;
+    newProject.error = '';
+
+    try {
+        const response = await fetch(quickStoreProject.url(), {
+            method: 'POST',
+            headers: withCsrfHeader({ Accept: 'application/json', 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ name: newProject.name, currency: itemForm.currency }),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            newProject.error = data.errors?.name?.[0] ?? data.errors?.currency?.[0] ?? t('ui.common.request_failed');
+
+            return;
+        }
+
+        extraProjects.value.push(data);
+        itemForm.project_id = data.id;
+        newProject.open = false;
+        newProject.name = '';
+    } catch {
+        newProject.error = t('ui.common.request_failed');
+    } finally {
+        newProject.processing = false;
+    }
+};
+const itemAccountChoices = computed(() => props.accounts.filter((account) => account.currency === itemForm.currency));
+
+/* A bucket or account in another currency would stay selected but invisible, and the server rejects it. */
+watch(() => itemForm.currency, () => {
+    if (itemForm.project_id && !projectChoices.value.some((project) => project.id === Number(itemForm.project_id))) {
+        itemForm.project_id = '';
+    }
+    if (itemForm.bucket_id && !bucketChoices.value.some((bucket) => bucket.id === itemForm.bucket_id)) {
+        itemForm.bucket_id = '';
+    }
+    itemForm.allowed_account_ids = itemForm.allowed_account_ids
+        .filter((id) => itemAccountChoices.value.some((account) => account.id === id));
+});
 
 const openItemModal = (item = null, projectId = '') => {
     editingItem.value = item;
@@ -142,7 +203,10 @@ const openItemModal = (item = null, projectId = '') => {
             currency: item.currency,
             importance: item.importance,
             project_id: item.projectId ?? '',
+            funding: item.bucket ? 'bucket' : 'ready',
             bucket_id: item.bucket?.id ?? '',
+            new_bucket_fill_rule: 'fixed',
+            new_bucket_fill_value: '',
             desired_by: item.desiredBy ?? '',
             allowed_account_ids: [...item.allowedAccountIds],
             url: item.url ?? '',
@@ -156,7 +220,15 @@ const openItemModal = (item = null, projectId = '') => {
 
 const submitItem = () => {
     const action = editingItem.value ? update(editingItem.value.id) : store();
-    itemForm.submit(action, { preserveScroll: true, onSuccess: () => (showItemModal.value = false) });
+
+    itemForm.transform(({ funding, ...data }) => ({
+        ...data,
+        project_id: data.project_id === '' ? null : data.project_id,
+        bucket_id: funding === 'bucket' && data.bucket_id !== '' ? data.bucket_id : null,
+        new_bucket: funding === 'new',
+        new_bucket_fill_rule: funding === 'new' ? data.new_bucket_fill_rule : null,
+        new_bucket_fill_value: funding === 'new' ? data.new_bucket_fill_value : null,
+    })).submit(action, { preserveScroll: true, onSuccess: () => (showItemModal.value = false) });
 };
 
 const setStatus = (item, status) => {
@@ -187,12 +259,16 @@ const deleteItem = () => {
 const buying = ref(null);
 const purchaseForm = useForm({ account_id: '', category_id: '', amount: '', date: today });
 
+const hasAccountInBuyingCurrency = computed(() => buying.value !== null
+    && props.accounts.some((account) => account.currency === buying.value.currency));
+
 const accountChoices = computed(() => {
     if (!buying.value) return [];
     const bucket = props.buckets.find((candidate) => candidate.id === buying.value.bucket?.id);
     const restrictions = [buying.value.allowedAccountIds, bucket?.allowed_account_ids ?? []].filter((list) => list.length);
 
-    return props.accounts.filter((account) => restrictions.every((list) => list.includes(account.id)));
+    return props.accounts.filter((account) => account.currency === buying.value.currency
+        && restrictions.every((list) => list.includes(account.id)));
 });
 
 const openPurchase = (item) => {
@@ -201,7 +277,7 @@ const openPurchase = (item) => {
     purchaseForm.account_id = '';
     purchaseForm.category_id = '';
     purchaseForm.amount = String(item.price);
-    purchaseForm.date = today;
+    purchaseForm.date = todayDate();
 };
 
 const submitPurchase = () => {
@@ -209,29 +285,37 @@ const submitPurchase = () => {
 };
 
 const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll: true });
+
+/* Arriving from a project's "New item": start the item in that project. */
+onMounted(() => {
+    if (props.newItemProject !== null) {
+        openItemModal(null, props.newItemProject);
+    }
+});
 </script>
 
 <template>
     <Head :title="$t('ui.wishlist.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.wishlist.title') }}</h2>
-                <div class="flex items-center gap-2">
-                    <SecondaryButton type="button" @click="openProjectModal()">
-                        <DynamicIcon name="flag" class="mr-1.5 h-4 w-4" />
-                        {{ $t('ui.wishlist.new_project') }}
-                    </SecondaryButton>
-                    <PrimaryButton type="button" @click="openItemModal()">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                        {{ $t('ui.wishlist.new_item') }}
-                    </PrimaryButton>
-                </div>
-            </div>
+            <PageHeader :title="$t('ui.wishlist.title')">
+                <template #actions>
+                    <div class="flex items-center gap-2">
+                        <SecondaryButton type="button" @click="openProjectModal()">
+                            <DynamicIcon name="flag" class="h-4 w-4" />
+                            {{ $t('ui.wishlist.new_project') }}
+                        </SecondaryButton>
+                        <PrimaryButton type="button" @click="openItemModal()">
+                            <DynamicIcon name="plus" class="h-4 w-4" />
+                            {{ $t('ui.wishlist.new_item') }}
+                        </PrimaryButton>
+                    </div>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <EmptyState
                 v-if="items.length === 0 && projects.length === 0"
                 icon="flag"
@@ -240,7 +324,7 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openItemModal()">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.wishlist.add_first') }}
                     </PrimaryButton>
                 </template>
@@ -253,6 +337,10 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                 </label>
                 <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><BulkCheckbox :bulk="bulk" page /> {{ $t('ui.wishlist.select_all') }}</label>
                 <BulkDeleteBar :bulk="bulk" :url="bulkDestroy.url()" :noun="$t('ui.wishlist.noun')" />
+
+                <p v-if="groups.length === 0" class="rounded-xl border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    {{ $t('ui.wishlist.all_closed') }}
+                </p>
 
                 <section v-for="group in groups" :key="group.project?.id ?? 'none'" class="space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -267,10 +355,10 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                                 {{ $t('ui.wishlist.add_item') }}
                             </button>
                             <template v-if="group.project">
-                                <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.edit_project')" @click="openProjectModal(group.project)">
+                                <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.edit_project')" :aria-label="$t('ui.wishlist.edit_project')" @click="openProjectModal(group.project)">
                                     <DynamicIcon name="pencil" class="h-4 w-4" />
                                 </button>
-                                <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.wishlist.delete_project')" @click="confirmingDeleteProject = group.project">
+                                <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.wishlist.delete_project')" :aria-label="$t('ui.wishlist.delete_project')" @click="confirmingDeleteProject = group.project">
                                     <DynamicIcon name="trash" class="h-4 w-4" />
                                 </button>
                             </template>
@@ -290,7 +378,7 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                                 <div class="min-w-0 flex-1">
                                     <p class="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
                                         <span class="truncate" :class="{ 'line-through': item.status === 'dropped' }">{{ item.name }}</span>
-                                        <a v-if="item.url" :href="item.url" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-primary-600" :title="$t('ui.wishlist.open_link')">
+                                        <a v-if="item.url" :href="item.url" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-primary-600" :title="$t('ui.wishlist.open_link')" :aria-label="$t('ui.wishlist.open_link')">
                                             <DynamicIcon name="link" class="h-3.5 w-3.5" />
                                         </a>
                                         <span v-if="item.status !== 'wanted'" class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
@@ -302,9 +390,12 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                                             <span v-for="n in 5" :key="n" class="h-1.5 w-1.5 rounded-full" :class="n <= item.importance ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-600'"></span>
                                         </span>
                                         <span v-if="item.desiredBy">{{ $t('ui.wishlist.by', { date: formatDate(item.desiredBy) }) }}</span>
-                                        <button v-if="item.bucket" type="button" class="font-medium text-primary-600 hover:underline dark:text-primary-400" @click="router.visit(bucketsIndex.url())">
+                                        <Link v-if="item.bucket" :href="bucketsIndex.url()" class="font-medium text-primary-600 hover:underline dark:text-primary-400">
                                             {{ item.bucket.name }}
-                                        </button>
+                                        </Link>
+                                        <Link v-else-if="item.projectBucket" :href="bucketsIndex.url()" class="font-medium text-primary-600 hover:underline dark:text-primary-400">
+                                            {{ item.projectBucket.name }} ({{ $t('ui.projects.from_project_bucket') }})
+                                        </Link>
                                         <span v-if="item.allowedAccountIds.length">
                                             {{ $t('ui.wishlist.only_with') }}
                                             <span v-for="id in item.allowedAccountIds" :key="id" class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 dark:bg-gray-700">{{ accounts.find((a) => a.id === id)?.name ?? '?' }}</span>
@@ -322,23 +413,23 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
 
                                 <div class="flex items-center gap-1">
                                     <template v-if="item.status === 'wanted'">
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" :title="$t('ui.wishlist.mark_purchased')" @click="openPurchase(item)">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-500/10" :title="$t('ui.wishlist.mark_purchased')" :aria-label="$t('ui.wishlist.mark_purchased')" @click="openPurchase(item)">
                                             <DynamicIcon name="check-circle" class="h-4 w-4" />
                                         </button>
-                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.drop')" @click="setStatus(item, 'dropped')">
+                                        <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.drop')" :aria-label="$t('ui.wishlist.drop')" @click="setStatus(item, 'dropped')">
                                             <DynamicIcon name="forward" class="h-4 w-4" />
                                         </button>
                                     </template>
-                                    <button v-else-if="item.status === 'dropped'" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.want_again')" @click="setStatus(item, 'wanted')">
+                                    <button v-else-if="item.status === 'dropped'" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.want_again')" :aria-label="$t('ui.wishlist.want_again')" @click="setStatus(item, 'wanted')">
                                         <DynamicIcon name="arrow-path" class="h-4 w-4" />
                                     </button>
                                     <button v-else type="button" class="rounded-lg px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" :title="$t('ui.wishlist.undo_purchase_tip')" @click="undo(item)">
                                         {{ $t('ui.wishlist.undo_purchase') }}
                                     </button>
-                                    <button v-if="item.status !== 'purchased'" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.edit')" @click="openItemModal(item)">
+                                    <button v-if="item.status !== 'purchased'" type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700" :title="$t('ui.wishlist.edit')" :aria-label="$t('ui.wishlist.edit')" @click="openItemModal(item)">
                                         <DynamicIcon name="pencil" class="h-4 w-4" />
                                     </button>
-                                    <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="confirmingDeleteItem = item">
+                                    <button type="button" class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" :aria-label="$t('ui.common.delete')" @click="confirmingDeleteItem = item">
                                         <DynamicIcon name="trash" class="h-4 w-4" />
                                     </button>
                                 </div>
@@ -349,37 +440,15 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
             </template>
         </div>
 
-        <ModalForm :show="showProjectModal" :title="editingProject ? $t('ui.wishlist.edit_project_title') : $t('ui.wishlist.new_project_title')" @close="showProjectModal = false">
-            <form id="project-form" class="space-y-4" @submit.prevent="submitProject">
-                <div>
-                    <InputLabel for="project_name" :value="$t('ui.wishlist.name')" />
-                    <TextInput id="project_name" v-model="projectForm.name" type="text" class="mt-1 block w-full" :placeholder="$t('ui.wishlist.project_placeholder')" />
-                    <InputError class="mt-1" :message="projectForm.errors.name" />
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <InputLabel for="project_kind" :value="$t('ui.wishlist.type')" />
-                        <SelectInput id="project_kind" v-model="projectForm.kind">
-                            <option v-for="kind in projectKinds" :key="kind.value" :value="kind.value">{{ kind.label }}</option>
-                        </SelectInput>
-                        <InputError class="mt-1" :message="projectForm.errors.kind" />
-                    </div>
-                    <div>
-                        <InputLabel for="project_color" :value="$t('ui.wishlist.colour')" />
-                        <input id="project_color" v-model="projectForm.color" type="color" class="mt-1 h-10 w-full rounded-lg border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-700" />
-                        <InputError class="mt-1" :message="projectForm.errors.color" />
-                    </div>
-                </div>
-                <div>
-                    <InputLabel for="project_notes" :value="$t('ui.wishlist.notes')" />
-                    <TextInput id="project_notes" v-model="projectForm.notes" type="text" class="mt-1 block w-full" />
-                </div>
-            </form>
-            <template #footer>
-                <SecondaryButton type="button" @click="showProjectModal = false">{{ $t('ui.common.cancel') }}</SecondaryButton>
-                <PrimaryButton form="project-form" type="submit" :disabled="projectForm.processing">{{ $t('ui.wishlist.save') }}</PrimaryButton>
-            </template>
-        </ModalForm>
+        <ProjectModal
+            :show="showProjectModal"
+            :project="editingProject"
+            :kinds="projectKinds"
+            :currencies="currencies"
+            :buckets="buckets"
+            :projects="projects"
+            @close="showProjectModal = false"
+        />
 
         <ModalForm :show="showItemModal" :title="editingItem ? $t('ui.wishlist.edit_item') : $t('ui.wishlist.new_item_title')" @close="showItemModal = false">
             <form id="item-form" class="space-y-4" @submit.prevent="submitItem">
@@ -418,35 +487,89 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                         <InputLabel for="item_project" :value="$t('ui.wishlist.project')" />
                         <SelectInput id="item_project" v-model="itemForm.project_id">
                             <option value="">{{ $t('ui.wishlist.no_project') }}</option>
-                            <option v-for="project in projects" :key="project.id" :value="project.id">{{ project.name }}</option>
+                            <option v-for="project in projectChoices" :key="project.id" :value="project.id">{{ project.name }}</option>
+                            <option value="__new__">＋ {{ $t('ui.wishlist.new_project_option') }}</option>
                         </SelectInput>
                         <InputError class="mt-1" :message="itemForm.errors.project_id" />
                     </div>
                 </div>
 
-                <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700" :open="Boolean(itemForm.bucket_id) || itemForm.allowed_account_ids.length > 0">
+                <div v-if="newProject.open" class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                    <InputLabel for="quick_project_name" :value="$t('ui.wishlist.quick_project_title')" />
+                    <div class="mt-1 flex flex-wrap gap-2">
+                        <TextInput
+                            id="quick_project_name"
+                            v-model="newProject.name"
+                            type="text"
+                            class="block min-w-0 flex-1"
+                            :placeholder="$t('ui.wishlist.project_placeholder')"
+                            @keydown.enter.prevent="createProject"
+                        />
+                        <SecondaryButton type="button" :disabled="newProject.processing || newProject.name.trim() === ''" @click="createProject">{{ $t('ui.wishlist.quick_project_create') }}</SecondaryButton>
+                        <SecondaryButton type="button" @click="newProject.open = false">{{ $t('ui.common.cancel') }}</SecondaryButton>
+                    </div>
+                    <InputError class="mt-1" :message="newProject.error" />
+                </div>
+
+                <fieldset class="space-y-2">
+                    <legend class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('ui.wishlist.funding_title') }}</legend>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <input v-model="itemForm.funding" type="radio" value="ready" class="text-primary-600 focus:ring-primary-500" />
+                        {{ selectedProject?.bucket ? $t('ui.wishlist.funding_project_bucket', { name: selectedProject.bucket.name }) : $t('ui.wishlist.funding_ready') }}
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <input v-model="itemForm.funding" type="radio" value="bucket" class="text-primary-600 focus:ring-primary-500" />
+                        {{ $t('ui.wishlist.funding_bucket') }}
+                    </label>
+                    <div v-if="itemForm.funding === 'bucket'" class="pl-6">
+                        <SelectInput id="item_bucket" v-model="itemForm.bucket_id">
+                            <option value="">{{ $t('ui.wishlist.no_bucket') }}</option>
+                            <option v-for="bucket in bucketChoices" :key="bucket.id" :value="bucket.id">{{ bucket.name }}</option>
+                        </SelectInput>
+                        <p v-if="capBelowPrice" class="mt-1 text-xs text-amber-600 dark:text-amber-400">{{ $t('ui.wishlist.cap_below_price', { cap: format.money(chosenBucket.cap, itemForm.currency) }) }}</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.wishlist.bucket_hint') }}</p>
+                        <InputError class="mt-1" :message="itemForm.errors.bucket_id" />
+                    </div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <input v-model="itemForm.funding" type="radio" value="new" class="text-primary-600 focus:ring-primary-500" />
+                        {{ $t('ui.wishlist.funding_new_bucket') }}
+                    </label>
+                    <div v-if="itemForm.funding === 'new'" class="space-y-2 pl-6">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.wishlist.funding_new_hint') }}</p>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <InputLabel for="item_fill_rule" :value="$t('ui.wishlist.fill_title')" />
+                                <SelectInput id="item_fill_rule" v-model="itemForm.new_bucket_fill_rule">
+                                    <option value="fixed">{{ $t('ui.wishlist.fill_fixed') }}</option>
+                                    <option value="percent">{{ $t('ui.wishlist.fill_percent') }}</option>
+                                    <option value="of_remaining">{{ $t('ui.wishlist.fill_of_remaining') }}</option>
+                                </SelectInput>
+                                <InputError class="mt-1" :message="itemForm.errors.new_bucket_fill_rule" />
+                            </div>
+                            <div>
+                                <InputLabel for="item_fill_value" :value="itemForm.new_bucket_fill_rule === 'fixed' ? $t('ui.wishlist.fill_amount') : $t('ui.wishlist.fill_percentage')" />
+                                <MoneyInput v-if="itemForm.new_bucket_fill_rule === 'fixed'" id="item_fill_value" v-model="itemForm.new_bucket_fill_value" :currency="itemForm.currency" class="mt-1" />
+                                <TextInput v-else id="item_fill_value" v-model="itemForm.new_bucket_fill_value" type="number" step="0.01" min="0" max="100" class="mt-1 block w-full" />
+                                <InputError class="mt-1" :message="itemForm.errors.new_bucket_fill_value" />
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <details class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700" :open="itemForm.allowed_account_ids.length > 0">
                     <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200">{{ $t('ui.wishlist.funding') }}</summary>
                     <div class="mt-3 space-y-4">
-                        <div>
-                            <InputLabel for="item_bucket" :value="$t('ui.wishlist.pay_bucket')" />
-                            <SelectInput id="item_bucket" v-model="itemForm.bucket_id">
-                                <option value="">{{ $t('ui.wishlist.no_bucket') }}</option>
-                                <option v-for="bucket in bucketChoices" :key="bucket.id" :value="bucket.id">{{ bucket.name }}</option>
-                            </SelectInput>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.wishlist.bucket_hint') }}</p>
-                            <InputError class="mt-1" :message="itemForm.errors.bucket_id" />
-                        </div>
                         <div>
                             <InputLabel for="item_desired_by" :value="$t('ui.wishlist.want_by')" />
                             <TextInput id="item_desired_by" v-model="itemForm.desired_by" type="date" class="mt-1 block w-full" />
                             <InputError class="mt-1" :message="itemForm.errors.desired_by" />
                         </div>
-                        <fieldset v-if="accounts.length">
+                        <fieldset v-if="itemAccountChoices.length">
                             <legend class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('ui.wishlist.only_bought_with') }}</legend>
                             <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.wishlist.only_bought_hint') }}</p>
-                            <label v-for="account in accounts" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
+                            <label v-for="account in itemAccountChoices" :key="account.id" class="flex items-center gap-2 py-0.5 text-sm text-gray-700 dark:text-gray-200">
                                 <input v-model="itemForm.allowed_account_ids" type="checkbox" :value="account.id" class="rounded border-gray-300 text-primary-600" />
-                                {{ account.name }}
+                                {{ account.name }} · {{ account.currency }}
                             </label>
                             <InputError class="mt-1" :message="itemForm.errors['allowed_account_ids.0']" />
                         </fieldset>
@@ -479,9 +602,11 @@ const undo = (item) => router.post(unpurchase.url(item.id), {}, { preserveScroll
                     <InputLabel for="purchase_account" :value="$t('ui.wishlist.paid_with')" />
                     <SelectInput id="purchase_account" v-model="purchaseForm.account_id">
                         <option value="">{{ $t('ui.wishlist.select_account') }}</option>
-                        <option v-for="account in accountChoices" :key="account.id" :value="account.id">{{ account.name }}</option>
+                        <option v-for="account in accountChoices" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </SelectInput>
-                    <p v-if="buying && accountChoices.length === 0" class="mt-1 text-xs text-red-600">{{ $t('ui.wishlist.no_account_allowed') }}</p>
+                    <p v-if="buying && accountChoices.length === 0" class="mt-1 text-xs text-red-600">
+                        {{ hasAccountInBuyingCurrency ? $t('ui.wishlist.no_account_allowed') : $t('ui.wishlist.no_account_in_currency', { currency: buying.currency }) }}
+                    </p>
                     <InputError class="mt-1" :message="purchaseForm.errors.account_id" />
                 </div>
                 <div>

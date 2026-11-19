@@ -7,6 +7,7 @@ import { useSidebar } from '@/composables/useSidebar';
 import { index as accountsIndex } from '@/routes/accounts';
 import { index as bucketsIndex } from '@/routes/buckets';
 import { index as plannedEventsIndex } from '@/routes/planned-events';
+import { index as projectsIndex } from '@/routes/projects';
 import { index as wishlistIndex } from '@/routes/wishlist';
 import { index as plannerIndex } from '@/routes/planner';
 import { index as categoriesIndex } from '@/routes/categories';
@@ -15,9 +16,7 @@ import { index as expensesIndex } from '@/routes/expenses';
 import { index as incomesIndex } from '@/routes/incomes';
 import { edit as preferencesEdit } from '@/routes/preferences';
 import { index as trashIndex } from '@/routes/trash';
-import { index as recurringTransactionsIndex } from '@/routes/recurring-transactions';
 import { annual as reportsAnnual, buckets as reportsBuckets, custom as reportsCustom, forecast as reportsForecast, monthly as reportsMonthly, projects as reportsProjects } from '@/routes/reports';
-import { index as savingsGoalsIndex } from '@/routes/savings-goals';
 import { importMethod as transactionsImport, index as transactionsIndex } from '@/routes/transactions';
 import { index as transfersIndex } from '@/routes/transfers';
 import { dashboard } from '@/routes';
@@ -28,46 +27,33 @@ const { isOpen, close } = useSidebar();
 
 const sections = [
     {
+        title: 'ui.shell.nav.money',
         items: [
             { label: 'ui.shell.nav.dashboard', route: dashboard, icon: 'home' },
-        ],
-    },
-    {
-        title: 'ui.shell.nav.finances',
-        items: [
-            { label: 'ui.shell.nav.transactions', route: transactionsIndex, icon: 'list-bullet' },
-            { label: 'ui.shell.nav.import_csv', route: transactionsImport, icon: 'arrow-up-tray' },
-            { label: 'ui.shell.nav.incomes', route: incomesIndex, icon: 'arrow-up-circle' },
-            { label: 'ui.shell.nav.expenses', route: expensesIndex, icon: 'arrow-down-circle' },
-            { label: 'ui.shell.nav.transfers', route: transfersIndex, icon: 'arrows-right-left' },
-        ],
-    },
-    {
-        title: 'ui.shell.nav.accounts',
-        items: [
             { label: 'ui.shell.nav.banks_wallets', route: accountsIndex, icon: 'wallet' },
+            { label: 'ui.shell.nav.transactions', route: transactionsIndex, also: [incomesIndex, expensesIndex, transfersIndex], icon: 'list-bullet' },
+            { label: 'ui.shell.nav.import_csv', route: transactionsImport, icon: 'arrow-up-tray' },
         ],
     },
     {
-        title: 'ui.shell.nav.planning',
+        title: 'ui.shell.nav.plan',
         items: [
-            { label: 'ui.shell.nav.cash_flow', route: plannedEventsIndex, icon: 'calendar' },
+            { label: 'ui.shell.nav.cash_flow', route: plannedEventsIndex, icon: 'calendar', badge: 'reviewCount' },
             { label: 'ui.shell.nav.buckets', route: bucketsIndex, icon: 'chart-pie' },
+            { label: 'ui.shell.nav.projects', route: projectsIndex, icon: 'folder' },
             { label: 'ui.shell.nav.wish_list', route: wishlistIndex, icon: 'flag' },
             { label: 'ui.shell.nav.planner', route: plannerIndex, icon: 'scale' },
-            { label: 'ui.shell.nav.savings_goals', route: savingsGoalsIndex, icon: 'flag' },
-            { label: 'ui.shell.nav.recurring_expenses', route: recurringTransactionsIndex, icon: 'arrow-path' },
         ],
     },
     {
-        title: 'ui.shell.nav.reports',
+        title: 'ui.shell.nav.insights',
         items: [
             { label: 'ui.shell.nav.monthly', route: reportsMonthly, icon: 'document-chart-bar' },
             { label: 'ui.shell.nav.annual', route: reportsAnnual, icon: 'document-chart-bar' },
             { label: 'ui.shell.nav.custom', route: reportsCustom, icon: 'document-chart-bar' },
             { label: 'ui.shell.nav.forecast', route: reportsForecast, icon: 'arrow-trending-up' },
-            { label: 'ui.shell.nav.buckets', route: reportsBuckets, icon: 'chart-pie' },
-            { label: 'ui.shell.nav.projects', route: reportsProjects, icon: 'flag' },
+            { label: 'ui.shell.nav.reports_buckets', route: reportsBuckets, icon: 'chart-pie' },
+            { label: 'ui.shell.nav.reports_projects', route: reportsProjects, icon: 'flag' },
         ],
     },
     {
@@ -82,7 +68,32 @@ const sections = [
     },
 ];
 
-const isActive = (routeFn) => computed(() => page.url === routeFn.url());
+const pathOf = (url) => new URL(url, window.location.origin).pathname.replace(/\/+$/, '') || '/';
+
+/** Every address an item answers for: its own, and the pages that belong to it (the Transactions item also covers the incomes, expenses and transfers lists). */
+const pathsOf = (item) => [item.route, ...(item.also ?? [])].map((route) => pathOf(route.url()));
+
+/*
+ * The active item is the one with the longest address that is a prefix of the current path (query string ignored),
+ * so /finances/transactions?page=2 highlights Transactions, /finances/transactions/import only Import CSV,
+ * /finances/expenses Transactions too, and /planning/buckets/1/history Buckets, while /reports/buckets highlights
+ * the Bucket report.
+ */
+const activeUrl = computed(() => {
+    const current = pathOf(page.url);
+    let best = null;
+
+    sections.forEach((section) => section.items.forEach((item) => pathsOf(item).forEach((candidate) => {
+        const matches = current === candidate || (candidate !== '/' && current.startsWith(`${candidate}/`));
+        if (matches && (best === null || candidate.length > best.length)) {
+            best = candidate;
+        }
+    })));
+
+    return best;
+});
+
+const isActive = (item) => pathsOf(item).includes(activeUrl.value);
 </script>
 
 <template>
@@ -109,13 +120,18 @@ const isActive = (routeFn) => computed(() => page.url === routeFn.url());
                         <Link
                             :href="item.route.url()"
                             class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition"
-                            :class="isActive(item.route).value
+                            :class="isActive(item)
                                 ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-400'
                                 : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'"
                             @click="close"
                         >
                             <DynamicIcon :name="item.icon" class="h-5 w-5 shrink-0" />
-                            {{ $t(item.label) }}
+                            <span class="flex-1">{{ $t(item.label) }}</span>
+                            <span
+                                v-if="item.badge && page.props[item.badge] > 0"
+                                class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-500/20 dark:text-red-300"
+                                :title="$t('ui.shell.review_badge', { count: page.props[item.badge] })"
+                            >{{ page.props[item.badge] }}</span>
                         </Link>
                     </li>
                 </ul>

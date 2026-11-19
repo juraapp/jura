@@ -2,9 +2,11 @@
 import { ref } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
+import MoneyMapStrip from '@/Components/MoneyMapStrip.vue';
 import ModalForm from '@/Components/ModalForm.vue';
 import Modal from '@/Components/Modal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -38,6 +40,7 @@ const form = useForm({
     color: '#2563eb',
     masked_number: '',
     is_active: true,
+    on_budget: true,
     notes: '',
 });
 
@@ -61,6 +64,7 @@ const openEditModal = (account) => {
     form.color = account.color;
     form.masked_number = account.masked_number ?? '';
     form.is_active = account.is_active;
+    form.on_budget = account.on_budget;
     form.notes = account.notes ?? '';
     showModal.value = true;
 };
@@ -98,20 +102,19 @@ const deleteAccount = () => {
 <template>
     <Head :title="$t('ui.accounts.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    {{ $t('ui.accounts.title') }}
-                </h2>
-                <PrimaryButton type="button" @click="openCreateModal">
-                    <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                    {{ $t('ui.accounts.new') }}
-                </PrimaryButton>
-            </div>
+            <PageHeader :title="$t('ui.accounts.title')">
+                <template #actions>
+                    <PrimaryButton type="button" @click="openCreateModal">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.accounts.new') }}
+                    </PrimaryButton>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div>
             <EmptyState
                 v-if="accounts.length === 0"
                 icon="wallet"
@@ -120,13 +123,15 @@ const deleteAccount = () => {
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.accounts.create_first') }}
                     </PrimaryButton>
                 </template>
             </EmptyState>
 
-            <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <MoneyMapStrip v-if="accounts.length > 0" class="mb-6" />
+
+            <div v-if="accounts.length > 0" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div
                     v-for="account in accounts"
                     :key="account.id"
@@ -148,12 +153,19 @@ const deleteAccount = () => {
                                     <template v-if="account.masked_number"> &middot; {{ account.masked_number }}</template>
                                     <template v-if="!account.is_active"> &middot; {{ $t('ui.accounts.archived') }}</template>
                                 </p>
+                                <span
+                                    v-if="!account.on_budget"
+                                    class="mt-1 inline-block rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                                    :title="$t('ui.accounts.off_budget_hint')"
+                                >{{ $t('ui.accounts.off_budget') }}</span>
                             </div>
                         </div>
 
                         <div class="flex items-center gap-1">
                             <button
                                 type="button"
+                                :title="$t('ui.common.edit')"
+                                :aria-label="$t('ui.common.edit')"
                                 class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
                                 @click="openEditModal(account)"
                             >
@@ -161,6 +173,8 @@ const deleteAccount = () => {
                             </button>
                             <button
                                 type="button"
+                                :title="$t('ui.common.delete')"
+                                :aria-label="$t('ui.common.delete')"
                                 class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
                                 @click="confirmDelete(account)"
                             >
@@ -264,6 +278,15 @@ const deleteAccount = () => {
                     <input v-model="form.is_active" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600">
                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $t('ui.accounts.active') }}</span>
                 </label>
+
+                <div>
+                    <label class="flex items-center gap-2">
+                        <input v-model="form.on_budget" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ $t('ui.accounts.on_budget') }}</span>
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $t('ui.accounts.on_budget_hint') }}</p>
+                    <InputError class="mt-1" :message="form.errors.on_budget" />
+                </div>
             </form>
 
             <template #footer>

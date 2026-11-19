@@ -11,6 +11,22 @@ enum ForecastView: string
     case Expected = 'expected';
     case Optimistic = 'optimistic';
 
+    /**
+     * The view every forecast uses unless the user picks another: confirmed and expected income.
+     */
+    public static function default(): self
+    {
+        return self::Expected;
+    }
+
+    /**
+     * The view named in a request, or the default when it is missing or unknown.
+     */
+    public static function fromRequest(?string $value): self
+    {
+        return self::tryFrom((string) $value) ?? self::default();
+    }
+
     public function label(): string
     {
         return __('enums.forecast_view.'.$this->value);

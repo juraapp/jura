@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'project_id', 'bucket_id', 'name', 'price', 'currency', 'importance', 'desired_by', 'allowed_account_ids',
-    'status', 'purchased_on', 'purchased_transaction_id', 'purchase_allocation_id', 'url', 'notes',
+    'status', 'purchased_on', 'purchased_transaction_id', 'purchase_allocation_id', 'completion_allocation_ids', 'url', 'notes',
 ])]
 class WishlistItem extends Model
 {
@@ -27,6 +27,7 @@ class WishlistItem extends Model
             'importance' => 'integer',
             'desired_by' => 'date',
             'purchased_on' => 'date',
+            'completion_allocation_ids' => 'array',
             'allowed_account_ids' => 'array',
             'status' => WishlistStatus::class,
         ];
@@ -47,6 +48,14 @@ class WishlistItem extends Model
     public function bucket(): BelongsTo
     {
         return $this->belongsTo(Bucket::class);
+    }
+
+    /**
+     * The bucket that pays for this item: its own, or else its project's.
+     */
+    protected function fundingBucket(): Attribute
+    {
+        return Attribute::get(fn (): ?Bucket => $this->bucket ?? $this->project?->bucket);
     }
 
     public function purchasedTransaction(): BelongsTo

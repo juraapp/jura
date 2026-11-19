@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
@@ -91,20 +92,19 @@ const deleteCategory = () => {
 <template>
     <Head :title="$t('ui.categories.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    {{ $t('ui.categories.title') }}
-                </h2>
-                <PrimaryButton type="button" @click="openCreateModal">
-                    <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
-                    {{ $t('ui.categories.new') }}
-                </PrimaryButton>
-            </div>
+            <PageHeader :title="$t('ui.categories.title')">
+                <template #actions>
+                    <PrimaryButton type="button" @click="openCreateModal">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.categories.new') }}
+                    </PrimaryButton>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <EmptyState
                 v-if="expenseCategories.length === 0 && incomeCategories.length === 0"
                 icon="tag"
@@ -113,7 +113,7 @@ const deleteCategory = () => {
             >
                 <template #action>
                     <PrimaryButton type="button" @click="openCreateModal">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.categories.create_first') }}
                     </PrimaryButton>
                 </template>
@@ -146,6 +146,8 @@ const deleteCategory = () => {
                             <div v-if="category.editable" class="flex items-center gap-1">
                                 <button
                                     type="button"
+                                    :title="$t('ui.common.edit')"
+                                    :aria-label="$t('ui.common.edit')"
                                     class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
                                     @click="openEditModal(category)"
                                 >
@@ -153,6 +155,8 @@ const deleteCategory = () => {
                                 </button>
                                 <button
                                     type="button"
+                                    :title="$t('ui.common.delete')"
+                                    :aria-label="$t('ui.common.delete')"
                                     class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
                                     @click="confirmDelete(category)"
                                 >
@@ -231,7 +235,7 @@ const deleteCategory = () => {
             <div class="p-6">
                 <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ $t('ui.categories.delete_title') }}</h2>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    {{ $t('ui.common.cannot_be_undone') }}
+                    {{ $t('ui.categories.delete_hint') }}
                 </p>
 
                 <div class="mt-6 flex justify-end gap-3">

@@ -9,8 +9,10 @@ use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Planning\Enums\Certainty;
 use App\Modules\Planning\Enums\PlannedEventStatus;
+use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
+use App\Modules\Planning\Services\PlannedEventService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -135,6 +137,24 @@ class PlannedEventsTest extends TestCase
         $this->assertTrue($last->date->lte(Carbon::now()->addMonthsNoOverflow(12)));
         $this->assertGreaterThanOrEqual(12, PlannedEvent::count());
         $this->assertLessThanOrEqual(13, PlannedEvent::count());
+    }
+
+    public function test_a_series_that_started_in_the_past_only_creates_occurrences_from_today(): void
+    {
+        Carbon::setTestNow('2026-10-12 09:00:00');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/planning/cash-flow', $this->payload([
+            'type' => 'expense', 'description' => 'Rent', 'amount' => 1000, 'date' => '2026-01-12', 'frequency' => 'monthly',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame(0, PlannedEvent::where('date', '<', '2026-10-12')->count());
+        $this->assertSame('2026-10-12', PlannedEvent::orderBy('date')->first()->date->toDateString());
+        $this->assertSame(13, PlannedEvent::count());
+
+        $this->artisan('planning:extend-series')->assertSuccessful();
+        $this->assertSame(0, PlannedEvent::where('date', '<', '2026-10-12')->count());
+        $this->assertSame(13, PlannedEvent::count());
     }
 
     public function test_other_users_events_cannot_be_changed_or_reached(): void
@@ -384,6 +404,24 @@ class PlannedEventsTest extends TestCase
         $this->assertSame(PlannedEventStatus::Skipped, $event->fresh()->status);
     }
 
+    public function test_skipping_a_plan_whose_transaction_is_in_the_trash_forgets_that_transaction(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $event = PlannedEvent::factory()->for($user)->expense()->create(['amount' => 100]);
+        $this->actingAs($user)->post("/planning/cash-flow/{$event->id}/realize", ['account_id' => $account->id, 'category_id' => $category->id]);
+        $transaction = Transaction::firstOrFail();
+        $this->delete("/finances/transactions/{$transaction->id}")->assertRedirect();
+
+        $this->post("/planning/cash-flow/{$event->id}/skip")->assertRedirect();
+        $this->post("/settings/trash/transactions/{$transaction->id}/restore")->assertRedirect();
+
+        $event->refresh();
+        $this->assertSame(PlannedEventStatus::Skipped, $event->status, 'restoring the transaction does not realize a skipped plan');
+        $this->assertNull($event->realized_transaction_id);
+    }
+
     public function test_index_suggests_a_similar_real_transaction_as_a_match(): void
     {
         $user = User::factory()->create();
@@ -457,5 +495,166 @@ class PlannedEventsTest extends TestCase
 
         $this->assertGreaterThanOrEqual(12, $first);
         $this->assertSame($first, $series->events()->count());
+    }
+
+    public function test_a_series_keeps_notes_a_bucket_split_and_auto_post_and_copies_them_to_its_occurrences(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->income()->create(['user_id' => $user->id]);
+        $bucket = Bucket::factory()->for($user)->create(['currency' => 'COP']);
+        $start = Carbon::now()->addDays(5);
+
+        $this->actingAs($user)->post('/planning/cash-flow', $this->payload([
+            'date' => $start->toDateString(),
+            'frequency' => 'monthly',
+            'ends_on' => $start->copy()->addMonthsNoOverflow(1)->toDateString(),
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+            'notes' => 'Invoice by the 25th',
+            'auto_post' => true,
+            'allocation_overrides' => [['bucket_id' => $bucket->id, 'amount' => 300]],
+        ]))->assertSessionHasNoErrors();
+
+        $series = PlannedEventSeries::firstOrFail();
+        $this->assertTrue($series->auto_post);
+        $this->assertSame('Invoice by the 25th', $series->notes);
+        $this->assertSame([['bucket_id' => $bucket->id, 'amount' => '300.00']], $series->allocation_overrides);
+
+        $this->assertSame(2, PlannedEvent::count());
+        PlannedEvent::all()->each(function (PlannedEvent $event) use ($bucket) {
+            $this->assertTrue($event->auto_post);
+            $this->assertSame('Invoice by the 25th', $event->notes);
+            $this->assertSame([['bucket_id' => $bucket->id, 'amount' => '300.00']], $event->allocation_overrides);
+        });
+    }
+
+    public function test_auto_post_needs_an_active_account_and_a_category(): void
+    {
+        $user = User::factory()->create();
+        $archived = Account::factory()->for($user)->inactive()->create();
+
+        $this->actingAs($user)
+            ->post('/planning/cash-flow', $this->payload(['auto_post' => true]))
+            ->assertSessionHasErrors(['account_id', 'category_id']);
+
+        $this->actingAs($user)
+            ->post('/planning/cash-flow', $this->payload(['auto_post' => true, 'account_id' => $archived->id]))
+            ->assertSessionHasErrors(['account_id', 'category_id']);
+
+        $this->actingAs($user)
+            ->post('/planning/cash-flow', $this->payload(['account_id' => $archived->id]))
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_an_expense_never_keeps_a_bucket_split(): void
+    {
+        $user = User::factory()->create();
+        $bucket = Bucket::factory()->for($user)->create();
+
+        $this->actingAs($user)->post('/planning/cash-flow', $this->payload([
+            'type' => 'expense',
+            'allocation_overrides' => [['bucket_id' => $bucket->id, 'amount' => 300]],
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertNull(PlannedEvent::firstOrFail()->allocation_overrides);
+    }
+
+    public function test_future_scope_also_updates_notes_and_auto_post(): void
+    {
+        [$user, $events] = $this->userWithMonthlySeries();
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->income()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)->patch("/planning/cash-flow/{$events[1]->id}", $this->payload([
+            'date' => $events[1]->date->toDateString(),
+            'scope' => 'future',
+            'notes' => 'New rate',
+            'auto_post' => true,
+            'account_id' => $account->id,
+            'category_id' => $category->id,
+        ]))->assertSessionHasNoErrors();
+
+        $fresh = PlannedEvent::orderBy('date')->get();
+        $this->assertNull($fresh[0]->notes);
+        $this->assertFalse($fresh[0]->auto_post);
+        $this->assertSame('New rate', $fresh[3]->notes);
+        $this->assertTrue($fresh[3]->auto_post);
+        $this->assertSame('New rate', PlannedEventSeries::firstOrFail()->notes);
+    }
+
+    public function test_an_inactive_series_is_never_materialized_or_extended(): void
+    {
+        $user = User::factory()->create();
+        $series = PlannedEventSeries::factory()->for($user)->create([
+            'starts_on' => Carbon::now()->toDateString(),
+            'is_active' => false,
+        ]);
+
+        $this->artisan('planning:extend-series')->assertSuccessful();
+
+        $this->assertSame(0, $series->events()->count());
+    }
+
+    public function test_one_click_realize_takes_everything_from_the_plan_and_keeps_an_overdue_plans_date(): void
+    {
+        Carbon::setTestNow('2026-10-12 09:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $event = PlannedEvent::factory()->for($user)->expense()->create([
+            'amount' => 45, 'date' => '2026-10-08', 'account_id' => $account->id, 'category_id' => $category->id, 'description' => 'Water',
+        ]);
+
+        $this->actingAs($user)->post("/planning/cash-flow/{$event->id}/realize")->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        $transaction = Transaction::sole();
+        $this->assertSame('2026-10-08', $transaction->date->toDateString());
+        $this->assertSame('45.00', $transaction->amount->toDecimalString());
+        $this->assertSame($category->id, $transaction->category_id);
+        $this->assertFalse($transaction->is_recurring_generated);
+    }
+
+    public function test_realizing_rejects_a_date_after_today(): void
+    {
+        Carbon::setTestNow('2026-10-12 09:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $event = PlannedEvent::factory()->for($user)->expense()->create(['account_id' => $account->id, 'category_id' => $category->id]);
+
+        $this->actingAs($user)->post("/planning/cash-flow/{$event->id}/realize", ['date' => '2026-10-13'])->assertSessionHasErrors('date');
+
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_the_form_gets_frequencies_certainties_and_only_the_users_buckets(): void
+    {
+        $user = User::factory()->create();
+        $bucket = Bucket::factory()->for($user)->create(['currency' => 'USD']);
+        Bucket::factory()->create();
+
+        $this->actingAs($user)->getJson('/planning/cash-flow/form-options')->assertOk()
+            ->assertJsonCount(4, 'frequencies')
+            ->assertJsonCount(3, 'certainties')
+            ->assertJsonCount(1, 'buckets')
+            ->assertJsonPath('buckets.0.id', $bucket->id)
+            ->assertJsonPath('buckets.0.currency', 'USD');
+    }
+
+    public function test_an_old_overdue_plan_only_matches_transactions_up_to_ten_days_after_its_date(): void
+    {
+        Carbon::setTestNow('2026-11-10 09:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        Transaction::factory()->for($user)->for($account)->create(['type' => 'expense', 'amount' => 100, 'date' => '2026-10-15']);
+        $old = PlannedEvent::factory()->for($user)->expense()->create(['amount' => 100, 'currency' => 'COP', 'date' => '2026-10-01']);
+        $recent = PlannedEvent::factory()->for($user)->expense()->create(['amount' => 100, 'currency' => 'COP', 'date' => '2026-11-02']);
+        Transaction::factory()->for($user)->for($account)->create(['type' => 'expense', 'amount' => 100, 'date' => '2026-11-10']);
+
+        $matches = app(PlannedEventService::class)->suggestedMatches($user, collect([$old, $recent]));
+
+        $this->assertNull($matches[$old->id], 'a transaction 14 days later is too far');
+        $this->assertNotNull($matches[$recent->id], 'a recent overdue plan still looks up to today');
     }
 }

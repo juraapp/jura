@@ -18,8 +18,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'series_id', 'type', 'description', 'amount', 'currency', 'date', 'account_id',
+    'series_id', 'series_date', 'type', 'description', 'amount', 'currency', 'date', 'account_id', 'counter_account_id',
     'category_id', 'certainty', 'status', 'realized_transaction_id', 'allocation_overrides', 'notes',
+    'auto_post', 'post_error',
 ])]
 class PlannedEvent extends Model
 {
@@ -31,9 +32,11 @@ class PlannedEvent extends Model
             'type' => TransactionType::class,
             'amount' => AsMoney::class,
             'date' => 'date',
+            'series_date' => 'date',
             'certainty' => Certainty::class,
             'status' => PlannedEventStatus::class,
             'allocation_overrides' => 'array',
+            'auto_post' => 'boolean',
         ];
     }
 
@@ -59,6 +62,14 @@ class PlannedEvent extends Model
         return $this->belongsTo(Account::class);
     }
 
+    /**
+     * The destination of a planned transfer (account_id is where the money leaves).
+     */
+    public function counterAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'counter_account_id');
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
@@ -72,5 +83,10 @@ class PlannedEvent extends Model
     public function isIncome(): bool
     {
         return $this->type === TransactionType::Income;
+    }
+
+    public function isTransfer(): bool
+    {
+        return $this->type === TransactionType::TransferOut;
     }
 }

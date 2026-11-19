@@ -12,7 +12,9 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Ledger\Services\TransactionService;
+use App\Modules\Planning\Contracts\UpcomingPlans;
 use App\Modules\Shared\Http\Controllers\Controller;
+use App\Modules\Shared\Validation\PlanningRules;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
@@ -26,11 +28,15 @@ class TransactionController extends Controller
 {
     private const BULK_LIMIT = 2000;
 
-    public function index(Request $request, string $type = 'all'): Response
+    /** How far ahead the list shows upcoming plans. */
+    private const PLANNED_DAYS = 30;
+
+    public function index(Request $request, UpcomingPlans $plans, string $type = 'all'): Response
     {
         $query = $this->filteredQuery($type, $request->only(['account', 'category', 'from', 'to', 'q']));
 
         $transactions = $query->paginate(15)->withQueryString();
+        $provenance = $plans->provenance($request->user(), $transactions->pluck('id')->all());
 
         $counterparts = Transaction::whereIn('transfer_group_id', $transactions->pluck('transfer_group_id')->filter())
             ->with('account:id,name')
@@ -59,14 +65,30 @@ class TransactionController extends Controller
             ] : null,
             'counterpartAccount' => $counterparts->get($transaction->transfer_group_id)
                 ?->firstWhere('id', '!=', $transaction->id)?->account?->name,
+            'autoPosted' => (bool) $transaction->is_recurring_generated,
+            'plan' => $provenance[$transaction->id] ?? null,
         ]);
+
+        // Upcoming and overdue plans sit above the first page of the list; a date range or a later page is history.
+        $showPlans = $transactions->currentPage() === 1 && ! $request->filled('from') && ! $request->filled('to');
 
         return Inertia::render('Transactions/Index', [
             'typeFilter' => $type,
             'transactions' => $transactions,
-            'accounts' => Account::orderBy('name')->get(['id', 'name']),
+            'accounts' => Account::orderBy('name')->get(['id', 'name', 'currency']),
             'categories' => Category::orderBy('name')->get(['id', 'name', 'type']),
             'filters' => $request->only(['account', 'category', 'from', 'to', 'q']),
+            'planned' => $showPlans
+                ? Inertia::defer(fn () => $plans->listBands($request->user(), self::PLANNED_DAYS, [
+                    'account' => $request->integer('account') ?: null,
+                    'category' => $request->integer('category') ?: null,
+                    'type' => match ($type) {
+                        'all' => null,
+                        'transfer' => 'transfer_out',
+                        default => $type,
+                    },
+                ]), 'planned')
+                : null,
         ]);
     }
 
@@ -184,7 +206,7 @@ class TransactionController extends Controller
     public function formOptions(): JsonResponse
     {
         return response()->json([
-            'accounts' => Account::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'accounts' => Account::where('is_active', true)->orderBy('name')->get(['id', 'name', 'currency', 'on_budget']),
             'expenseCategories' => Category::where('type', CategoryType::Expense)->orderBy('name')->get(['id', 'name']),
             'incomeCategories' => Category::where('type', CategoryType::Income)->orderBy('name')->get(['id', 'name']),
         ]);
@@ -207,6 +229,7 @@ class TransactionController extends Controller
                 'type' => 'transfer',
                 'from_account_id' => $out?->account_id,
                 'to_account_id' => $in?->account_id,
+                'accounts' => $this->editAccounts([$out?->account_id, $in?->account_id]),
                 'amount' => $transaction->amount->toFloat(),
                 'date' => $transaction->date->toDateString(),
                 'time' => $transaction->time,
@@ -219,6 +242,7 @@ class TransactionController extends Controller
             'id' => $transaction->id,
             'type' => $transaction->type->value,
             'account_id' => $transaction->account_id,
+            'accounts' => $this->editAccounts([$transaction->account_id]),
             'category_id' => $transaction->category_id,
             'amount' => $transaction->amount->toFloat(),
             'date' => $transaction->date->toDateString(),
@@ -226,7 +250,20 @@ class TransactionController extends Controller
             'description' => $transaction->description,
             'notes' => $transaction->notes,
             'payment_method' => $transaction->payment_method?->value,
+            'bucket_id' => $transaction->bucket_id,
+            'bucket_locked' => PlanningRules::isWishlistPurchase(Auth::id(), $transaction->id),
         ]);
+    }
+
+    /**
+     * The accounts a transaction being edited uses, including inactive ones the form options leave out.
+     *
+     * @param  array<int, int|null>  $accountIds
+     * @return Collection<int, Account>
+     */
+    private function editAccounts(array $accountIds): Collection
+    {
+        return Account::whereIn('id', array_filter($accountIds))->get(['id', 'name', 'currency', 'is_active', 'on_budget']);
     }
 
     public function store(StoreTransactionRequest $request, TransactionService $service): RedirectResponse

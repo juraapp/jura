@@ -1,6 +1,12 @@
 <script setup>
+import { Link } from '@inertiajs/vue3';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
 
+/**
+ * The zero-rows state of a list. With `actionLabel` it shows its main action as a primary button: a link to
+ * `actionHref`, or (without one) a button that emits `action`. The #action slot still works for anything else.
+ */
 defineProps({
     title: {
         type: String,
@@ -14,7 +20,21 @@ defineProps({
         type: String,
         default: 'inbox',
     },
+    actionLabel: {
+        type: String,
+        default: null,
+    },
+    actionIcon: {
+        type: String,
+        default: null,
+    },
+    actionHref: {
+        type: String,
+        default: null,
+    },
 });
+
+defineEmits(['action']);
 </script>
 
 <template>
@@ -29,8 +49,17 @@ defineProps({
             {{ description }}
         </p>
 
-        <div v-if="$slots.action" class="mt-5">
-            <slot name="action" />
+        <div v-if="actionLabel || $slots.action" class="mt-5">
+            <slot name="action">
+                <PrimaryButton v-if="actionHref" :as="Link" :href="actionHref">
+                    <DynamicIcon v-if="actionIcon" :name="actionIcon" class="h-4 w-4" />
+                    {{ actionLabel }}
+                </PrimaryButton>
+                <PrimaryButton v-else type="button" @click="$emit('action')">
+                    <DynamicIcon v-if="actionIcon" :name="actionIcon" class="h-4 w-4" />
+                    {{ actionLabel }}
+                </PrimaryButton>
+            </slot>
         </div>
     </div>
 </template>

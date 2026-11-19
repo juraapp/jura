@@ -12,6 +12,11 @@ class ProjectPolicy
         return true;
     }
 
+    public function view(User $user, Project $project): bool
+    {
+        return $user->id === $project->user_id;
+    }
+
     public function create(User $user): bool
     {
         return true;

@@ -3,8 +3,12 @@
 namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\PlannedEventSeries;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -180,5 +184,39 @@ class CategoriesTest extends TestCase
 
         $this->assertDatabaseHas('categories', ['id' => $system->id, 'deleted_at' => null]);
         $this->assertDatabaseHas('categories', ['id' => $foreign->id, 'deleted_at' => null]);
+    }
+
+    public function test_a_category_used_by_a_repeating_plan_bucket_or_open_plan_cannot_be_deleted(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $forSeries = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $forBucket = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $forPlan = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $free = Category::factory()->expense()->create(['user_id' => $user->id]);
+        PlannedEventSeries::factory()->for($user)->create(['type' => 'expense', 'account_id' => $account->id, 'category_id' => $forSeries->id]);
+        Bucket::factory()->for($user)->create(['category_id' => $forBucket->id]);
+        PlannedEvent::factory()->for($user)->create(['type' => 'expense', 'category_id' => $forPlan->id]);
+
+        $this->actingAs($user)->delete("/settings/categories/{$forSeries->id}")->assertSessionHas('error');
+        $this->post('/settings/categories/bulk-delete', ['ids' => [$forBucket->id, $forPlan->id, $free->id]])->assertRedirect();
+
+        $this->assertNotSoftDeleted('categories', ['id' => $forSeries->id]);
+        $this->assertNotSoftDeleted('categories', ['id' => $forBucket->id]);
+        $this->assertNotSoftDeleted('categories', ['id' => $forPlan->id]);
+        $this->assertSoftDeleted('categories', ['id' => $free->id]);
+    }
+
+    public function test_a_trashed_category_still_used_by_a_repeating_plan_cannot_be_purged(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        PlannedEventSeries::factory()->for($user)->create(['type' => 'expense', 'account_id' => $account->id, 'category_id' => $category->id]);
+        $category->delete();
+
+        $this->actingAs($user)->delete("/settings/trash/categories/{$category->id}")->assertSessionHas('error');
+
+        $this->assertSoftDeleted('categories', ['id' => $category->id]);
     }
 }

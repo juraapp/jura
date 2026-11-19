@@ -13,31 +13,30 @@ use App\Modules\Planning\Http\Requests\Wishlist\UpdateWishlistItemRequest;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\Project;
 use App\Modules\Planning\Models\WishlistItem;
-use App\Modules\Planning\Services\BucketLedger;
+use App\Modules\Planning\Services\ProjectOverview;
 use App\Modules\Planning\Services\WishlistService;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Http\Requests\BulkIdsRequest;
 use App\Modules\Shared\Support\Money;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Collection;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class WishlistItemController extends Controller
 {
-    public function index(BucketLedger $funds, LedgerQuery $ledger): Response
+    public function index(Request $request, ProjectOverview $overview, LedgerQuery $ledger): Response
     {
         $this->authorize('viewAny', WishlistItem::class);
 
-        $items = WishlistItem::with(['bucket', 'project'])->orderBy('id')->get();
-        $available = $items->pluck('bucket')->filter()->unique('id')
-            ->mapWithKeys(fn (Bucket $bucket) => [$bucket->id => $funds->available($bucket)]);
+        $items = WishlistItem::with(['bucket', 'project.bucket'])->orderBy('id')->get();
+        $covered = $overview->coverage($items->where('status', WishlistStatus::Wanted));
 
         $currencies = Auth::user()->accounts()->pluck('currency')->unique()->sort()->values();
 
         return Inertia::render('Wishlist/Index', [
-            'projects' => Project::orderBy('name')->get()->map(fn (Project $project) => [
+            'projects' => Project::with('bucket')->orderBy('name')->get()->map(fn (Project $project) => [
                 'id' => $project->id,
                 'name' => $project->name,
                 'kind' => $project->kind->value,
@@ -45,29 +44,49 @@ class WishlistItemController extends Controller
                 'color' => $project->color,
                 'icon' => $project->icon,
                 'notes' => $project->notes,
+                'currency' => $project->currency,
+                'budget' => $project->budget_amount?->toFloat(),
+                'targetDate' => $project->target_date?->toDateString(),
+                'bucket' => $project->bucket ? ['id' => $project->bucket->id, 'name' => $project->bucket->name] : null,
             ])->values(),
-            'items' => $items->map(fn (WishlistItem $item) => $this->present($item, $available))->values(),
-            'buckets' => Bucket::inPriorityOrder()->where('kind', BucketKind::Savings->value)->get(['id', 'name', 'currency', 'allowed_account_ids']),
-            'accounts' => $ledger->activeAccountOptions(),
-            'categories' => $ledger->categoryOptions(CategoryType::Expense, ['id', 'name', 'icon', 'color']),
+            'newItemProject' => ($projectId = (int) $request->query('project')) > 0 && Project::whereKey($projectId)->exists() ? $projectId : null,
+            'items' => $items->map(fn (WishlistItem $item) => $this->present($item, $covered))->values(),
+            'buckets' => Bucket::inPriorityOrder()->where('kind', BucketKind::Savings->value)->get()->map(fn (Bucket $bucket) => [
+                'id' => $bucket->id,
+                'name' => $bucket->name,
+                'currency' => $bucket->currency,
+                'allowed_account_ids' => $bucket->allowed_account_ids,
+                'cap' => $bucket->cap_amount?->toFloat(),
+            ])->values(),
+            'accounts' => $ledger->activeAccountOptions(Auth::id()),
+            'categories' => $ledger->categoryOptions(Auth::id(), CategoryType::Expense, ['id', 'name', 'icon', 'color']),
             'currencies' => $currencies->isEmpty() ? collect([Auth::user()->currency_default]) : $currencies,
             'projectKinds' => collect(ProjectKind::cases())->map(fn (ProjectKind $kind) => ['value' => $kind->value, 'label' => $kind->label()]),
         ]);
     }
 
-    public function store(StoreWishlistItemRequest $request): RedirectResponse
+    public function store(StoreWishlistItemRequest $request, WishlistService $service): RedirectResponse
     {
-        $item = new WishlistItem($this->attributes($request->validated(), $request->user()->currency_default));
+        $data = $request->validated();
+        $attributes = $this->attributes($data, $request->user()->currency_default);
+        if (! empty($data['new_bucket'])) {
+            $attributes['bucket_id'] = $service->createBucketFor($request->user(), $data + ['currency' => $attributes['currency']])->id;
+        }
+
+        $item = new WishlistItem($attributes);
         $item->user_id = $request->user()->id;
         $item->save();
 
         return back()->with('success', __('wishlist.saved'));
     }
 
-    public function update(UpdateWishlistItemRequest $request, WishlistItem $wishlistItem): RedirectResponse
+    public function update(UpdateWishlistItemRequest $request, WishlistItem $wishlistItem, WishlistService $service): RedirectResponse
     {
         $data = $request->validated();
         $attributes = $this->attributes($data, $wishlistItem->currency);
+        if (! empty($data['new_bucket'])) {
+            $attributes['bucket_id'] = $service->createBucketFor($request->user(), $data + ['currency' => $attributes['currency']])->id;
+        }
 
         if ($wishlistItem->status !== WishlistStatus::Purchased && isset($data['status'])) {
             $attributes['status'] = $data['status'];
@@ -145,14 +164,14 @@ class WishlistItemController extends Controller
     }
 
     /**
-     * @param  Collection<int, Money>  $available  funded money by bucket id
+     * @param  array<int, Money>  $covered  what each wanted item's bucket covers, by item id
      * @return array<string, mixed>
      */
-    private function present(WishlistItem $item, Collection $available): array
+    private function present(WishlistItem $item, array $covered): array
     {
         $funded = null;
-        if ($item->bucket !== null && $item->price->isPositive()) {
-            $funded = max(0, min(100, $available->get($item->bucket_id, Money::zero())->percentageOf($item->price)));
+        if ($item->fundingBucket !== null && $item->price->isPositive() && isset($covered[$item->id])) {
+            $funded = max(0, min(100, $covered[$item->id]->percentageOf($item->price)));
         }
 
         return [
@@ -167,6 +186,7 @@ class WishlistItemController extends Controller
             'purchasedOn' => $item->purchased_on?->toDateString(),
             'projectId' => $item->project_id,
             'bucket' => $item->bucket ? ['id' => $item->bucket->id, 'name' => $item->bucket->name] : null,
+            'projectBucket' => $item->bucket === null && $item->fundingBucket ? ['id' => $item->fundingBucket->id, 'name' => $item->fundingBucket->name] : null,
             'allowedAccountIds' => $item->allowed_account_ids ?? [],
             'fundedPercent' => $funded,
             'url' => $item->url,

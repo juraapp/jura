@@ -11,10 +11,9 @@ use App\Modules\Ledger\Http\Controllers\TrashController;
 use App\Modules\Notifications\Http\Controllers\NotificationController;
 use App\Modules\Planning\Http\Controllers\BucketController;
 use App\Modules\Planning\Http\Controllers\PlannedEventController;
+use App\Modules\Planning\Http\Controllers\PlannedSeriesController;
 use App\Modules\Planning\Http\Controllers\PlannerController;
 use App\Modules\Planning\Http\Controllers\ProjectController;
-use App\Modules\Planning\Http\Controllers\RecurringTransactionController;
-use App\Modules\Planning\Http\Controllers\SavingsGoalController;
 use App\Modules\Planning\Http\Controllers\WishlistItemController;
 use App\Modules\Reporting\Http\Controllers\DashboardController;
 use App\Modules\Reporting\Http\Controllers\ReportController;
@@ -65,17 +64,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');
     Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
 
-    Route::get('planning/goals', [SavingsGoalController::class, 'index'])->name('savings-goals.index');
-    Route::post('planning/goals', [SavingsGoalController::class, 'store'])->name('savings-goals.store');
-    Route::patch('planning/goals/{savingsGoal}', [SavingsGoalController::class, 'update'])->name('savings-goals.update');
-    Route::delete('planning/goals/{savingsGoal}', [SavingsGoalController::class, 'destroy'])->name('savings-goals.destroy');
-    Route::post('planning/goals/bulk-delete', [SavingsGoalController::class, 'bulkDestroy'])->name('savings-goals.bulk-delete');
-    Route::post('planning/goals/{id}/restore', [SavingsGoalController::class, 'restore'])->name('savings-goals.restore');
-    Route::delete('planning/goals/{id}/force', [SavingsGoalController::class, 'forceDestroy'])->name('savings-goals.force-destroy');
-    Route::post('planning/goals/{savingsGoal}/contributions', [SavingsGoalController::class, 'contribute'])->name('savings-goals.contribute');
     Route::redirect('planning/budgets', '/planning/buckets');
+    Route::redirect('planning/goals', '/planning/buckets');
     Route::get('planning/buckets', [BucketController::class, 'index'])->name('buckets.index');
     Route::post('planning/buckets', [BucketController::class, 'store'])->name('buckets.store');
+    Route::get('planning/buckets/spend-options', [BucketController::class, 'spendOptions'])->name('buckets.spend-options');
     Route::patch('planning/buckets/{bucket}', [BucketController::class, 'update'])->name('buckets.update');
     Route::delete('planning/buckets/{bucket}', [BucketController::class, 'destroy'])->name('buckets.destroy');
     Route::post('planning/buckets/bulk-delete', [BucketController::class, 'bulkDestroy'])->name('buckets.bulk-delete');
@@ -90,9 +83,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/buckets/{bucket}/adjust', [BucketController::class, 'adjust'])->name('buckets.adjust');
     Route::get('planning/wishlist', [WishlistItemController::class, 'index'])->name('wishlist.index');
     Route::post('planning/wishlist', [WishlistItemController::class, 'store'])->name('wishlist.store');
-    Route::post('planning/wishlist/projects', [ProjectController::class, 'store'])->name('projects.store');
-    Route::patch('planning/wishlist/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
-    Route::delete('planning/wishlist/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+    Route::get('planning/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::post('planning/projects/quick', [ProjectController::class, 'quickStore'])->name('projects.quick-store');
+    Route::get('planning/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::post('planning/projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::patch('planning/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
+    Route::delete('planning/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
     Route::patch('planning/wishlist/{wishlistItem}', [WishlistItemController::class, 'update'])->name('wishlist.update');
     Route::delete('planning/wishlist/{wishlistItem}', [WishlistItemController::class, 'destroy'])->name('wishlist.destroy');
     Route::post('planning/wishlist/bulk-delete', [WishlistItemController::class, 'bulkDestroy'])->name('wishlist.bulk-delete');
@@ -104,6 +100,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/planner/simulate', [PlannerController::class, 'simulate'])->name('planner.simulate');
     Route::delete('planning/planner/{scenario}', [PlannerController::class, 'destroy'])->name('planner.destroy');
     Route::get('planning/cash-flow', [PlannedEventController::class, 'index'])->name('planned-events.index');
+    Route::get('planning/cash-flow/form-options', [PlannedEventController::class, 'formOptions'])->name('planned-events.form-options');
     Route::post('planning/cash-flow', [PlannedEventController::class, 'store'])->name('planned-events.store');
     Route::patch('planning/cash-flow/{plannedEvent}', [PlannedEventController::class, 'update'])->name('planned-events.update');
     Route::delete('planning/cash-flow/{plannedEvent}', [PlannedEventController::class, 'destroy'])->name('planned-events.destroy');
@@ -112,12 +109,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('planning/cash-flow/{plannedEvent}/skip', [PlannedEventController::class, 'skip'])->name('planned-events.skip');
     Route::post('planning/cash-flow/{plannedEvent}/reopen', [PlannedEventController::class, 'reopen'])->name('planned-events.reopen');
     Route::post('planning/cash-flow/{plannedEvent}/link', [PlannedEventController::class, 'link'])->name('planned-events.link');
-    Route::get('planning/recurring', [RecurringTransactionController::class, 'index'])->name('recurring-transactions.index');
-    Route::post('planning/recurring', [RecurringTransactionController::class, 'store'])->name('recurring-transactions.store');
-    Route::patch('planning/recurring/{recurringTransaction}', [RecurringTransactionController::class, 'update'])->name('recurring-transactions.update');
-    Route::post('planning/recurring/bulk-delete', [RecurringTransactionController::class, 'bulkDestroy'])->name('recurring-transactions.bulk-delete');
-    Route::patch('planning/recurring/{recurringTransaction}/toggle', [RecurringTransactionController::class, 'toggleActive'])->name('recurring-transactions.toggle');
-    Route::delete('planning/recurring/{recurringTransaction}', [RecurringTransactionController::class, 'destroy'])->name('recurring-transactions.destroy');
+    Route::permanentRedirect('planning/recurring', '/planning/cash-flow?section=repeating');
+    Route::get('planning/series/{plannedEventSeries}/edit-data', [PlannedSeriesController::class, 'editData'])->name('planned-series.edit-data');
+    Route::patch('planning/series/{plannedEventSeries}', [PlannedSeriesController::class, 'update'])->name('planned-series.update');
+    Route::post('planning/series/{plannedEventSeries}/pause', [PlannedSeriesController::class, 'pause'])->name('planned-series.pause');
+    Route::post('planning/series/{plannedEventSeries}/resume', [PlannedSeriesController::class, 'resume'])->name('planned-series.resume');
+    Route::delete('planning/series/{plannedEventSeries}', [PlannedSeriesController::class, 'destroy'])->name('planned-series.destroy');
 
     Route::get('reports/monthly', [ReportController::class, 'monthly'])->name('reports.monthly');
     Route::get('reports/monthly/pdf', MonthlyReportPdfController::class)->name('reports.monthly.pdf');
@@ -146,7 +143,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/trash/categories/{id}', [TrashController::class, 'purgeCategory'])->name('trash.categories.purge');
     Route::get('settings/preferences', [PreferenceController::class, 'edit'])->name('preferences.edit');
     Route::patch('settings/preferences', [PreferenceController::class, 'update'])->name('preferences.update');
-    Route::get('settings/export', fn () => Inertia::render('ComingSoon', ['title' => 'Export my data']))->name('data-export.index');
+    Route::get('settings/export', fn () => Inertia::render('ComingSoon', ['titleKey' => 'ui.shell.nav.export_data']))->name('data-export.index');
 });
 
 require __DIR__.'/auth.php';

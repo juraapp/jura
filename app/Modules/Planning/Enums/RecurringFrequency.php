@@ -16,6 +16,19 @@ enum RecurringFrequency: string
         return __('enums.recurring_frequency.'.$this->value);
     }
 
+    /**
+     * Half of one period in days: how far from its rule date a moved occurrence still stands for that date.
+     */
+    public function halfPeriodDays(): int
+    {
+        return match ($this) {
+            self::Weekly => 3,
+            self::Biweekly => 7,
+            self::Monthly => 15,
+            self::Yearly => 182,
+        };
+    }
+
     public function addTo(Carbon $date): Carbon
     {
         return match ($this) {
@@ -23,20 +36,6 @@ enum RecurringFrequency: string
             self::Biweekly => $date->copy()->addWeeks(2),
             self::Monthly => $date->copy()->addMonthNoOverflow(),
             self::Yearly => $date->copy()->addYearNoOverflow(),
-        };
-    }
-
-    /**
-     * The date of the Nth occurrence after a start date, computed from the start
-     * (not by chaining) so month-end dates do not drift (Jan 31 -> Feb 28 -> Mar 31).
-     */
-    public function occurrence(Carbon $start, int $steps): Carbon
-    {
-        return match ($this) {
-            self::Weekly => $start->copy()->addWeeks($steps),
-            self::Biweekly => $start->copy()->addWeeks(2 * $steps),
-            self::Monthly => $start->copy()->addMonthsNoOverflow($steps),
-            self::Yearly => $start->copy()->addYearsNoOverflow($steps),
         };
     }
 }

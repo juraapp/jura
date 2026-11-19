@@ -23,7 +23,7 @@ class BudgetThresholdReached extends Notification
 
     public function toArray(object $notifiable): array
     {
-        $category = $this->bucket->category->name;
+        $category = $this->bucket->category?->name ?? $this->bucket->name;
 
         return [
             'type' => 'budget_alert',

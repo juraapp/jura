@@ -1,21 +1,26 @@
 <script setup>
+import NeedsReviewList from '@/Components/NeedsReviewList.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
 import StatCard from '@/Components/StatCard.vue';
 import BadgeVariation from '@/Components/BadgeVariation.vue';
 import Money from '@/Components/Money.vue';
+import MoneyMapStrip from '@/Components/MoneyMapStrip.vue';
 import { useDarkMode } from '@/composables/useDarkMode';
 import { CHART_PALETTE, formatCompact, formatMoney } from '@/chartPalette';
 import { index as accountsIndex } from '@/routes/accounts';
 import { index as plannedEventsIndex } from '@/routes/planned-events';
-import { index as transactionsIndex } from '@/routes/transactions';
 import { dashboard } from '@/routes';
 import { useFormat } from '@/composables/useFormat';
+import { useTransactionModal } from '@/composables/useTransactionModal';
 
 const format = useFormat();
+const { open: openTransactionModal } = useTransactionModal();
 const { t } = useI18n();
 
 const props = defineProps({
@@ -24,6 +29,7 @@ const props = defineProps({
     hasAnyTransaction: { type: Boolean, required: true },
     currencies: { type: Array, required: true },
     upcoming: { type: Array, default: () => [] },
+    needsReview: { type: Object, default: () => ({ count: 0, items: [] }) },
 });
 
 const page = usePage();
@@ -107,14 +113,12 @@ const netWorthEvolutionOptions = (currency) => ({
 <template>
     <Head :title="$t('ui.dashboard.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                {{ $t('ui.dashboard.title') }}
-            </h2>
+            <PageHeader :title="$t('ui.dashboard.title')" />
         </template>
 
-        <div class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-6">
             <EmptyState
                 v-if="!hasAnyAccount"
                 icon="wallet"
@@ -122,34 +126,34 @@ const netWorthEvolutionOptions = (currency) => ({
                 :description="$t('ui.dashboard.no_account_hint')"
             >
                 <template #action>
-                    <Link
-                        :href="accountsIndex().url"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-                    >
+                    <PrimaryButton :as="Link" :href="accountsIndex().url">
                         <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.dashboard.create_account') }}
-                    </Link>
-                </template>
-            </EmptyState>
-
-            <EmptyState
-                v-else-if="!hasAnyTransaction"
-                icon="list-bullet"
-                :title="$t('ui.dashboard.no_tx_title')"
-                :description="$t('ui.dashboard.no_tx_hint')"
-            >
-                <template #action>
-                    <Link
-                        :href="transactionsIndex().url"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-                    >
-                        <DynamicIcon name="plus" class="h-4 w-4" />
-                        {{ $t('ui.dashboard.new_transaction') }}
-                    </Link>
+                    </PrimaryButton>
                 </template>
             </EmptyState>
 
             <template v-else>
+                <!-- Accounts but no transactions yet: show balances, with a light nudge to record the first one -->
+                <div
+                    v-if="!hasAnyTransaction"
+                    class="flex flex-col gap-3 rounded-xl border border-primary-100 bg-primary-50/60 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-primary-500/20 dark:bg-primary-500/5"
+                >
+                    <div class="flex items-start gap-3">
+                        <DynamicIcon name="list-bullet" class="mt-0.5 h-5 w-5 shrink-0 text-primary-600 dark:text-primary-400" />
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ $t('ui.dashboard.no_tx_title') }}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ $t('ui.dashboard.no_tx_hint') }}</p>
+                        </div>
+                    </div>
+                    <PrimaryButton type="button" class="shrink-0" @click="openTransactionModal(null, 'expense')">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.dashboard.new_transaction') }}
+                    </PrimaryButton>
+                </div>
+
+                <MoneyMapStrip />
+
                 <!-- Total net worth never mixes currencies, one line per currency -->
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard :label="$t('ui.dashboard.total_net_worth')" icon="banknotes">
@@ -158,6 +162,11 @@ const netWorthEvolutionOptions = (currency) => ({
                         </div>
                     </StatCard>
                 </div>
+
+                <section v-if="needsReview.count > 0" class="rounded-xl border border-red-200 bg-red-50/40 p-4 dark:border-red-500/30 dark:bg-red-500/5">
+                    <h3 class="mb-2 text-sm font-semibold text-red-700 dark:text-red-300">{{ $t('ui.dashboard.needs_review', { count: needsReview.count }) }}</h3>
+                    <NeedsReviewList :review="needsReview" :see-all-url="plannedEventsIndex.url({ query: { section: 'review' } })" />
+                </section>
 
                 <!-- Projected, not recorded: kept visually apart from the real figures below -->
                 <div v-if="upcoming.length" class="rounded-xl border border-dashed border-primary-300 bg-primary-50/40 p-4 dark:border-primary-500/40 dark:bg-primary-500/5">

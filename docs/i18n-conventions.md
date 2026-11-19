@@ -12,17 +12,17 @@ look. Do not format numbers or dates by hand: use `useFormat()` in Vue and `$use
 ```
 lang/en/   accounts.php  buckets.php  categories.php  enums.php  insights.php
            messages.php  notifications.php  pdf.php  preferences.php
-           planned-events.php  planner.php  recurring-transactions.php  savings-goals.php  transactions.php  wishlist.php
+           planned-events.php  planner.php  transactions.php  wishlist.php
 lang/es/   (mirrors lang/en/ exactly, same keys)
 ```
 
 - One file per domain module for flash/action strings (`__('budgets.saved')`, `__('categories.has_transactions')`), following the flat-array style in e.g. `lang/en/accounts.php`.
-- `enums.php` — `label()` methods on every backend enum (`AccountType`, `CategoryType`, `TransactionType`, `PaymentMethod`, `RecurringFrequency`, `BudgetPeriodType`, `SavingsGoalStatus`) resolve through `__('enums.{enum_snake_case}.{value}')`.
+- `enums.php` — `label()` methods on every backend enum (`AccountType`, `CategoryType`, `TransactionType`, `PaymentMethod`, `RecurringFrequency`, `BudgetPeriodType`) resolve through `__('enums.{enum_snake_case}.{value}')`.
 - `messages.php` — cross-cutting strings not owned by one domain (CSV column headers under `messages.csv.*`, `TransactionImportService`'s error messages under `messages.import.*`).
 - `insights.php` — every templated sentence `InsightService` produces.
 - `.env`: `APP_LOCALE=en`, `APP_FALLBACK_LOCALE=en` — English is the source of truth; Spanish is the translation, not the default.
 
-`APP_LOCALE` is the default for guests. For signed-in users the `SetUserLocale` middleware (Shared, registered before `HandleInertiaRequests`) calls `App::setLocale()` with the saved `locale` preference, so server strings and the shared `i18n` props follow it. Vue pages still use English literals (see below), so changing the language only affects server-side text until those are migrated to `$t()`.
+`APP_LOCALE` is the default for guests. For signed-in users the `SetUserLocale` middleware (Shared, registered before `HandleInertiaRequests`) calls `App::setLocale()` with the saved `locale` preference, so server strings and the shared `i18n` props follow it. Outside a request (jobs, commands, listeners they trigger) there is no middleware: `User` implements `HasLocalePreference`, so a notification is always written in its owner's language (`preferredLocale()` returns English for a saved language the app does not have, like the middleware ignores one). Vue pages still use English literals (see below), so changing the language only affects server-side text until those are migrated to `$t()`.
 
 ## Server → client bridge
 
@@ -39,6 +39,6 @@ Vue pages and components use `$t('ui.<area>.<key>')` in templates and `const { t
 - Placeholders use vue-i18n braces (`'Delete {label}?'`), not Laravel's `:label`. Avoid `@`, `|` and `{`/`}` as literal text
   in a value (they are message syntax); plurals use `'one item | {count} items'` with `t(key, { count }, count)`.
 - Spanish says "balde" for bucket.
-- `tests/Feature/UiTranslationsTest.php` fails when `en` and `es` differ in keys or a page uses a key that does not exist.
+- `tests/Feature/UiTranslationsTest.php` fails when any `en` and `es` lang file (server messages and `ui/*`) differ in keys, or a page uses a key that does not exist.
   It cannot see English text left hard-coded in a template, so reviewing a page means grepping it for literals.
 - Every page and component is migrated. Free-text examples (placeholders) are translated too; names users type are shown as entered.

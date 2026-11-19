@@ -2,8 +2,8 @@
 import { onMounted, ref } from 'vue';
 
 const model = defineModel({
-    type: String,
-    required: true,
+    type: [String, Number, null],
+    default: '',
 });
 
 const input = ref(null);
@@ -19,7 +19,7 @@ defineExpose({ focus: () => input.value.focus() });
 
 <template>
     <input
-        class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-indigo-600 dark:focus:ring-indigo-600"
+        class="rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
         v-model="model"
         ref="input"
     />

@@ -6,7 +6,10 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\PlannedEventSeries;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -29,6 +32,9 @@ class TransactionsTest extends TestCase
             ->component('Transactions/Index')
             ->where('typeFilter', 'all')
             ->has('transactions.data', 3)
+            ->has('accounts', 1)
+            ->where('accounts.0.id', $account->id)
+            ->where('accounts.0.currency', $account->currency)
         );
     }
 
@@ -306,7 +312,22 @@ class TransactionsTest extends TestCase
         $response = $this->actingAs($user)->getJson('/finances/transactions/form-options');
 
         $response->assertOk();
-        $response->assertJsonStructure(['accounts', 'expenseCategories', 'incomeCategories']);
+        $response->assertJsonStructure(['accounts' => [['id', 'name', 'currency']], 'expenseCategories', 'incomeCategories']);
+    }
+
+    public function test_edit_data_includes_an_inactive_account_so_the_form_can_show_it(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create(['is_active' => false, 'currency' => 'USD']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $transaction = Transaction::factory()->for($user)->for($account)->for($category)->create();
+
+        $response = $this->actingAs($user)->getJson("/finances/transactions/{$transaction->id}/edit-data");
+
+        $response->assertOk();
+        $response->assertJsonPath('accounts.0.id', $account->id);
+        $response->assertJsonPath('accounts.0.currency', 'USD');
+        $response->assertJsonPath('accounts.0.is_active', false);
     }
 
     public function test_edit_data_endpoint_returns_simple_transaction_data(): void
@@ -414,5 +435,89 @@ class TransactionsTest extends TestCase
         $ids = collect($this->actingAs($user)->get('/finances/transactions')->viewData('page')['props']['transactions']['data'])->pluck('id')->all();
 
         $this->assertSame([$evening->id, $morning->id, $untimed->id], $ids);
+    }
+
+    public function test_a_transaction_dated_after_the_users_today_is_saved_only_once_confirmed(): void
+    {
+        Carbon::setTestNow('2026-11-10 12:00:00'); // Auckland is already on Nov 11.
+        $user = User::factory()->create(['timezone' => 'America/Bogota']);
+        $kiwi = User::factory()->create(['timezone' => 'Pacific/Auckland']);
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $kiwiAccount = Account::factory()->for($kiwi)->create();
+        $kiwiCategory = Category::factory()->expense()->create(['user_id' => $kiwi->id]);
+        $expense = fn (Account $on, Category $in, array $extra = []) => [
+            'type' => 'expense', 'account_id' => $on->id, 'category_id' => $in->id, 'amount' => 10, 'date' => '2026-11-11', ...$extra,
+        ];
+
+        $this->actingAs($user)->post('/finances/transactions', $expense($account, $category))
+            ->assertSessionHasErrors(['date' => __('transactions.future_date_confirm')]);
+        $this->actingAs($user)->post('/finances/transactions', $expense($account, $category, ['confirm_future' => 1]))->assertSessionHasNoErrors();
+        $this->actingAs($kiwi)->post('/finances/transactions', $expense($kiwiAccount, $kiwiCategory))->assertSessionHasNoErrors();
+
+        $other = Account::factory()->for($user)->create();
+        $this->actingAs($user)->post('/finances/transactions', [
+            'type' => 'transfer', 'from_account_id' => $account->id, 'to_account_id' => $other->id, 'amount' => 5, 'date' => '2026-11-12',
+        ])->assertSessionHasErrors('date');
+
+        $this->assertSame(2, Transaction::withoutGlobalScopes()->count());
+    }
+
+    public function test_an_edit_is_asked_only_when_it_moves_the_date_after_today(): void
+    {
+        Carbon::setTestNow('2026-11-10 12:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $future = Transaction::factory()->for($user)->for($account)->for($category)->create(['type' => 'expense', 'date' => '2026-11-20']);
+        $payload = ['account_id' => $account->id, 'category_id' => $category->id, 'amount' => 15];
+
+        $this->actingAs($user)->patch("/finances/transactions/{$future->id}", $payload + ['date' => '2026-11-20'])->assertSessionHasNoErrors();
+        $this->actingAs($user)->patch("/finances/transactions/{$future->id}", $payload + ['date' => '2026-11-21'])->assertSessionHasErrors('date');
+        $this->actingAs($user)->patch("/finances/transactions/{$future->id}", $payload + ['date' => '2026-11-21', 'confirm_future' => 1])->assertSessionHasNoErrors();
+
+        $this->assertSame('2026-11-21', $future->fresh()->date->toDateString());
+    }
+
+    public function test_the_list_defers_the_planned_bands_and_marks_auto_posted_and_planned_rows(): void
+    {
+        Carbon::setTestNow('2026-11-10 12:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC']);
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $other = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $auto = Transaction::factory()->for($user)->for($account)->for($category)->create(['type' => 'expense', 'date' => '2026-11-01', 'is_recurring_generated' => true]);
+        $confirmed = Transaction::factory()->for($user)->for($account)->for($category)->create(['type' => 'expense', 'date' => '2026-11-02']);
+        $series = PlannedEventSeries::factory()->for($user)->create(['type' => 'expense']);
+        $plan = PlannedEvent::factory()->for($user)->create(['series_id' => $series->id, 'status' => 'realized', 'realized_transaction_id' => $confirmed->id]);
+        $overdue = PlannedEvent::factory()->for($user)->expense()->create(['date' => '2026-11-05', 'currency' => 'COP', 'account_id' => $account->id]);
+        PlannedEvent::factory()->for($user)->expense()->create(['date' => '2026-11-20', 'currency' => 'COP', 'account_id' => $other->id]);
+
+        $this->actingAs($user)->get('/finances/transactions')->assertInertia(fn (Assert $page) => $page
+            ->missing('planned')
+            ->where('transactions.data.0.id', $confirmed->id)
+            ->where('transactions.data.0.plan', ['plannedEventId' => $plan->id, 'seriesId' => $series->id])
+            ->where('transactions.data.1.autoPosted', true)
+            ->where('transactions.data.1.plan', null)
+            ->loadDeferredProps('planned', fn (Assert $reload) => $reload
+                ->where('planned.upcoming.count', 1)
+                ->where('planned.overdue.items.0.id', $overdue->id)
+            )
+        );
+
+        $this->actingAs($user)->get('/finances/transactions?account='.$account->id)->assertInertia(fn (Assert $page) => $page
+            ->loadDeferredProps('planned', fn (Assert $reload) => $reload
+                ->where('planned.overdue.count', 1)
+                ->where('planned.upcoming.count', 0)
+            )
+        );
+    }
+
+    public function test_a_later_page_or_a_date_range_shows_no_plans(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/finances/transactions?page=2')->assertInertia(fn (Assert $page) => $page->where('planned', null));
+        $this->actingAs($user)->get('/finances/transactions?from=2026-01-01')->assertInertia(fn (Assert $page) => $page->where('planned', null));
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Modules\Planning\Http\Controllers;
 
-use App\Modules\Ledger\Contracts\LedgerQuery;
-use App\Modules\Ledger\Enums\CategoryType;
+use App\Modules\Identity\Models\User;
+use App\Modules\Planning\Contracts\UpcomingPlans;
 use App\Modules\Planning\Enums\Certainty;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Enums\PlannedEventStatus;
@@ -14,27 +14,36 @@ use App\Modules\Planning\Http\Requests\PlannedEvents\StorePlannedEventRequest;
 use App\Modules\Planning\Http\Requests\PlannedEvents\UpdatePlannedEventRequest;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Models\PlannedEventSeries;
+use App\Modules\Planning\Services\BucketProjection;
 use App\Modules\Planning\Services\CashFlowProjector;
+use App\Modules\Planning\Services\PlannedEventPresenter;
 use App\Modules\Planning\Services\PlannedEventService;
+use App\Modules\Planning\Services\SeriesPoster;
 use App\Modules\Shared\Http\Controllers\Controller;
 use App\Modules\Shared\Http\Requests\BulkIdsRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PlannedEventController extends Controller
 {
-    public function index(Request $request, CashFlowProjector $projector, PlannedEventService $service, LedgerQuery $ledger): Response
+    /** Rows the review inbox shows on the cash flow page. */
+    private const REVIEW_LIMIT = 50;
+
+    public function index(Request $request, CashFlowProjector $projector, BucketProjection $buckets, PlannedEventService $service, PlannedEventPresenter $presenter, UpcomingPlans $upcoming): Response
     {
         $this->authorize('viewAny', PlannedEvent::class);
 
-        $view = ForecastView::tryFrom((string) $request->query('view')) ?? ForecastView::Expected;
+        $view = ForecastView::fromRequest($request->query('view'));
         $months = max(3, min(12, (int) $request->query('months', 6)));
-        $monthStart = today()->startOfMonth();
+        $monthStart = Carbon::instance($request->user()->today())->startOfMonth();
         $horizonEnd = $monthStart->copy()->addMonthsNoOverflow($months)->subDay();
 
-        $events = PlannedEvent::with(['account', 'category'])
+        $events = PlannedEvent::with(['account', 'counterAccount', 'category'])
             ->where(function ($query) use ($monthStart) {
                 $query->where('date', '>=', $monthStart->toDateString())
                     ->orWhere('status', PlannedEventStatus::Planned->value);
@@ -44,58 +53,109 @@ class PlannedEventController extends Controller
             ->orderBy('id')
             ->get();
 
-        $matches = $service->suggestedMatches($events);
+        $matches = $service->suggestedMatches($request->user(), $events);
 
+        $budget = $this->budgetRows($request->user(), $view, $months, $projector, $buckets);
         $projection = $projector->project($request->user(), $view, $months)->map(fn (array $currency) => [
             'currency' => $currency['currency'],
             'opening' => $currency['opening']->toFloat(),
-            'months' => collect($currency['months'])->map(fn (array $month) => [
+            'months' => collect($currency['months'])->map(fn (array $month, int $index) => [
                 'month' => $month['month'],
                 'income' => $month['income']->toFloat(),
                 'expense' => $month['expense']->toFloat(),
                 'interest' => $month['interest']->toFloat(),
                 'net' => $month['net']->toFloat(),
                 'closing' => $month['closing']->toFloat(),
+                'onBudget' => $budget[$currency['currency']][$index]['onBudget'] ?? null,
+                'readyToAssign' => $budget[$currency['currency']][$index]['readyToAssign'] ?? null,
             ])->values(),
         ])->values();
 
+        $today = $request->user()->today();
+        $rules = PlannedEventSeries::with(['account', 'counterAccount', 'category'])
+            ->orderByDesc('is_active')
+            ->orderBy('description')
+            ->get();
+        $nextDates = $service->nextDates($rules, $today);
+        $series = $rules->map(fn (PlannedEventSeries $rule) => $presenter->series($rule, $nextDates[$rule->id]))->values();
+
         return Inertia::render('CashFlow/Index', [
-            'events' => $events->map(fn (PlannedEvent $event) => $this->present($event, $matches[$event->id] ?? null))->values(),
+            'events' => $events->map(fn (PlannedEvent $event) => $presenter->event($event, $matches[$event->id] ?? null))->values(),
+            'series' => $series,
+            'review' => $upcoming->needsReview($request->user(), self::REVIEW_LIMIT),
             'projection' => $projection,
             'view' => $view->value,
             'views' => collect(ForecastView::cases())->map(fn (ForecastView $case) => ['value' => $case->value, 'label' => $case->label()]),
             'months' => $months,
-            'accounts' => $ledger->activeAccountOptions(),
-            'expenseCategories' => $ledger->categoryOptions(CategoryType::Expense, ['id', 'name', 'icon', 'color']),
-            'incomeCategories' => $ledger->categoryOptions(CategoryType::Income, ['id', 'name', 'icon', 'color']),
-            'frequencies' => collect(RecurringFrequency::cases())->map(fn (RecurringFrequency $case) => ['value' => $case->value, 'label' => $case->label()]),
-            'buckets' => Bucket::inPriorityOrder()->get(['id', 'name', 'currency']),
-            'certainties' => collect(Certainty::cases())->map(fn (Certainty $case) => ['value' => $case->value, 'label' => $case->label()]),
+            'section' => in_array($request->query('section'), ['repeating', 'review'], true) ? $request->query('section') : null,
         ]);
     }
 
-    public function store(StorePlannedEventRequest $request, PlannedEventService $service): RedirectResponse
+    /**
+     * Projected cash in on-budget accounts at each month end (no interest) and what of it is ready to assign: that cash
+     * minus what funded bucket envelopes are projected to hold. Projected only; nothing here is a real balance.
+     *
+     * @return array<string, list<array{onBudget: float, readyToAssign: float}>> keyed by currency, one row per month
+     */
+    private function budgetRows(User $user, ForecastView $view, int $months, CashFlowProjector $projector, BucketProjection $buckets): array
+    {
+        $rows = [];
+        foreach ($projector->budgetMonthly($user, $view, $months) as $currency => $projection) {
+            $ends = array_map(fn (array $month) => Carbon::parse($month['month'].'-01')->endOfMonth()->startOfDay(), $projection['months']);
+            $earmarks = $buckets->earmarksAt($user, $currency, $view, $ends);
+
+            $rows[$currency] = array_map(fn (array $month, Carbon $end) => [
+                'onBudget' => $month['closing']->toFloat(),
+                'readyToAssign' => $month['closing']->subtract($earmarks[$end->toDateString()])->toFloat(),
+            ], $projection['months'], $ends);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * What the money-movement form needs once "Planned" is chosen (loaded on demand, like the transaction
+     * form options).
+     */
+    public function formOptions(): JsonResponse
+    {
+        $this->authorize('viewAny', PlannedEvent::class);
+
+        return response()->json([
+            'frequencies' => collect(RecurringFrequency::cases())->map(fn (RecurringFrequency $case) => ['value' => $case->value, 'label' => $case->label()]),
+            'certainties' => collect(Certainty::cases())->map(fn (Certainty $case) => ['value' => $case->value, 'label' => $case->label()]),
+            'buckets' => Bucket::inPriorityOrder()->get(['id', 'name', 'currency']),
+        ]);
+    }
+
+    public function store(StorePlannedEventRequest $request, PlannedEventService $service, SeriesPoster $poster): RedirectResponse
     {
         $data = $request->validated();
 
         if (! empty($data['frequency'])) {
             $service->createSeries($request->user(), $data);
-
-            return back()->with('success', __('planned-events.series_saved'));
+        } else {
+            $service->createEvent($request->user(), $data);
         }
 
-        $service->createEvent($request->user(), $data);
+        if (! empty($data['auto_post'])) {
+            $poster->postDueForUser($request->user());
+        }
 
-        return back()->with('success', __('planned-events.saved'));
+        return back()->with('success', __(! empty($data['frequency']) ? 'planned-events.series_saved' : 'planned-events.saved'));
     }
 
-    public function update(UpdatePlannedEventRequest $request, PlannedEvent $plannedEvent, PlannedEventService $service): RedirectResponse
+    public function update(UpdatePlannedEventRequest $request, PlannedEvent $plannedEvent, PlannedEventService $service, SeriesPoster $poster): RedirectResponse
     {
         if ($plannedEvent->status !== PlannedEventStatus::Planned) {
             return back()->with('error', __('planned-events.already_closed'));
         }
 
         $service->updateEvent($plannedEvent, $request->validated(), $request->input('scope', 'this'));
+
+        if ($request->boolean('auto_post')) {
+            $poster->postDueForUser($request->user());
+        }
 
         return back()->with('success', __('planned-events.updated'));
     }
@@ -115,7 +175,8 @@ class PlannedEventController extends Controller
     {
         $count = 0;
 
-        foreach (PlannedEvent::whereIn('id', $request->validated('ids'))->get() as $item) {
+        // A realized plan is the record of where its transaction came from: bulk delete leaves it alone.
+        foreach (PlannedEvent::whereIn('id', $request->validated('ids'))->where('status', '!=', PlannedEventStatus::Realized->value)->get() as $item) {
             $this->authorize('delete', $item);
             $service->deleteEvent($item, 'this');
             $count++;
@@ -130,7 +191,9 @@ class PlannedEventController extends Controller
             return back()->with('error', __('planned-events.already_closed'));
         }
 
-        $service->realize($plannedEvent, $request->validated());
+        if ($service->realize($plannedEvent, $request->validated()) === null) {
+            return back()->with('error', __('planned-events.already_closed'));
+        }
 
         return back()->with('success', __('planned-events.realized'));
     }
@@ -170,35 +233,5 @@ class PlannedEventController extends Controller
         $service->link($plannedEvent, (int) $request->validated('transaction_id'));
 
         return back()->with('success', __('planned-events.linked'));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function present(PlannedEvent $event, ?\stdClass $match): array
-    {
-        return [
-            'id' => $event->id,
-            'type' => $event->type->value,
-            'description' => $event->description,
-            'amount' => $event->amount->toFloat(),
-            'currency' => $event->currency,
-            'date' => $event->date->toDateString(),
-            'status' => $event->status->value,
-            'statusLabel' => $event->status->label(),
-            'certainty' => $event->certainty->value,
-            'certaintyLabel' => $event->certainty->label(),
-            'seriesId' => $event->series_id,
-            'notes' => $event->notes,
-            'allocationOverrides' => $event->allocation_overrides ?? [],
-            'account' => $event->account ? ['id' => $event->account->id, 'name' => $event->account->name] : null,
-            'category' => $event->category ? [
-                'id' => $event->category->id,
-                'name' => $event->category->name,
-                'icon' => $event->category->icon,
-                'color' => $event->category->color,
-            ] : null,
-            'suggestedMatch' => $match,
-        ];
     }
 }

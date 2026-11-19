@@ -33,6 +33,7 @@ class AccountController extends Controller
                 'color' => $account->color,
                 'masked_number' => $account->masked_number,
                 'is_active' => $account->is_active,
+                'on_budget' => $account->on_budget,
                 'notes' => $account->notes,
                 'balance' => $calculator->accountBalance($account)->toFloat(),
             ]);
@@ -65,7 +66,7 @@ class AccountController extends Controller
     {
         $this->authorize('delete', $account);
 
-        if ($account->transactions()->exists() || $account->recurringTransactions()->exists()) {
+        if ($account->transactions()->withTrashed()->exists() || $account->isUsedByActiveSeries()) {
             $account->update(['is_active' => false]);
 
             return back()->with('warning', __('accounts.archived'));

@@ -12,6 +12,9 @@ enum AllocationSource: string
     case Adjustment = 'adjustment';
     case Opening = 'opening';
 
+    /** Money exchanged with ready to assign: a single row with no counterpart bucket. */
+    case Ready = 'ready';
+
     public function label(): string
     {
         return __('enums.allocation_source.'.$this->value);

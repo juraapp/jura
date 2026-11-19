@@ -5,11 +5,17 @@ PHPUnit only — **no Pest**, per project convention. Every test class extends `
 ```bash
 vendor/bin/sail artisan test --compact                              # full suite
 vendor/bin/sail artisan test --compact tests/Feature/BucketsTest.php # one file
-vendor/bin/sail artisan test --compact --filter=test_user_can_create_a_budget
+vendor/bin/sail artisan test --compact --filter=test_user_can_create_a_spending_bucket
 ```
 
+## The clock
+`Tests\TestCase::setUp()` starts every test at midday UTC of the current date, so the server's date and a
+user's date (`$user->today()`) are the same day in every timezone between UTC-11 and UTC+11. Without it, tests
+that build dates with `now()` fail between midnight UTC and the user's midnight. A test that needs another
+moment calls `$this->travelTo(...)` itself; assert expected dates as literal, hand-computed values.
+
 ## JavaScript unit tests
-`resources/js/format.js` is covered by Node's built-in runner: `vendor/bin/sail npm run test:js` (files in
+`resources/js/format.js` (dates, numbers, money, and reading typed money amounts), `resources/js/today.js`, `resources/js/moneyMovement.js` and `resources/js/currencies.js` are covered by Node's built-in runner: `vendor/bin/sail npm run test:js` (files in
 `tests/js`). No extra dependency; keep browser-free logic in plain modules so it can be tested this way.
 
 ## Asserting Inertia responses
@@ -17,14 +23,14 @@ vendor/bin/sail artisan test --compact --filter=test_user_can_create_a_budget
 ```php
 use Inertia\Testing\AssertableInertia as Assert;
 
-$response = $this->actingAs($user)->get('/planning/budgets');
+$response = $this->actingAs($user)->get('/planning/buckets');
 
 $response->assertOk();
 $response->assertInertia(fn (Assert $page) => $page
     ->component('Buckets/Index')
-    ->has('budgets', 2)          // exact count
-    ->where('typeFilter', 'all') // exact value
-    ->has('currencies')          // just presence
+    ->has('buckets', 2)                 // exact count
+    ->where('buckets.0.kind', 'savings') // exact value
+    ->has('currencies')                 // just presence
 );
 ```
 
@@ -53,30 +59,31 @@ public function test_user_cannot_update_another_users_bucket(): void
 
 ## Soft deletes
 
-`Account`, `Category`, `SavingsGoal`, and `Transaction` use `SoftDeletes`; `Bucket`, `Allocation` and `RecurringTransaction` don't. Use the right assertion:
+`Account`, `Category` and `Transaction` use `SoftDeletes`; `Bucket`, `Allocation`, `PlannedEvent` and `PlannedEventSeries` don't. Use the right assertion:
 
 ```php
 $this->assertSoftDeleted('accounts', ['id' => $account->id]);   // soft-delete models
-$this->assertDatabaseMissing('budgets', ['id' => $budget->id]); // hard-delete models
+$this->assertDatabaseMissing('buckets', ['id' => $bucket->id]); // hard-delete models
 ```
 
 `assertDatabaseMissing` on a soft-deleted row fails (the row is still physically present with `deleted_at` set) — this is the most common false failure when writing a new delete test; check the model's traits before assuming which assertion applies.
 
 ## Factories and cross-model foreign keys
 
-Every domain model has a factory in `database/factories/`. The one sharp edge: **`Account` (like most models) is itself `BelongsToUser`-scoped**, so a `RecurringTransaction`/`Transaction`/`Bucket` factory's default `account_id => Account::factory()` creates an account owned by a *fresh, unrelated* user unless you explicitly tie it to the same user:
+Every domain model has a factory in `database/factories/`. The one sharp edge: **`Account` (like most models) is itself `BelongsToUser`-scoped**, so a `Transaction`/`Bucket` factory's default `account_id => Account::factory()` (or a plan whose `account_id` you set to some other user's account) creates an account owned by a *fresh, unrelated* user unless you explicitly tie it to the same user:
 
 ```php
 // Wrong — $account belongs to some other random factory-created user.
-$recurring = RecurringTransaction::factory()->for($user)->create();
+$transaction = Transaction::factory()->for($user)->create();
 
 // Right — account_id and user_id agree.
 $account = Account::factory()->for($user)->create();
 $category = Category::factory()->expense()->create(['user_id' => $user->id]);
-$recurring = RecurringTransaction::factory()->for($user)->for($account)->for($category)->create();
+$transaction = Transaction::factory()->for($user)->for($account)->for($category)->create();
+$series = PlannedEventSeries::factory()->for($user)->create(['account_id' => $account->id, 'category_id' => $category->id]);
 ```
 
-Getting this wrong doesn't fail at factory-creation time — it fails later, non-obviously, when a controller eager-loads the relation (`->with('account')`) and the `BelongsToUser` scope silently returns `null` for a row that "exists" but isn't visible to the acting user, producing a 500 ("Attempt to read property on null") instead of a validation error. This exact bug was caught writing `RecurringTransactionsTest` and is also why `account_id`/`category_id` Form Request validation is scoped to the current user (see `domain-model.md`) — the same class of bug is reachable from real user input, not just sloppy test setup.
+Getting this wrong doesn't fail at factory-creation time — it fails later, non-obviously, when a controller eager-loads the relation (`->with('account')`) and the `BelongsToUser` scope silently returns `null` for a row that "exists" but isn't visible to the acting user, producing a 500 ("Attempt to read property on null") instead of a validation error. This exact bug was caught writing the (since removed) recurring transactions tests and is also why `account_id`/`category_id` Form Request validation is scoped to the current user (see `domain-model.md`) — the same class of bug is reachable from real user input, not just sloppy test setup.
 
 `CategoryFactory::create()` defaults to `user_id: null` (a system category, visible to everyone) — pass `['user_id' => $user->id]` explicitly whenever a test needs a category that's *not* visible to some other user, or the "another user's private category" half of a cross-tenant test will silently pass for the wrong reason (the category is a system one, not actually owned by anyone).
 
@@ -98,11 +105,13 @@ $partial = $this->actingAs($user)->getJson('/dashboard', [
 $partial->assertJsonStructure(['props' => ['netWorth', 'notifications' => ['items', 'unreadCount']]]);
 ```
 
+For a page's own deferred props, `AssertableInertia::loadDeferredProps('group', fn (Assert $reload) => ...)` does this reload for you (see `TransactionsTest`'s planned bands).
+
 Don't try to precompute `X-Inertia-Version` — it's not stable when resolved outside of actual route dispatch (e.g. calling `Inertia::getVersion()` directly from a test body, before making a request, returns a different value than what the middleware computes for the live request). Bootstrap it from a real response's header instead, as above. Sending a *wrong* version on a GET request with the `X-Inertia` header produces a 409, not a 200 with a fallback — this is the most common way this specific test pattern goes subtly wrong.
 
 ## What's covered, what isn't
 
-Every domain module from the Inertia migration has feature test coverage (`tests/Feature/{Accounts,Categories,Budgets,SavingsGoals,RecurringTransactions,Transactions,TransactionImport,Reports,Preferences,Dashboard,Notifications,TransactionImportTemplate}Test.php`) — index rendering, create/update/delete happy paths, validation failures, and cross-tenant authorization. Auth flows (`tests/Feature/Auth/*`) and profile management (`ProfileTest.php`) are Breeze's own generated PHPUnit tests, adapted for the Inertia+Vue scaffold rather than rewritten from scratch.
+Every domain module from the Inertia migration has feature test coverage (`tests/Feature/{Accounts,Categories,Buckets,PlannedEvents,PlannedSeries,AutoPost,Transactions,TransactionImport,Reports,Preferences,Dashboard,Notifications,TransactionImportTemplate}Test.php`) — index rendering, create/update/delete happy paths, validation failures, and cross-tenant authorization. Auth flows (`tests/Feature/Auth/*`) and profile management (`ProfileTest.php`) are Breeze's own generated PHPUnit tests, adapted for the Inertia+Vue scaffold rather than rewritten from scratch.
 
 Not covered: the CSV/PDF *content* of report downloads beyond status code + `Content-Type` (real Dompdf/CSV rendering is exercised, but byte-for-byte output isn't asserted), and Vue-side interaction tests (no component-level JS test runner is set up — `GlobalTransactionModal`'s open/edit/submit flow is verified only through the backend endpoints it calls).
 
@@ -112,5 +121,21 @@ Not covered: the CSV/PDF *content* of report downloads beyond status code + `Con
 
 ## Pure planning logic
 
-`Waterfall`, `ForecastEngine` and `ScenarioSuggester` (under `app/Modules/Planning/Support`) have no framework or database dependencies, so they are tested with plain PHPUnit `TestCase`s in `tests/Unit` using hand-built DTOs. Keep new forecast rules there with a failing unit test first; reserve feature tests for the wiring (`PlannerTest`, `IncomeAllocationTest`). In a PHPUnit test class never name a helper `run()`: `TestCase::run()` is final.
+`Waterfall`, `IncomeStep`, `Recurrence` (the dates of a repeating plan), `ProjectedItem`, `CashTimeline`, `ForecastEngine` and `ScenarioSuggester` (under `app/Modules/Planning/Support`) have no framework or database dependencies, so they are tested with plain PHPUnit `TestCase`s in `tests/Unit` using hand-built DTOs. Keep new forecast rules there with a failing unit test first; reserve feature tests for the wiring (`PlannerTest`, `IncomeAllocationTest`, and `ProjectionConsistencyTest`, which checks that the cash flow, the planner and `PlannedOccurrences` agree). In a PHPUnit test class never name a helper `run()`: `TestCase::run()` is final.
+
+### Forecast checks that do not trust themselves
+A test that recomputes the expected value with the code under test proves nothing. The forecast is checked three
+independent ways:
+- `FreeMoneyReconciliationTest` compares the engine cash with code written separately: at every month end and in
+  every view, engine cash = `CashFlowForecast::budgetMonthly` closing (which shares only the planned occurrences and
+  the on-budget balances); today's ready to assign = `MoneyMap`; with a purchase, cash = closing − what was bought.
+  The earmark side (`BucketProjection::earmarksAt`) runs the same engine, so it is not independent: three month ends
+  (Nov 30, Dec 31, Jan 31) are asserted with cash, earmarked and ready to assign worked out by hand.
+- `IncomeAllocatorParityTest` lets the forecast predict an income, records the same income for real and compares the
+  split bucket by bucket (and with hand-computed amounts).
+- `ForecastEngineInvariantTest` is a property test: 300 seeded random inputs (`mt_srand`, so a failure names its case
+  and is reproducible), each checked against invariants recounted from the input alone (cash = start + flows −
+  purchases, ready to assign + funded envelopes = cash, no negative cash after a purchase, strict order, not-before,
+  determinism, an extra income never delays the first item, reused work equals a fresh run).
+- `ScenarioSuggesterTest` keeps a performance guard: 6 items, 36 months and 10 buckets suggest in under 1.5 s.
 

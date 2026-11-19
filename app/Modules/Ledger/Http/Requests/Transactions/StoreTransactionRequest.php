@@ -3,12 +3,19 @@
 namespace App\Modules\Ledger\Http\Requests\Transactions;
 
 use App\Modules\Ledger\Enums\PaymentMethod;
+use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Shared\Validation\LedgerRules;
+use App\Modules\Shared\Validation\MoneyRules;
+use App\Modules\Shared\Validation\PlanningRules;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreTransactionRequest extends FormRequest
 {
+    use GuardsFutureDates;
+
     public function authorize(): bool
     {
         return $this->user()->can('create', Transaction::class);
@@ -19,10 +26,21 @@ class StoreTransactionRequest extends FormRequest
         if ($this->input('type') === 'transfer') {
             return [
                 'type' => ['required', 'in:transfer'],
-                'from_account_id' => ['required', 'integer', 'different:to_account_id', Rule::exists('accounts', 'id')->where('user_id', $this->user()->id)],
-                'to_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $this->user()->id)],
-                'amount' => ['required', 'numeric', 'gt:0'],
-                'date' => ['required', 'date'],
+                'from_account_id' => ['required', 'integer', 'different:to_account_id', LedgerRules::account($this->user()->id, activeOnly: true)],
+                'to_account_id' => [
+                    'required',
+                    'integer',
+                    LedgerRules::account($this->user()->id, activeOnly: true),
+                    function (string $attribute, mixed $value, Closure $fail) {
+                        $currencies = Account::whereKey([(int) $this->input('from_account_id'), (int) $value])->pluck('currency')->unique();
+
+                        if ($currencies->count() > 1) {
+                            $fail(__('transactions.currency_mismatch'));
+                        }
+                    },
+                ],
+                'amount' => ['required', ...MoneyRules::positive()],
+                'date' => ['required', 'date', $this->futureDateGuard()],
                 'time' => ['nullable', 'date_format:H:i'],
                 'description' => ['nullable', 'string', 'max:255'],
                 'notes' => ['nullable', 'string', 'max:2000'],
@@ -31,14 +49,25 @@ class StoreTransactionRequest extends FormRequest
 
         return [
             'type' => ['required', 'in:income,expense'],
-            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $this->user()->id)],
-            'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('user_id', $this->user()->id)->orWhereNull('user_id'))],
-            'amount' => ['required', 'numeric', 'gt:0'],
-            'date' => ['required', 'date'],
+            'account_id' => ['required', 'integer', LedgerRules::account($this->user()->id, activeOnly: true)],
+            'category_id' => ['required', 'integer', LedgerRules::category($this->user()->id, (string) $this->input('type'))],
+            'amount' => ['required', ...MoneyRules::positive()],
+            'date' => ['required', 'date', $this->futureDateGuard()],
             'time' => ['nullable', 'date_format:H:i'],
             'description' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)],
+            'bucket_id' => [
+                'nullable',
+                'prohibited_unless:type,expense',
+                'integer',
+                PlanningRules::spendableBucket($this->user()->id, Account::whereKey((int) $this->input('account_id'))->value('currency')),
+                function (string $attribute, mixed $value, Closure $fail) {
+                    if (Account::whereKey((int) $this->input('account_id'))->value('on_budget') === false) {
+                        $fail(__('transactions.bucket_off_budget'));
+                    }
+                },
+            ],
         ];
     }
 }

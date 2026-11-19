@@ -6,4 +6,9 @@ return [
     'bulk_deleted' => ':count transacción(es) eliminada(s).',
     'bulk_restored' => ':count transacción(es) restaurada(s).',
     'bulk_updated' => ':count transacción(es) actualizada(s).',
+    'currency_mismatch' => 'Ambas cuentas deben usar la misma moneda. No se admiten transferencias entre monedas.',
+    'account_currency_mismatch' => 'Esta cuenta usa otra moneda. Elige una cuenta en :currency.',
+    'bucket_off_budget' => 'Un gasto en una cuenta fuera del presupuesto no se puede pagar desde un balde.',
+    'bucket_locked_by_purchase' => 'El balde de la compra de un artículo solo cambia deshaciendo la compra.',
+    'future_date_confirm' => 'Esta fecha es posterior a hoy. Planéalo en su lugar, o confirma que ya ocurrió.',
 ];

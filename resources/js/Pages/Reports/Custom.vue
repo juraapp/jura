@@ -2,9 +2,11 @@
 import { computed, reactive } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import InputLabel from '@/Components/InputLabel.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Money from '@/Components/Money.vue';
 import StatCard from '@/Components/StatCard.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -40,14 +42,12 @@ const formatDate = (date) => format.date(date);
 <template>
     <Head :title="$t('ui.reports.custom_title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                {{ $t('ui.reports.custom_title') }}
-            </h2>
+            <PageHeader :title="$t('ui.reports.custom_title')" />
         </template>
 
-        <div class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-6">
             <div class="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div>
                     <InputLabel for="from" :value="$t('ui.reports.from')" />
@@ -57,10 +57,10 @@ const formatDate = (date) => format.date(date);
                     <InputLabel for="to" :value="$t('ui.reports.to')" />
                     <TextInput id="to" v-model="filters.to" type="date" class="mt-1" @change="applyFilters" />
                 </div>
-                <a :href="csvUrl" class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                <PrimaryButton as="a" :href="csvUrl">
                     <DynamicIcon name="arrow-down-tray" class="h-4 w-4" />
                     {{ $t('ui.reports.export_csv') }}
-                </a>
+                </PrimaryButton>
             </div>
 
             <div v-for="currencyTotals in totals" :key="currencyTotals.currency" class="grid grid-cols-1 gap-4 sm:grid-cols-3">

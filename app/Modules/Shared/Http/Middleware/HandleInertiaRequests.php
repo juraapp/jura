@@ -3,6 +3,8 @@
 namespace App\Modules\Shared\Http\Middleware;
 
 use App\Modules\Ledger\Contracts\Balances;
+use App\Modules\Planning\Contracts\MoneyMap;
+use App\Modules\Planning\Contracts\UpcomingPlans;
 use App\Modules\Shared\Support\UiMessages;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -42,6 +44,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'today' => fn () => $request->user()?->today()->toDateString(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
@@ -58,6 +61,20 @@ class HandleInertiaRequests extends Middleware
                     ->map(fn ($money) => $money->toFloat())
                     ->all();
             }, 'topbar'),
+            'moneyMap' => Inertia::defer(function () use ($request) {
+                if (! $request->user()) {
+                    return [];
+                }
+
+                return array_values(array_map(fn (array $row) => [
+                    'currency' => $row['currency'],
+                    'inAccounts' => $row['inAccounts']->toFloat(),
+                    'inBuckets' => $row['inBuckets']->toFloat(),
+                    'readyToAssign' => $row['readyToAssign']->toFloat(),
+                    'overAssigned' => $row['overAssigned'],
+                ], app(MoneyMap::class)->summary($request->user())));
+            }, 'topbar'),
+            'reviewCount' => Inertia::defer(fn () => $request->user() ? app(UpcomingPlans::class)->needsReviewCount($request->user()) : 0, 'topbar'),
             'notifications' => Inertia::defer(function () use ($request) {
                 if (! $request->user()) {
                     return ['items' => [], 'unreadCount' => 0];

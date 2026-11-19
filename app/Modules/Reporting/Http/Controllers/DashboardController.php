@@ -25,17 +25,18 @@ class DashboardController extends Controller
         $hasAnyAccount = $user->accounts()->exists();
         $hasAnyTransaction = $user->transactions()->exists();
 
-        if (! $hasAnyAccount || ! $hasAnyTransaction) {
+        if (! $hasAnyAccount) {
             return Inertia::render('Dashboard', [
                 'evolutionMonths' => $evolutionMonths,
-                'hasAnyAccount' => $hasAnyAccount,
+                'hasAnyAccount' => false,
                 'hasAnyTransaction' => $hasAnyTransaction,
                 'currencies' => [],
                 'upcoming' => [],
+                'needsReview' => ['count' => 0, 'items' => []],
             ]);
         }
 
-        $now = Carbon::now();
+        $now = Carbon::instance($user->today());
         $summary = $reports->monthlySummary($user, $now->year, $now->month);
         $expenseByCategory = $reports->expenseByCategory($user, $now->year, $now->month);
         $expenseByAccount = $reports->expenseByAccount($user, $now->year, $now->month)
@@ -77,9 +78,10 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'evolutionMonths' => $evolutionMonths,
             'hasAnyAccount' => true,
-            'hasAnyTransaction' => true,
+            'hasAnyTransaction' => $hasAnyTransaction,
             'currencies' => $currencies,
             'upcoming' => $planning->upcoming($user),
+            'needsReview' => $planning->needsReview($user),
         ]);
     }
 

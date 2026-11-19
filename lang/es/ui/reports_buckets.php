@@ -18,6 +18,5 @@ return [
     'target' => 'Meta',
     'in_12' => 'En 12 meses (proyectado)',
     'change' => 'Cambio',
-    'default' => 'Por defecto',
     'limit_per_cycle' => 'límite {amount} por ciclo',
 ];

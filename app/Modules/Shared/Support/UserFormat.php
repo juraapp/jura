@@ -125,7 +125,10 @@ final class UserFormat
         return ! preg_match('/^[A-Z]{3}$/', $symbol);
     }
 
-    private function decimalSeparator(): string
+    /**
+     * The decimal separator the user reads and types (their preference, else their language's).
+     */
+    public function decimalSeparator(): string
     {
         return $this->preference('decimal_separator') ?? (new NumberFormatter($this->intlLocale(), NumberFormatter::DECIMAL))->getSymbol(NumberFormatter::DECIMAL_SEPARATOR_SYMBOL);
     }

@@ -1,14 +1,16 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Deferred, Head, Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
 import Modal from '@/Components/Modal.vue';
 import Pagination from '@/Components/Pagination.vue';
+import PlannedBand from '@/Components/PlannedBand.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
@@ -17,6 +19,11 @@ import BulkActionBar from '@/Components/BulkActionBar.vue';
 import { useBulkSelection } from '@/composables/useBulkSelection';
 import { destroy, bulkDestroy, bulkUpdate } from '@/actions/App/Modules/Ledger/Http/Controllers/TransactionController';
 import { useFormat } from '@/composables/useFormat';
+import { index as plannedEventsIndex } from '@/routes/planned-events';
+import { importMethod as transactionsImport, index as transactionsIndex } from '@/routes/transactions';
+import { index as incomesIndex } from '@/routes/incomes';
+import { index as expensesIndex } from '@/routes/expenses';
+import { index as transfersIndex } from '@/routes/transfers';
 
 const format = useFormat();
 const { t } = useI18n();
@@ -27,9 +34,23 @@ const props = defineProps({
     accounts: { type: Array, required: true },
     categories: { type: Array, required: true },
     filters: { type: Object, required: true },
+    /** Deferred { overdue, upcoming } bands; null when the list is showing history (a later page or a date range). */
+    planned: { type: Object, default: undefined },
 });
 
+const reviewUrl = plannedEventsIndex.url({ query: { section: 'review' } });
+const cashFlowUrl = plannedEventsIndex.url();
+const planUrl = (plan) => plannedEventsIndex.url({ query: { highlight: plan.plannedEventId } });
+
 const { open: openTransactionModal } = useTransactionModal();
+
+/** All transactions, or only the incomes, expenses or transfers (each has its own address). */
+const typeTabs = computed(() => [
+    { type: 'all', label: t('ui.shell.nav.transactions'), href: transactionsIndex().url },
+    { type: 'income', label: t('ui.shell.nav.incomes'), href: incomesIndex().url },
+    { type: 'expense', label: t('ui.shell.nav.expenses'), href: expensesIndex().url },
+    { type: 'transfer', label: t('ui.shell.nav.transfers'), href: transfersIndex().url },
+]);
 const confirmingDeleteTransaction = ref(null);
 
 const filters = reactive({
@@ -113,14 +134,37 @@ const bulkEdit = () => {
 <template>
     <Head :title="pageTitle" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                {{ pageTitle }}
-            </h2>
+            <PageHeader :title="pageTitle">
+                <template #actions>
+                    <SecondaryButton :as="Link" :href="transactionsImport().url">
+                        <DynamicIcon name="arrow-up-tray" class="h-4 w-4" />
+                        {{ $t('ui.shell.nav.import_csv') }}
+                    </SecondaryButton>
+                    <PrimaryButton type="button" @click="openTransactionModal(null, typeFilter === 'all' ? 'expense' : typeFilter)">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
+                        {{ $t('ui.transactions.new') }}
+                    </PrimaryButton>
+                </template>
+                <template #meta>
+                    <nav class="flex flex-wrap gap-1" :aria-label="$t('ui.transactions.types')">
+                        <Link
+                            v-for="tab in typeTabs"
+                            :key="tab.type"
+                            :href="tab.href"
+                            class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                            :class="tab.type === typeFilter
+                                ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-400'
+                                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'"
+                            :aria-current="tab.type === typeFilter ? 'page' : undefined"
+                        >{{ tab.label }}</Link>
+                    </nav>
+                </template>
+            </PageHeader>
         </template>
 
-        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div>
             <div class="mb-4 grid grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-3 lg:grid-cols-6 dark:border-gray-700 dark:bg-gray-800">
                 <div class="col-span-2 sm:col-span-1 lg:col-span-2">
                     <input
@@ -138,7 +182,7 @@ const bulkEdit = () => {
                     @change="applyFilters"
                 >
                     <option value="">{{ $t('ui.transactions.all_accounts') }}</option>
-                    <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+                    <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                 </select>
 
                 <select
@@ -164,6 +208,16 @@ const bulkEdit = () => {
                 />
             </div>
 
+            <Deferred v-if="planned !== null" data="planned">
+                <template #fallback>
+                    <div class="mb-4 h-16 animate-pulse rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"></div>
+                </template>
+                <div v-if="planned && (planned.overdue.count || planned.upcoming.count)" class="mb-4 space-y-3">
+                    <PlannedBand :band="planned.overdue" variant="overdue" :title="$t('ui.transactions.overdue_band')" :see-all-url="reviewUrl" />
+                    <PlannedBand :band="planned.upcoming" :title="$t('ui.transactions.upcoming_band')" :see-all-url="cashFlowUrl" />
+                </div>
+            </Deferred>
+
             <EmptyState
                 v-if="transactions.data.length === 0"
                 icon="list-bullet"
@@ -171,8 +225,8 @@ const bulkEdit = () => {
                 :description="$t('ui.transactions.empty_hint')"
             >
                 <template #action>
-                    <PrimaryButton type="button" @click="openTransactionModal(null, 'expense')">
-                        <DynamicIcon name="plus" class="mr-1.5 h-4 w-4" />
+                    <PrimaryButton type="button" @click="openTransactionModal(null, typeFilter === 'all' ? 'expense' : typeFilter)">
+                        <DynamicIcon name="plus" class="h-4 w-4" />
                         {{ $t('ui.transactions.new') }}
                     </PrimaryButton>
                 </template>
@@ -228,6 +282,8 @@ const bulkEdit = () => {
                                                     <template v-if="transaction.type === 'transfer_out'">{{ $t('ui.transactions.transfer_out') }}<template v-if="transaction.counterpartAccount"> &rarr; {{ transaction.counterpartAccount }}</template></template>
                                                     <template v-else-if="transaction.type === 'transfer_in'">{{ $t('ui.transactions.transfer_in') }}<template v-if="transaction.counterpartAccount"> &larr; {{ transaction.counterpartAccount }}</template></template>
                                                     <template v-else>{{ transaction.category?.name }}</template>
+                                                    <span v-if="transaction.autoPosted" class="ml-1.5 rounded-full bg-gray-100 px-1.5 py-0.5 font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ $t('ui.transactions.auto_posted') }}</span>
+                                                    <Link v-if="transaction.plan" :href="planUrl(transaction.plan)" class="ml-1.5 rounded-full bg-primary-50 px-1.5 py-0.5 font-medium text-primary-700 hover:underline dark:bg-primary-500/10 dark:text-primary-300">{{ $t('ui.transactions.from_plan') }}</Link>
                                                 </p>
                                             </div>
                                         </div>
@@ -243,6 +299,8 @@ const bulkEdit = () => {
                                         <div class="flex items-center justify-end gap-1">
                                             <button
                                                 type="button"
+                                                :title="$t('ui.common.edit')"
+                                                :aria-label="$t('ui.common.edit')"
                                                 class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
                                                 @click="openTransactionModal(transaction.id)"
                                             >
@@ -250,6 +308,8 @@ const bulkEdit = () => {
                                             </button>
                                             <button
                                                 type="button"
+                                                :title="$t('ui.common.delete')"
+                                                :aria-label="$t('ui.common.delete')"
                                                 class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
                                                 @click="confirmDelete(transaction)"
                                             >
@@ -295,7 +355,7 @@ const bulkEdit = () => {
                     </select>
                     <select v-model="bulkChanges.account_id" class="block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                         <option value="">{{ $t('ui.transactions.keep_account') }}</option>
-                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
+                        <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ account.currency }}</option>
                     </select>
                 </div>
                 <div class="mt-6 flex justify-end gap-3">

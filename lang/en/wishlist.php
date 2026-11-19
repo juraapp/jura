@@ -11,4 +11,5 @@ return [
     'not_purchased' => 'This item has not been purchased.',
     'account_not_allowed' => 'This item cannot be bought with that account.',
     'currency_mismatch' => 'The account currency does not match the item currency.',
+    'project_currency_mismatch' => 'The project uses :currency, so its items must too.',
 ];

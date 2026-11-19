@@ -6,6 +6,7 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
+use App\Modules\Planning\Contracts\MoneyMap;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Allocation;
@@ -139,6 +140,22 @@ class BucketsTest extends TestCase
         $this->assertNull($bucket->category_id);
     }
 
+    public function test_a_fixed_fill_is_money_with_two_decimals_while_a_percentage_keeps_four(): void
+    {
+        $user = User::factory()->create();
+        $payload = ['kind' => 'savings', 'name' => 'Car', 'currency' => 'COP', 'priority' => 10];
+
+        $this->actingAs($user)->post('/planning/buckets', $payload + ['fill_rule' => 'fixed', 'fill_value' => '100.125'])
+            ->assertSessionHasErrors('fill_value');
+        $this->post('/planning/buckets', $payload + ['fill_rule' => 'fixed', 'fill_value' => '100', 'step_up_value' => '150.555'])
+            ->assertSessionHasErrors('step_up_value');
+        $this->assertDatabaseCount('buckets', 0);
+
+        $this->post('/planning/buckets', $payload + ['fill_rule' => 'percent', 'fill_value' => '12.3456'])->assertSessionHasNoErrors();
+        $this->post('/planning/buckets', array_merge($payload, ['name' => 'Trip']) + ['fill_rule' => 'fixed', 'fill_value' => '100.25'])->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('buckets', 2);
+    }
+
     public function test_creating_a_spending_bucket_for_an_existing_category_currency_and_cycle_updates_it(): void
     {
         $user = User::factory()->create();
@@ -250,32 +267,19 @@ class BucketsTest extends TestCase
         $this->assertDatabaseHas('buckets', ['id' => $bucket->id]);
     }
 
-    public function test_deleting_a_funded_bucket_returns_its_money_to_the_default_bucket(): void
+    public function test_deleting_a_funded_bucket_makes_its_money_ready_to_assign_again(): void
     {
         $user = User::factory()->create();
-        $default = Bucket::factory()->savings()->for($user)->create(['currency' => 'COP', 'is_default' => true]);
+        Account::factory()->for($user)->create(['currency' => 'COP', 'initial_balance' => 1000]);
         $bucket = Bucket::factory()->savings()->for($user)->create(['currency' => 'COP']);
         Allocation::factory()->for($user)->for($bucket)->create(['amount' => 400, 'currency' => 'COP']);
+        $this->assertSame('600.00', app(MoneyMap::class)->readyToAssign($user, 'COP')->toDecimalString());
 
         $this->actingAs($user)->delete("/planning/buckets/{$bucket->id}")->assertRedirect();
 
-        $this->assertEquals(400, Allocation::where('bucket_id', $default->id)->sum('amount'));
         $this->assertDatabaseMissing('buckets', ['id' => $bucket->id]);
-    }
-
-    public function test_only_one_bucket_per_currency_can_be_the_default(): void
-    {
-        $user = User::factory()->create();
-        $first = Bucket::factory()->savings()->for($user)->create(['currency' => 'COP', 'is_default' => true]);
-        $usd = Bucket::factory()->savings()->for($user)->create(['currency' => 'USD', 'is_default' => true]);
-
-        $this->actingAs($user)->post('/planning/buckets', [
-            'kind' => 'savings', 'name' => 'New default', 'currency' => 'COP', 'is_default' => true,
-        ])->assertRedirect();
-
-        $this->assertFalse($first->fresh()->is_default);
-        $this->assertTrue($usd->fresh()->is_default);
-        $this->assertTrue(Bucket::where('name', 'New default')->firstOrFail()->is_default);
+        $this->assertSame(0, Allocation::count());
+        $this->assertSame('1000.00', app(MoneyMap::class)->readyToAssign($user, 'COP')->toDecimalString());
     }
 
     public function test_the_old_budgets_url_redirects_to_buckets(): void

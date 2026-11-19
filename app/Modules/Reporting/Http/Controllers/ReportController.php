@@ -19,8 +19,8 @@ class ReportController extends Controller
 {
     public function monthly(Request $request, ReportService $reports, InsightService $insights): Response
     {
-        $year = (int) $request->integer('year', now()->year);
-        $month = (int) $request->integer('month', now()->month);
+        $year = (int) $request->integer('year', $request->user()->today()->year);
+        $month = (int) $request->integer('month', $request->user()->today()->month);
         $user = Auth::user();
 
         $summary = $reports->monthlySummary($user, $year, $month);
@@ -31,7 +31,12 @@ class ReportController extends Controller
             ->where('transactions.type', TransactionType::Expense->value)
             ->whereYear('transactions.date', $year)
             ->whereMonth('transactions.date', $month)
-            ->where('transactions.is_recurring_generated', true)
+            // Fixed: recorded automatically, or confirmed from a repeating plan.
+            ->where(fn ($query) => $query->where('transactions.is_recurring_generated', true)
+                ->orWhereExists(fn ($plans) => $plans->selectRaw('1')
+                    ->from('planned_events')
+                    ->whereColumn('planned_events.realized_transaction_id', 'transactions.id')
+                    ->whereNotNull('planned_events.series_id')))
             ->selectRaw('accounts.currency as currency, SUM(transactions.amount) as total')
             ->groupBy('accounts.currency')
             ->get()
@@ -74,7 +79,7 @@ class ReportController extends Controller
 
     public function annual(Request $request, ReportService $reports): Response
     {
-        $year = (int) $request->integer('year', now()->year);
+        $year = (int) $request->integer('year', $request->user()->today()->year);
         $user = Auth::user();
 
         $summary = $reports->annualSummary($user, $year);
@@ -115,8 +120,8 @@ class ReportController extends Controller
 
     public function custom(Request $request): Response
     {
-        $from = $request->date('from') ?? now()->startOfMonth();
-        $to = $request->date('to') ?? now()->endOfMonth();
+        $from = $request->date('from') ?? Carbon::instance($request->user()->today())->startOfMonth();
+        $to = $request->date('to') ?? Carbon::instance($request->user()->today())->endOfMonth();
 
         $transactions = Transaction::query()
             ->with(['account', 'category'])

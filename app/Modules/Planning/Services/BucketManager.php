@@ -9,12 +9,11 @@ use App\Modules\Planning\Enums\CarryOverPolicy;
 use App\Modules\Planning\Enums\FillRule;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Shared\Support\Money;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Creates, updates and deletes buckets, keeping the invariants: one default
- * bucket per currency, and one spending bucket per category, currency and cycle.
+ * Creates, updates and deletes buckets, keeping the invariant of one spending
+ * bucket per category, currency and cycle.
  */
 class BucketManager
 {
@@ -34,7 +33,7 @@ class BucketManager
             $carryOver = CarryOverPolicy::from($data['carry_over'] ?? CarryOverPolicy::Carry->value);
 
             $attributes = [
-                'name' => $data['name'] ?? $this->ledger->categoryName((int) ($data['category_id'] ?? 0)) ?? __('buckets.untitled'),
+                'name' => $data['name'] ?? $this->ledger->categoryName($user->id, (int) ($data['category_id'] ?? 0)) ?? __('buckets.untitled'),
                 'kind' => $kind,
                 'currency' => $data['currency'],
                 'priority' => $data['priority'] ?? $bucket?->priority ?? 100,
@@ -44,6 +43,7 @@ class BucketManager
                 'cycle_anchor' => isset($data['cycle']) ? ($data['cycle_anchor'] ?? null) : null,
                 'cycle_goal' => isset($data['cycle']) && $kind === BucketKind::Savings && isset($data['cycle_goal']) ? Money::of($data['cycle_goal']) : null,
                 'cap_amount' => isset($data['cap_amount']) ? Money::of($data['cap_amount']) : null,
+                'target_date' => $kind === BucketKind::Savings && isset($data['cap_amount']) && ! empty($data['target_date']) ? $data['target_date'] : null,
                 'fill_rule' => $fillRule,
                 'fill_value' => $fillRule !== null && $fillRule !== FillRule::FillToTarget ? $data['fill_value'] : null,
                 'step_up_value' => $fillRule !== null && $fillRule !== FillRule::FillToTarget && ! empty($data['step_up_after_bucket_id']) && isset($data['step_up_value']) ? $data['step_up_value'] : null,
@@ -52,19 +52,12 @@ class BucketManager
                 'carry_over' => $carryOver,
                 'overflow_bucket_id' => $carryOver === CarryOverPolicy::Overflow ? ($data['overflow_bucket_id'] ?? null) : null,
                 'allowed_account_ids' => ! empty($data['allowed_account_ids']) ? array_map('intval', $data['allowed_account_ids']) : null,
-                'is_default' => (bool) ($data['is_default'] ?? false),
             ];
 
-            if ($bucket === null && $kind === BucketKind::Spending) {
-                $bucket = Bucket::forUser($user)
-                    ->where('category_id', $attributes['category_id'])
-                    ->where('currency', strtoupper($attributes['currency']))
-                    ->where('cycle', $attributes['cycle'])
-                    ->first();
-            }
+            $bucket ??= $this->matchingSpendingBucket($user, $kind, $attributes['category_id'], $attributes['currency'], $attributes['cycle']);
 
             if ($bucket === null) {
-                $bucket = new Bucket($attributes + ['tracking_started_on' => Carbon::today()->toDateString()]);
+                $bucket = new Bucket($attributes + ['tracking_started_on' => $user->today()->toDateString()]);
                 $bucket->user_id = $user->id;
                 $bucket->save();
             } else {
@@ -75,22 +68,84 @@ class BucketManager
                 $this->buckets->setOpeningBalance($bucket, Money::of($data['opening_balance'] ?? 0));
             }
 
-            if ($bucket->is_default) {
-                Bucket::forUser($user)
-                    ->where('currency', $bucket->currency)
-                    ->whereKeyNot($bucket->id)
-                    ->update(['is_default' => false]);
-            }
-
             return $bucket;
         });
     }
 
+    /**
+     * How much saving this data would move out of ready to assign through the bucket's opening balance: the change
+     * in the opening amount, less the category spending a first opening brings into the envelope, plus what changing a
+     * funded bucket's category does to its envelope. Saving a new
+     * spending bucket for a category that already has one updates that bucket, so its opening counts as the base.
+     *
+     * @param  array<string, mixed>  $data  validated request data
+     */
+    public function openingEffect(User $user, array $data, ?Bucket $bucket = null): Money
+    {
+        $kind = BucketKind::from($data['kind']);
+        $categoryId = $kind === BucketKind::Spending ? ($data['category_id'] ?? null) : null;
+        $retracked = $this->categoryChangeEffect($bucket, $kind, $categoryId);
+
+        if (! array_key_exists('opening_balance', $data)) {
+            return $retracked;
+        }
+
+        $target = $bucket ?? $this->matchingSpendingBucket($user, $kind, $categoryId, (string) $data['currency'], $data['cycle'] ?? null);
+
+        $probe = $target !== null ? clone $target : new Bucket(['tracking_started_on' => $user->today()->toDateString()]);
+        $probe->user_id = $user->id;
+        $probe->kind = $kind;
+        $probe->category_id = $categoryId;
+        $probe->currency = (string) $data['currency'];
+
+        $amount = Money::of($data['opening_balance'] ?? 0);
+        $current = $target !== null ? $this->buckets->openingBalance($target) : Money::zero();
+
+        return $retracked->add($current->isZero()
+            ? $this->buckets->assignEffect($probe, $amount)
+            : $amount->subtract($current));
+    }
+
+    /**
+     * What changing a funded bucket's category (or kind) does to ready to assign: its envelope pays for the new
+     * category's spending since it was funded instead of the old one's, so the envelope (and what is earmarked)
+     * changes by the difference.
+     */
+    private function categoryChangeEffect(?Bucket $bucket, BucketKind $kind, mixed $categoryId): Money
+    {
+        $categoryId = $categoryId !== null ? (int) $categoryId : null;
+
+        if ($bucket === null || ! $this->buckets->isFunded($bucket)
+            || ($kind === $bucket->kind && $categoryId === $bucket->category_id)) {
+            return Money::zero();
+        }
+
+        $after = clone $bucket;
+        $after->kind = $kind;
+        $after->category_id = $categoryId;
+
+        return $this->buckets->envelope($after)->subtract($this->buckets->envelope($bucket));
+    }
+
+    /**
+     * The spending bucket already tracking this category, currency and cycle (there is at most one).
+     */
+    private function matchingSpendingBucket(User $user, BucketKind $kind, mixed $categoryId, string $currency, mixed $cycle): ?Bucket
+    {
+        if ($kind !== BucketKind::Spending) {
+            return null;
+        }
+
+        return Bucket::forUser($user)
+            ->where('category_id', $categoryId)
+            ->where('currency', strtoupper($currency))
+            ->where('cycle', $cycle)
+            ->first();
+    }
+
     public function delete(Bucket $bucket): void
     {
-        DB::transaction(function () use ($bucket) {
-            $this->buckets->releaseFunds($bucket);
-            $bucket->delete();
-        });
+        // Its allocations go with it, so whatever it held is ready to assign again.
+        $bucket->delete();
     }
 }

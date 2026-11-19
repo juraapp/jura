@@ -3,9 +3,18 @@
 namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Ledger\Models\Account;
+use App\Modules\Ledger\Models\Category;
+use App\Modules\Notifications\Notifications\BudgetThresholdReached;
 use App\Modules\Notifications\Notifications\LowAccountBalance;
+use App\Modules\Notifications\Notifications\PlannedPostingBlocked;
+use App\Modules\Notifications\Notifications\UpcomingPlannedPayment;
+use App\Modules\Planning\Models\Bucket;
+use App\Modules\Planning\Models\PlannedEvent;
+use App\Modules\Planning\Services\SeriesPoster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -87,5 +96,87 @@ class NotificationsTest extends TestCase
 
         $this->assertDatabaseHas('notifications', ['type' => LowAccountBalance::class]);
         $this->assertDatabaseMissing('notifications', ['type' => 'App\\Notifications\\LowAccountBalance']);
+    }
+
+    public function test_a_budget_alert_for_a_bucket_whose_category_was_deleted_uses_the_bucket_name(): void
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        $bucket = Bucket::factory()->for($user)->create(['category_id' => $category->id, 'name' => 'Groceries']);
+        $category->delete();
+
+        $data = (new BudgetThresholdReached($bucket->fresh(), 90.0, false))->toArray($user);
+
+        $this->assertStringContainsString('Groceries', $data['message']);
+    }
+
+    public function test_planned_expenses_due_within_three_days_get_one_reminder_saying_whether_they_record_themselves(): void
+    {
+        Carbon::setTestNow('2026-10-12 12:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC', 'locale' => 'en']);
+        $account = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $archived = Account::factory()->for($user)->inactive()->create(['currency' => 'COP']);
+        $plan = fn (array $attributes) => PlannedEvent::factory()->for($user)->expense()->create($attributes + ['currency' => 'COP', 'account_id' => $account->id, 'amount' => 50]);
+        $auto = $plan(['date' => '2026-10-13', 'description' => 'Gym', 'auto_post' => true]);
+        $manual = $plan(['date' => '2026-10-15', 'description' => 'Plumber']);
+        $plan(['date' => '2026-10-16', 'description' => 'Too far']);
+        $plan(['date' => '2026-10-14', 'description' => 'Archived', 'account_id' => $archived->id]);
+        PlannedEvent::factory()->for($user)->income()->create(['date' => '2026-10-13', 'currency' => 'COP']);
+        $other = User::factory()->create(['timezone' => 'UTC']);
+        PlannedEvent::factory()->for($other)->expense()->create(['date' => '2026-10-13', 'currency' => 'COP']);
+
+        $this->artisan('app:notify-upcoming-planned-payments')->assertSuccessful();
+        $this->artisan('app:notify-upcoming-planned-payments')->assertSuccessful();
+
+        $notes = $user->notifications()->where('type', UpcomingPlannedPayment::class)->get()->keyBy(fn ($note) => $note->data['planned_event_id']);
+        $this->assertSame([$auto->id, $manual->id], $notes->keys()->sort()->values()->all());
+        $this->assertStringContainsString('recorded automatically', $notes[$auto->id]->data['message']);
+        $this->assertStringContainsString('Confirm it', $notes[$manual->id]->data['message']);
+        $this->assertStringContainsString('section=review', $notes[$manual->id]->data['url']);
+        $this->assertSame(1, $other->notifications()->count());
+    }
+
+    public function test_the_owner_is_told_once_when_an_auto_posting_plan_is_blocked(): void
+    {
+        Carbon::setTestNow('2026-10-12 12:00:00');
+        $user = User::factory()->create(['timezone' => 'UTC', 'locale' => 'en']);
+        $account = Account::factory()->for($user)->inactive()->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        PlannedEvent::factory()->for($user)->expense()->create([
+            'date' => '2026-10-12', 'currency' => 'COP', 'account_id' => $account->id, 'category_id' => $category->id, 'auto_post' => true, 'description' => 'Gym',
+        ]);
+        $bystander = User::factory()->create();
+
+        app(SeriesPoster::class)->postDue();
+        app(SeriesPoster::class)->postDue();
+
+        $notes = $user->notifications()->where('type', PlannedPostingBlocked::class)->get();
+        $this->assertCount(1, $notes);
+        $this->assertSame("Couldn't record Gym automatically: its account is archived or deleted.", $notes[0]->data['message']);
+        $this->assertSame(0, $bystander->notifications()->count());
+    }
+
+    public function test_a_notification_from_the_hourly_job_is_written_in_its_owners_language(): void
+    {
+        Carbon::setTestNow('2026-10-12 12:00:00');
+        app()->setLocale('en');
+        $user = User::factory()->create(['timezone' => 'UTC', 'locale' => 'es']);
+        $account = Account::factory()->for($user)->inactive()->create(['currency' => 'COP']);
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+        PlannedEvent::factory()->for($user)->expense()->create([
+            'date' => '2026-10-12', 'currency' => 'COP', 'account_id' => $account->id, 'category_id' => $category->id, 'auto_post' => true, 'description' => 'Gimnasio',
+        ]);
+
+        app(SeriesPoster::class)->postDue();
+
+        $note = $user->notifications()->where('type', PlannedPostingBlocked::class)->sole();
+        $this->assertSame('No se pudo registrar Gimnasio automáticamente: su cuenta está archivada o eliminada.', $note->data['message']);
+        $this->assertSame('en', app()->getLocale());
+    }
+
+    public function test_a_saved_language_the_app_does_not_have_falls_back_to_english_for_notifications(): void
+    {
+        $this->assertSame('en', User::factory()->make(['locale' => 'fr'])->preferredLocale());
+        $this->assertSame('es', User::factory()->make(['locale' => 'es'])->preferredLocale());
     }
 }

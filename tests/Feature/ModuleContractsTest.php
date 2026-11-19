@@ -18,15 +18,15 @@ use App\Modules\Ledger\Services\BalanceCalculator;
 use App\Modules\Ledger\Services\EloquentLedgerQuery;
 use App\Modules\Ledger\Services\TransactionService;
 use App\Modules\Planning\Contracts\BucketProgress;
+use App\Modules\Planning\Contracts\MoneyMap;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
-use App\Modules\Planning\Models\RecurringTransaction;
-use App\Modules\Planning\Models\SavingsGoal;
+use App\Modules\Planning\Models\PlannedEventSeries;
 use App\Modules\Planning\Policies\BucketPolicy;
 use App\Modules\Planning\Policies\PlannedEventPolicy;
-use App\Modules\Planning\Policies\RecurringTransactionPolicy;
-use App\Modules\Planning\Policies\SavingsGoalPolicy;
+use App\Modules\Planning\Policies\PlannedEventSeriesPolicy;
 use App\Modules\Planning\Services\BucketService;
+use App\Modules\Planning\Services\MoneyMapService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
@@ -70,6 +70,7 @@ class ModuleContractsTest extends TestCase
         $make($cop, $otherCategory, '2026-10-07', 555.00); // other category
 
         $total = app(LedgerQuery::class)->expenseTotal(
+            $user->id,
             $category->id,
             'COP',
             Carbon::parse('2026-10-01'),
@@ -79,21 +80,23 @@ class ModuleContractsTest extends TestCase
         $this->assertSame('150.50', $total->toDecimalString());
     }
 
-    public function test_account_and_category_options_are_scoped_to_the_user(): void
+    public function test_account_and_category_options_are_scoped_to_the_user_without_an_authenticated_user(): void
     {
         $user = User::factory()->create();
-        $this->actingAs($user);
 
         Account::factory()->for($user)->create(['name' => 'Active', 'is_active' => true]);
         Account::factory()->for($user)->inactive()->create(['name' => 'Archived']);
         Account::factory()->create(['name' => 'Someone else']);
         Category::factory()->expense()->create(['user_id' => $user->id, 'name' => 'Mine']);
+        Category::factory()->expense()->create(['user_id' => User::factory()->create()->id, 'name' => 'Theirs']);
 
         $ledger = app(LedgerQuery::class);
 
-        $this->assertSame(['Active'], $ledger->activeAccountOptions()->pluck('name')->all());
-        $this->assertContains('Mine', $ledger->categoryOptions(CategoryType::Expense)->pluck('name')->all());
-        $this->assertNotContains('Mine', $ledger->categoryOptions(CategoryType::Income)->pluck('name')->all());
+        $this->assertSame(['Active'], $ledger->activeAccountOptions($user->id)->pluck('name')->all());
+        $expenseNames = $ledger->categoryOptions($user->id, CategoryType::Expense)->pluck('name')->all();
+        $this->assertContains('Mine', $expenseNames);
+        $this->assertNotContains('Theirs', $expenseNames);
+        $this->assertNotContains('Mine', $ledger->categoryOptions($user->id, CategoryType::Income)->pluck('name')->all());
     }
 
     public function test_record_creates_a_transaction_and_returns_its_id(): void
@@ -117,16 +120,48 @@ class ModuleContractsTest extends TestCase
         $this->assertFalse($transaction->is_recurring_generated);
     }
 
+    public function test_record_can_mark_a_transaction_as_auto_posted(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::factory()->for($user)->create();
+        $category = Category::factory()->expense()->create(['user_id' => $user->id]);
+
+        $id = app(RecordsTransactions::class)->record($user, TransactionType::Expense, [
+            'account_id' => $account->id, 'category_id' => $category->id, 'amount' => 20, 'date' => '2026-10-12', 'description' => 'Gym',
+        ], autoPosted: true);
+
+        $this->assertTrue(Transaction::withoutGlobalScopes()->findOrFail($id)->is_recurring_generated);
+    }
+
+    public function test_record_transfer_creates_both_legs_and_returns_the_outgoing_one(): void
+    {
+        $user = User::factory()->create();
+        $from = Account::factory()->for($user)->create(['currency' => 'COP']);
+        $to = Account::factory()->for($user)->create(['currency' => 'COP']);
+
+        $id = app(RecordsTransactions::class)->recordTransfer($user, [
+            'from_account_id' => $from->id, 'to_account_id' => $to->id, 'amount' => 75.5, 'date' => '2026-10-12', 'description' => 'Savings',
+        ], autoPosted: true);
+
+        $legs = Transaction::withoutGlobalScopes()->orderBy('id')->get();
+        $this->assertCount(2, $legs);
+        $this->assertSame($id, $legs[0]->id);
+        $this->assertSame(TransactionType::TransferOut, $legs[0]->type);
+        $this->assertSame($to->id, $legs[1]->account_id);
+        $this->assertSame($legs[0]->transfer_group_id, $legs[1]->transfer_group_id);
+        $this->assertTrue($legs[1]->is_recurring_generated);
+    }
+
     public function test_planning_contract_resolves_to_its_implementation(): void
     {
         $this->assertInstanceOf(BucketService::class, app(BucketProgress::class));
+        $this->assertInstanceOf(MoneyMapService::class, app(MoneyMap::class));
     }
 
     public function test_planning_models_resolve_their_policies(): void
     {
         $this->assertInstanceOf(BucketPolicy::class, Gate::getPolicyFor(Bucket::class));
         $this->assertInstanceOf(PlannedEventPolicy::class, Gate::getPolicyFor(PlannedEvent::class));
-        $this->assertInstanceOf(SavingsGoalPolicy::class, Gate::getPolicyFor(SavingsGoal::class));
-        $this->assertInstanceOf(RecurringTransactionPolicy::class, Gate::getPolicyFor(RecurringTransaction::class));
+        $this->assertInstanceOf(PlannedEventSeriesPolicy::class, Gate::getPolicyFor(PlannedEventSeries::class));
     }
 }

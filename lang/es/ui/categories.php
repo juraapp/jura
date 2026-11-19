@@ -19,6 +19,7 @@ return [
     'preview' => 'Vista previa',
     'save' => 'Guardar',
     'delete_title' => '¿Eliminar esta categoría?',
+    'delete_hint' => 'Se mueve a la Papelera, desde donde puedes restaurarla. Una categoría que todavía tiene transacciones se conserva.',
     'name_placeholder' => 'Mercado',
     'select_all' => 'Seleccionar todo',
     'noun' => 'categorías',

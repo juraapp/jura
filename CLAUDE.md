@@ -1,7 +1,7 @@
 # Jura
 
-Personal finance app: accounts, transactions, budgets, recurring transactions, savings goals, reports, and
-(in progress) project budgeting with income forecasting. Single-user-per-account data, scoped by the
+Personal finance app: accounts, transactions, budgets, planned and repeating money (plans can record themselves
+on their date), savings buckets with target dates, reports, and project budgeting with income forecasting. Single-user-per-account data, scoped by the
 `BelongsToUser` global scope.
 
 ## Stack (not Livewire/Volt)
@@ -17,8 +17,8 @@ auto-discovered. See `docs/architecture.md`.
 
 ## Project budgeting domain (Planning module)
 Actual data is `Ledger`'s `Transaction`; projected data never touches balances. Concepts: `PlannedEvent` (future income/expense with
-certainty), `Bucket` + `Allocation` (virtual earmarked money filled from income by a priority waterfall), `Project`/`WishlistItem`,
-`BucketCycle` (stored history of each bucket cycle), and the planner (`ForecastEngine`, `ScenarioSuggester`, `CyclePeriod`: pure, unit-tested logic in `Planning/Support`). Display formats come from the user's preferences: use `useFormat()` (Vue) / `$user->formatter()` (PHP), never `toLocale*`/`number_format` by hand. Keep pure logic framework-free. UI text is translated: Vue uses `$t('ui.<area>.<key>')` with keys in `lang/{en,es}/ui/<area>.php` (see `docs/i18n-conventions.md`).
+certainty; `PlannedEventSeries` repeats it and can auto-post it as a real transaction, replacing recurring transactions; `PlannedOccurrences` is the one source of open planned money for every projection), `Bucket` + `Allocation` (virtual earmarked money filled from income by a priority waterfall), `Project`/`WishlistItem`,
+`BucketCycle` (stored history of each bucket cycle), and the planner (`ForecastEngine`, `ScenarioSuggester`, `IncomeStep`, `CashTimeline`, `CyclePeriod`: pure, unit-tested logic in `Planning/Support`). Forecasts plan against free money (ready to assign = on-budget cash − funded envelopes, never stored) with a cash guard; `ForecastInputBuilder` is the one place that turns real data into engine input, and `ForecastView::default()` (Expected) is the view everywhere unless the user picks another. Display formats come from the user's preferences: use `useFormat()` (Vue) / `$user->formatter()` (PHP), never `toLocale*`/`number_format` by hand. "Today" is the user's date in their timezone: `$user->today()` / `User::todayFor($id)` (PHP) and `useToday()` (Vue), never `today()`/`now()` or `toISOString()` for a user's date. Keep pure logic framework-free. UI text is translated: Vue uses `$t('ui.<area>.<key>')` with keys in `lang/{en,es}/ui/<area>.php` (see `docs/i18n-conventions.md`).
 
 ## Where to read first
 - `docs/architecture.md`, `docs/domain-model.md`: layout, request lifecycle, entities.
@@ -28,8 +28,13 @@ certainty), `Bucket` + `Allocation` (virtual earmarked money filled from income 
 
 ## Project conventions
 - Keep these docs and this section current as the code changes; do it in the same change, not later.
-- Money is `decimal(15,2)` via `Shared/Support/Money` and `AsMoney`. Actual data is `Transaction`; projected
+- Money is `decimal(15,2)` via `Shared/Support/Money` and `AsMoney`. Validate money input with
+  `Shared/Validation/MoneyRules` and account/category foreign keys with `Shared/Validation/LedgerRules` (owner, not
+  trashed, active, category type). Code reachable from jobs/console must scope by user explicitly (no auth there). Actual data is `Transaction`; projected
   (forecast) data must stay separate from actual data and be labelled as such.
+- Envelope model: "ready to assign" = on-budget account balances − funded bucket envelopes, per currency. It is
+  computed (`Planning\Contracts\MoneyMap`), never stored; there is no default/catch-all bucket. Planning/Support
+  stays pure (`tests/Architecture` checks it).
 - Commits are atomic Conventional Commits with no `Co-Authored-By` trailer (`.ai/rules/general.md`).
 - Local ports: if 80/3306/6379/5173 are taken by another Sail project, set `APP_PORT`, `FORWARD_DB_PORT`,
   `FORWARD_REDIS_PORT` and `VITE_PORT` in `.env` (and `APP_URL` to match).

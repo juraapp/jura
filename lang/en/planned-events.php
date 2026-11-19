@@ -12,4 +12,11 @@ return [
     'linked' => 'Linked to the existing transaction.',
     'already_closed' => 'This planned event is already closed.',
     'account_required' => 'Choose an account to record this transaction.',
+    'currency_mismatch' => 'This plan is in :currency. Choose an account or transaction in the same currency.',
+    'auto_post_requires' => 'Recording it automatically needs an active account and a category.',
+    'series_updated' => 'Repeating plan updated from today on.',
+    'series_paused' => 'Repeating plan paused.',
+    'series_resumed' => 'Repeating plan resumed from today.',
+    'series_deleted' => 'Repeating plan deleted. Recorded and skipped dates stay in your history.',
+    'future_not_allowed' => 'A recorded transaction cannot be dated after today.',
 ];

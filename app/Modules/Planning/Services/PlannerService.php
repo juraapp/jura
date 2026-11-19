@@ -3,15 +3,10 @@
 namespace App\Modules\Planning\Services;
 
 use App\Modules\Identity\Models\User;
-use App\Modules\Ledger\Enums\TransactionType;
-use App\Modules\Planning\Enums\BucketKind;
+use App\Modules\Ledger\Contracts\LedgerQuery;
 use App\Modules\Planning\Enums\ForecastView;
 use App\Modules\Planning\Enums\WishlistStatus;
-use App\Modules\Planning\Models\Bucket;
-use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\WishlistItem;
-use App\Modules\Planning\Support\Forecast\EngineBucket;
-use App\Modules\Planning\Support\Forecast\EngineIncome;
 use App\Modules\Planning\Support\Forecast\EngineInput;
 use App\Modules\Planning\Support\Forecast\EngineLine;
 use App\Modules\Planning\Support\Forecast\EngineResult;
@@ -26,64 +21,32 @@ use Carbon\CarbonImmutable;
 class PlannerService
 {
     public function __construct(
-        private readonly BucketLedger $funds,
+        private readonly ForecastInputBuilder $builder,
         private readonly ForecastEngine $engine,
         private readonly ScenarioSuggester $suggester,
+        private readonly LedgerQuery $ledger,
     ) {}
 
     public function context(User $user, string $currency, ForecastView $view, int $horizonMonths): PlannerContext
     {
-        $start = CarbonImmutable::today();
+        $start = CarbonImmutable::instance($user->today())->startOfDay();
         $end = $start->addMonthsNoOverflow($horizonMonths);
+        $inputs = $this->builder->build($user, $currency, $view, $end);
 
-        $buckets = Bucket::forUser($user)->where('currency', $currency)->inPriorityOrder()->get();
-
-        $names = [];
         $balances = [];
-        $engineBuckets = $buckets->map(function (Bucket $bucket) use (&$names, &$balances, $start) {
-            $balance = $this->funds->available($bucket);
-            $names[$bucket->id] = $bucket->name;
-            $balances[$bucket->id] = $balance->toFloat();
-
-            return new EngineBucket(
-                $bucket->id,
-                $bucket->fill_rule,
-                $bucket->fill_value !== null ? (string) $bucket->fill_value : null,
-                $bucket->cap_amount,
-                $bucket->kind === BucketKind::Savings,
-                $balance,
-                $bucket->allowed_account_ids,
-                $bucket->cycle,
-                $bucket->carry_over,
-                $bucket->overflow_bucket_id,
-                $bucket->is_default,
-                (int) $bucket->cycle_every,
-                $bucket->cycle_anchor !== null ? CarbonImmutable::parse($bucket->cycle_anchor->toDateString()) : null,
-                $this->funds->receivedInCycle($bucket, $start),
-                $bucket->step_up_value !== null ? (string) $bucket->step_up_value : null,
-                $bucket->step_up_after_bucket_id,
-                $bucket->completes_on_purchase,
-                $bucket->completed_on !== null ? CarbonImmutable::parse($bucket->completed_on->toDateString()) : null,
-            );
-        })->values()->all();
-
-        $incomes = PlannedEvent::forUser($user)
-            ->open()
-            ->where('type', TransactionType::Income->value)
-            ->where('currency', $currency)
-            ->where('date', '<=', $end->toDateString())
-            ->orderBy('date')
-            ->get()
-            ->filter(fn (PlannedEvent $event) => $view->includesIncome($event->certainty))
-            ->map(fn (PlannedEvent $event) => new EngineIncome(CarbonImmutable::parse($event->date->toDateString()), $event->amount, $event->account_id))
-            ->values()
-            ->all();
+        $hasFillRules = false;
+        foreach ($inputs->buckets as $bucket) {
+            $balances[$bucket->id] = $bucket->envelope->toFloat();
+            $hasFillRules = $hasFillRules || $bucket->rule !== null;
+        }
 
         return new PlannerContext(
-            new EngineInput($start, $end, $engineBuckets, $incomes),
-            $names,
+            new EngineInput($start, $end, $inputs->startCash, $inputs->buckets, $inputs->flows, $inputs->timeline),
+            $inputs->bucketNames,
             $balances,
-            $buckets->contains(fn (Bucket $bucket) => $bucket->fill_rule !== null),
+            $hasFillRules,
+            $inputs->coverage,
+            $inputs->startReadyToAssign(),
         );
     }
 
@@ -94,6 +57,7 @@ class PlannerService
     public function lines(User $user, string $currency, PlannerContext $context, array $rows): array
     {
         $items = WishlistItem::forUser($user)
+            ->with('project')
             ->whereIn('id', array_column($rows, 'item_id'))
             ->where('status', WishlistStatus::Wanted->value)
             ->where('currency', $currency)
@@ -104,7 +68,6 @@ class PlannerService
         foreach ($context->input->buckets as $bucket) {
             $buckets[$bucket->id] = $bucket;
         }
-        $defaultId = $context->input->defaultBucket()?->id;
 
         $lines = [];
         foreach ($rows as $row) {
@@ -113,22 +76,36 @@ class PlannerService
                 continue;
             }
 
-            $bucket = $buckets[$item->bucket_id ?? $defaultId] ?? null;
+            $bucketId = $item->bucket_id ?? $item->project?->bucket_id;
+            $bucket = $bucketId !== null ? ($buckets[$bucketId] ?? null) : null;
             $blocked = null;
             if (! empty($item->allowed_account_ids) && $bucket !== null && ! empty($bucket->allowedAccountIds)
                 && array_intersect($item->allowed_account_ids, $bucket->allowedAccountIds) === []) {
                 $blocked = 'accounts';
+            } elseif (! empty($item->allowed_account_ids)
+                && collect($item->allowed_account_ids)->every(fn ($accountId) => ! $this->ledger->isOnBudget($user->id, (int) $accountId))) {
+                $blocked = 'off_budget';
+            }
+
+            $warnings = [];
+            if ($bucket !== null && $bucket->roomApplies()) {
+                $cap = $bucket->capOn($context->input->start);
+                $most = $cap !== null && $cap->greaterThan($bucket->envelope) ? $cap : $bucket->envelope;
+                if ($cap !== null && $most->lessThan($item->price)) {
+                    $warnings[] = 'cap_below_price';
+                }
             }
 
             $lines[] = new EngineLine(
                 $item->id,
                 $item->name,
                 $item->price,
-                $item->bucket_id,
+                $bucketId,
                 ! empty($row['not_before']) ? CarbonImmutable::parse($row['not_before']) : null,
                 $item->desired_by ? CarbonImmutable::parse($item->desired_by->toDateString()) : null,
                 $item->importance,
                 $blocked,
+                warnings: $warnings,
             );
         }
 
@@ -136,12 +113,15 @@ class PlannerService
     }
 
     /**
+     * Plays a user-built order. An item that cannot be bought in time is parked at the end so it does not hold back
+     * the ones after it (suggestions never need this: they already put such items last).
+     *
      * @param  list<EngineLine>  $lines
      * @return array<string, mixed>
      */
     public function simulate(PlannerContext $context, array $lines): array
     {
-        $result = $this->engine->run($context->input, $lines);
+        $result = $this->engine->run($context->input, $lines, parkUnaffordable: true);
 
         return $this->present($context, $result, $this->suggester->score($context->input, $result));
     }
@@ -178,6 +158,12 @@ class PlannerService
                 'blocked' => $line->blocked,
                 'late' => $line->late,
                 'importance' => $line->importance,
+                'fromBucket' => $line->fromBucket->toFloat(),
+                'fromFree' => $line->fromFree->toFloat(),
+                'limitedBy' => $line->limitedBy,
+                'parked' => $line->parked,
+                'freeDipsOn' => $line->freeDipsOn?->toDateString(),
+                'warnings' => $line->warnings,
             ], $result->lines),
             'buckets' => collect($context->bucketNames)->map(fn (string $name, int $id) => [
                 'id' => $id,
@@ -185,8 +171,48 @@ class PlannerService
                 'startBalance' => $context->startBalances[$id],
                 'endBalance' => $result->endBalances[$id]->toFloat(),
             ])->values()->all(),
+            'readyToAssign' => [
+                'start' => $context->startReadyToAssign->toFloat(),
+                'end' => $result->endReadyToAssign->toFloat(),
+            ],
+            'timeline' => $this->monthEnds($context, $result),
+            'incomes' => [
+                'view' => $context->coverage->view,
+                'counted' => $context->coverage->incomesCounted,
+                'total' => $context->coverage->incomesTotal,
+                'countedAmount' => $context->coverage->countedAmount->toFloat(),
+                'totalAmount' => $context->coverage->totalAmount->toFloat(),
+                'overdue' => $context->coverage->overdueCounted,
+                'offBudget' => $context->coverage->offBudgetIncomes,
+                'offBudgetAmount' => $context->coverage->offBudgetAmount->toFloat(),
+                'allocated' => $result->incomes->allocated->toFloat(),
+                'leftFree' => $result->incomes->leftFree->toFloat(),
+            ],
             'score' => round($score, 1),
             'hasFillRules' => $context->hasFillRules,
         ];
+    }
+
+    /**
+     * Cash and ready to assign at the end of every month of the horizon (the last point: the horizon's end).
+     *
+     * @return list<array{date: string, cash: float, free: float}>
+     */
+    private function monthEnds(PlannerContext $context, EngineResult $result): array
+    {
+        $points = [];
+        $end = $context->input->end;
+        for ($month = $context->input->start->endOfMonth()->startOfDay(); ; $month = $month->addDay()->endOfMonth()->startOfDay()) {
+            $date = $month->gt($end) ? $end : $month;
+            $point = $result->pointAt($date);
+            if ($point !== null) {
+                $points[] = ['date' => $date->toDateString(), 'cash' => $point->cash->toFloat(), 'free' => $point->free->toFloat()];
+            }
+            if ($month->gte($end)) {
+                break;
+            }
+        }
+
+        return $points;
     }
 }

@@ -6,24 +6,26 @@ use App\Modules\Ledger\Models\Account;
 use App\Modules\Ledger\Models\Category;
 use App\Modules\Ledger\Models\Transaction;
 use App\Modules\Planning\Models\Bucket;
-use App\Modules\Planning\Models\RecurringTransaction;
-use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Shared\Support\UserFormat;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use ArrayObject;
+use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Auth;
 
 #[Fillable([
     'name', 'email', 'password', 'currency_default', 'locale', 'timezone',
     'date_format', 'time_format', 'decimal_separator', 'thousands_separator', 'fraction_digits', 'currency_display', 'currency_position',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -31,6 +33,7 @@ class User extends Authenticatable
     protected $attributes = [
         'currency_default' => 'COP',
         'locale' => 'en',
+        'timezone' => 'America/Bogota',
         'date_format' => 'auto',
         'time_format' => 'auto',
         'currency_display' => 'auto',
@@ -64,6 +67,65 @@ class User extends Authenticatable
         ]), $this->locale ?? 'en');
     }
 
+    /**
+     * The language notifications are written in, also when they are sent from a job or a command: the saved
+     * language when the app has it (as SetUserLocale does for requests), English otherwise.
+     */
+    public function preferredLocale(): string
+    {
+        return in_array($this->locale, ['en', 'es'], true) ? $this->locale : 'en';
+    }
+
+    /**
+     * The user's timezone, or the app's when none (or an unknown one) is stored.
+     */
+    public function timezoneName(): string
+    {
+        $timezone = $this->timezone;
+
+        return is_string($timezone) && in_array($timezone, timezone_identifiers_list(), true)
+            ? $timezone
+            : config('app.timezone');
+    }
+
+    /**
+     * The user's current calendar date, as midnight in the app timezone so it compares directly with stored
+     * `date` columns. Use this, never today()/now(), whenever server code needs "today" for a user.
+     */
+    public function today(): CarbonImmutable
+    {
+        return CarbonImmutable::parse(CarbonImmutable::now($this->timezoneName())->toDateString(), config('app.timezone'));
+    }
+
+    /** Container key of the users looked up by todayFor() in the current request, job or command. */
+    private const DATE_OWNERS = 'identity.date-owners';
+
+    /**
+     * Today for a user given by id, without a query when it is the authenticated user (services that only
+     * hold a user_id, such as bucket maths, call this on every request). Other users are looked up once per
+     * request or queued job (a scoped instance, reset between jobs), not on every call.
+     */
+    public static function todayFor(self|int $user): CarbonImmutable
+    {
+        if ($user instanceof self) {
+            return $user->today();
+        }
+
+        $current = Auth::user();
+        if ($current instanceof self && $current->id === $user) {
+            return $current->today();
+        }
+
+        if (! app()->bound(self::DATE_OWNERS)) {
+            app()->scoped(self::DATE_OWNERS, fn () => new ArrayObject);
+        }
+
+        $owners = app(self::DATE_OWNERS);
+        $owners[$user] ??= static::find($user) ?? new static;
+
+        return $owners[$user]->today();
+    }
+
     public function accounts(): HasMany
     {
         return $this->hasMany(Account::class);
@@ -82,15 +144,5 @@ class User extends Authenticatable
     public function buckets(): HasMany
     {
         return $this->hasMany(Bucket::class);
-    }
-
-    public function savingsGoals(): HasMany
-    {
-        return $this->hasMany(SavingsGoal::class);
-    }
-
-    public function recurringTransactions(): HasMany
-    {
-        return $this->hasMany(RecurringTransaction::class);
     }
 }

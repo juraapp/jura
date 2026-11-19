@@ -3,12 +3,11 @@
 namespace Tests\Feature;
 
 use App\Modules\Identity\Models\User;
+use App\Modules\Planning\Enums\PlannedEventStatus;
 use App\Modules\Planning\Models\Allocation;
 use App\Modules\Planning\Models\Bucket;
 use App\Modules\Planning\Models\PlannedEvent;
 use App\Modules\Planning\Models\PlannedEventSeries;
-use App\Modules\Planning\Models\RecurringTransaction;
-use App\Modules\Planning\Models\SavingsGoal;
 use App\Modules\Planning\Models\WishlistItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -45,39 +44,43 @@ class BulkDeleteTest extends TestCase
         $this->assertDatabaseMissing('planned_events', ['id' => $occurrences[1]->id]);
     }
 
-    public function test_wishlist_items_recurring_transactions_and_goals_are_deleted_in_bulk(): void
+    public function test_bulk_delete_keeps_realized_plans(): void
+    {
+        $realized = PlannedEvent::factory()->for($this->user)->status(PlannedEventStatus::Realized)->create();
+        $open = PlannedEvent::factory()->for($this->user)->create();
+
+        $this->actingAs($this->user)->post('/planning/cash-flow/bulk-delete', ['ids' => [$realized->id, $open->id]])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('planned_events', ['id' => $realized->id]);
+        $this->assertDatabaseMissing('planned_events', ['id' => $open->id]);
+    }
+
+    public function test_wishlist_items_are_deleted_in_bulk(): void
     {
         $items = WishlistItem::factory()->for($this->user)->count(2)->create();
-        $recurring = RecurringTransaction::factory()->for($this->user)->count(2)->create();
-        $goals = SavingsGoal::factory()->for($this->user)->count(2)->create();
         $foreignItem = WishlistItem::factory()->create();
 
         $this->actingAs($this->user)->post('/planning/wishlist/bulk-delete', ['ids' => [...$items->pluck('id'), $foreignItem->id]])->assertRedirect()->assertSessionHas('success');
-        $this->actingAs($this->user)->post('/planning/recurring/bulk-delete', ['ids' => $recurring->pluck('id')->all()])->assertRedirect();
-        $this->actingAs($this->user)->post('/planning/goals/bulk-delete', ['ids' => $goals->pluck('id')->all()])->assertRedirect();
 
         $this->assertSame(0, WishlistItem::where('user_id', $this->user->id)->count());
         $this->assertNotNull(WishlistItem::withoutGlobalScopes()->find($foreignItem->id));
-        $this->assertSame(0, RecurringTransaction::where('user_id', $this->user->id)->count());
-        $this->assertSame(2, SavingsGoal::onlyTrashed()->count(), 'goals go to the trash');
     }
 
-    public function test_buckets_are_deleted_in_bulk_and_their_money_goes_to_the_default_bucket(): void
+    public function test_buckets_are_deleted_in_bulk_with_their_money(): void
     {
-        $default = Bucket::factory()->savings()->asDefault()->for($this->user)->create(['currency' => 'COP']);
         $one = Bucket::factory()->savings()->for($this->user)->create(['currency' => 'COP']);
         $two = Bucket::factory()->savings()->for($this->user)->create(['currency' => 'COP']);
         Allocation::factory()->for($this->user)->for($one)->create(['amount' => 300, 'currency' => 'COP']);
 
         $this->actingAs($this->user)->post('/planning/buckets/bulk-delete', ['ids' => [$one->id, $two->id]])->assertRedirect()->assertSessionHas('success');
 
-        $this->assertSame(1, Bucket::where('user_id', $this->user->id)->count());
-        $this->assertSame('300.00', number_format((float) Allocation::where('bucket_id', $default->id)->sum('amount'), 2, '.', ''));
+        $this->assertSame(0, Bucket::where('user_id', $this->user->id)->count());
+        $this->assertSame(0, Allocation::where('user_id', $this->user->id)->count(), 'what they held is ready to assign again');
     }
 
     public function test_the_ids_are_required_and_limited_on_every_bulk_endpoint(): void
     {
-        foreach (['planning/cash-flow', 'planning/wishlist', 'planning/recurring', 'planning/goals', 'planning/buckets'] as $path) {
+        foreach (['planning/cash-flow', 'planning/wishlist', 'planning/recurring', 'planning/buckets'] as $path) {
             $this->actingAs($this->user)->post("/{$path}/bulk-delete", [])->assertSessionHasErrors('ids');
             $this->actingAs($this->user)->post("/{$path}/bulk-delete", ['ids' => range(1, 501)])->assertSessionHasErrors('ids');
         }

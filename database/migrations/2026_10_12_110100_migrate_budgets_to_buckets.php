@@ -41,7 +41,6 @@ return new class extends Migration
                 'cycle' => $group->period_type,
                 'cap_amount' => $latest->amount,
                 'carry_over' => 'carry',
-                'is_default' => false,
                 'tracking_started_on' => now()->toDateString(),
                 'created_at' => now(),
                 'updated_at' => now(),

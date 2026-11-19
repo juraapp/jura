@@ -40,4 +40,5 @@ return [
     'distribution' => 'Distribución actual del dinero',
     'no_positive' => 'Aún no tienes saldo positivo en ninguna cuenta.',
     'net_worth_evolution' => 'Evolución del patrimonio neto',
+    'needs_review' => 'Por revisar ({count})',
 ];

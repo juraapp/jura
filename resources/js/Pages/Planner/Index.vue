@@ -5,9 +5,11 @@ import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import EmptyState from '@/Components/EmptyState.vue';
+import IconButton from '@/Components/IconButton.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import InputError from '@/Components/InputError.vue';
 import Money from '@/Components/Money.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import ScenarioResult from '@/Components/ScenarioResult.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
@@ -28,28 +30,43 @@ const props = defineProps({
     currencies: { type: Array, required: true },
     scenarios: { type: Array, required: true },
     views: { type: Array, required: true },
+    defaultView: { type: String, default: 'expected' },
     horizons: { type: Array, required: true },
     hasFillRules: { type: Boolean, required: true },
 });
 
 const currency = ref(props.currencies[0] ?? 'COP');
-const view = ref('conservative');
+const view = ref(props.defaultView);
 const horizon = ref(12);
 
-const viewHints = {
+const viewHints = computed(() => ({
     conservative: t('ui.planner.hint_conservative'),
     expected: t('ui.planner.hint_expected'),
     optimistic: t('ui.planner.hint_optimistic'),
-};
+}));
 
 const itemsInCurrency = computed(() => props.items.filter((item) => item.currency === currency.value));
 const selected = ref(new Set(props.items.filter((item) => item.currency === (props.currencies[0] ?? '')).map((item) => item.id)));
 
+/* Set by loadScenario so switching to the scenario's currency keeps the order it just loaded. */
+let keepOrderOnCurrencyChange = false;
+
 watch(currency, () => {
     selected.value = new Set(itemsInCurrency.value.map((item) => item.id));
-    suggestions.value = [];
+    clearSuggestions();
+    if (keepOrderOnCurrencyChange) {
+        keepOrderOnCurrencyChange = false;
+
+        return;
+    }
     order.value = [];
-    result.value = null;
+    clearResult();
+});
+
+/* Results and suggestions were computed for the old view or horizon: rerun the builder, drop the suggestions. */
+watch([view, horizon], () => {
+    clearSuggestions();
+    runSimulation();
 });
 
 const toggle = (id) => {
@@ -62,11 +79,16 @@ const importance = (n) => '●'.repeat(n) + '○'.repeat(5 - n);
 const formatDate = (date) => format.date(date);
 
 /* ---- JSON helper ---- */
-const loading = ref(false);
+const pending = ref(0);
+const loading = computed(() => pending.value > 0);
 const error = ref('');
 
-const post = async (action, body) => {
-    loading.value = true;
+/**
+ * Posts JSON to a planner endpoint. `isCurrent` tells whether the caller still wants this answer;
+ * a stale response neither returns data nor touches the error banner.
+ */
+const post = async (action, body, isCurrent = () => true) => {
+    pending.value++;
     error.value = '';
 
     try {
@@ -77,6 +99,10 @@ const post = async (action, body) => {
         });
         const json = await response.json();
 
+        if (!isCurrent()) {
+            return null;
+        }
+
         if (!response.ok) {
             error.value = Object.values(json.errors ?? {}).flat()[0] ?? json.message ?? t('ui.planner.err_generic');
 
@@ -85,11 +111,13 @@ const post = async (action, body) => {
 
         return json;
     } catch (e) {
-        error.value = t('ui.planner.err_server');
+        if (isCurrent()) {
+            error.value = t('ui.planner.err_server');
+        }
 
         return null;
     } finally {
-        loading.value = false;
+        pending.value--;
     }
 };
 
@@ -97,6 +125,12 @@ const runParams = () => ({ currency: currency.value, view: view.value, horizon_m
 
 /* ---- suggestions ---- */
 const suggestions = ref([]);
+let suggestRequest = 0;
+
+const clearSuggestions = () => {
+    suggestRequest++;
+    suggestions.value = [];
+};
 
 const runSuggest = async () => {
     if (selected.value.size === 0) {
@@ -105,7 +139,8 @@ const runSuggest = async () => {
         return;
     }
 
-    const json = await post(suggest, { ...runParams(), item_ids: [...selected.value] });
+    const request = ++suggestRequest;
+    const json = await post(suggest, { ...runParams(), item_ids: [...selected.value] }, () => request === suggestRequest);
     if (json) suggestions.value = json.suggestions;
 };
 
@@ -113,6 +148,18 @@ const runSuggest = async () => {
 const order = ref([]); // [{ itemId, notBefore }]
 const result = ref(null);
 const itemById = (id) => props.items.find((item) => item.id === id);
+
+/*
+ * Only wanted items in the planner's currency can be simulated or saved; others (bought, dropped) stay visible but left out.
+ * A saved scenario's line carries the server's `wanted` flag; rows built from the wish list have none and are wanted.
+ */
+const isPlannable = (row, inCurrency = currency.value) => row.wanted !== false && itemById(row.itemId)?.currency === inCurrency;
+const scenarioHasPlannableLines = (scenario) => scenario.lines.some((line) => isPlannable(line, scenario.currency));
+const lineName = (row) => itemById(row.itemId)?.name ?? row.name ?? t('ui.planner.item_n', { id: row.itemId });
+const plannableRows = computed(() => order.value.filter((row) => isPlannable(row)));
+/* The incomes the last run counted (the same for every suggestion and the builder of this currency, view and horizon). */
+const coverage = computed(() => (result.value ?? suggestions.value[0])?.incomes ?? null);
+
 const viewLabel = (value) => props.views.find((candidate) => candidate.value === value)?.label ?? value;
 
 const useOrder = (ids) => {
@@ -134,14 +181,28 @@ const move = (index, delta) => {
 
 const removeLine = (index) => {
     order.value = order.value.filter((_, i) => i !== index);
-    order.value.length ? runSimulation() : (result.value = null);
+    runSimulation();
 };
 
 const linesPayload = (rows) => rows.map((row) => ({ item_id: row.itemId, not_before: row.notBefore || null }));
 
+/* Each run gets a number; only the latest one may set the result, so a slow older response cannot overwrite a newer one. */
+let simulationRequest = 0;
+
+const clearResult = () => {
+    simulationRequest++;
+    result.value = null;
+};
+
 const runSimulation = async () => {
-    if (order.value.length === 0) return;
-    const json = await post(simulate, { ...runParams(), lines: linesPayload(order.value) });
+    if (plannableRows.value.length === 0) {
+        clearResult();
+
+        return;
+    }
+
+    const request = ++simulationRequest;
+    const json = await post(simulate, { ...runParams(), lines: linesPayload(plannableRows.value) }, () => request === simulationRequest);
     if (json) result.value = json;
 };
 
@@ -151,11 +212,12 @@ const showSave = ref(false);
 
 const saveOrder = (ids) => {
     order.value = ids.map((id) => ({ itemId: id, notBefore: '' }));
+    runSimulation();
     showSave.value = true;
 };
 
 const submitSave = () => {
-    saveForm.transform((data) => ({ ...data, ...runParams(), lines: linesPayload(order.value) })).post(store.url(), {
+    saveForm.transform((data) => ({ ...data, ...runParams(), lines: linesPayload(plannableRows.value) })).post(store.url(), {
         preserveScroll: true,
         onSuccess: () => {
             showSave.value = false;
@@ -175,17 +237,29 @@ const toggleCompare = async (scenario) => {
     await refreshComparison();
 };
 
+let comparisonRequest = 0;
+
 const refreshComparison = async () => {
+    const request = ++comparisonRequest;
     const chosen = props.scenarios.filter((scenario) => compareIds.value.has(scenario.id));
     const runs = [];
 
     for (const scenario of chosen) {
+        /* A scenario with nothing left to plan shows the nothing_plannable hint in the saved-plans list instead. */
+        const lines = scenario.lines.filter((line) => isPlannable(line, scenario.currency));
+        if (lines.length === 0) {
+            continue;
+        }
+
         const json = await post(simulate, {
             currency: scenario.currency,
             view: scenario.view,
             horizon_months: scenario.horizonMonths,
-            lines: linesPayload(scenario.lines.map((line) => ({ itemId: line.itemId, notBefore: line.notBefore }))),
-        });
+            lines: linesPayload(lines.map((line) => ({ itemId: line.itemId, notBefore: line.notBefore }))),
+        }, () => request === comparisonRequest);
+        if (request !== comparisonRequest) {
+            return;
+        }
         if (json) runs.push({ scenario, result: json });
     }
 
@@ -193,11 +267,18 @@ const refreshComparison = async () => {
 };
 
 const loadScenario = (scenario) => {
+    if (scenario.currency !== currency.value) {
+        keepOrderOnCurrencyChange = true;
+    }
+    /* A new view or horizon already reruns the simulation through its watcher; only run it here when neither changes. */
+    const settingsChange = view.value !== scenario.view || horizon.value !== scenario.horizonMonths;
     currency.value = scenario.currency;
     view.value = scenario.view;
     horizon.value = scenario.horizonMonths;
-    order.value = scenario.lines.map((line) => ({ itemId: line.itemId, notBefore: line.notBefore ?? '' }));
-    runSimulation();
+    order.value = scenario.lines.map((line) => ({ itemId: line.itemId, name: line.name, wanted: line.wanted, notBefore: line.notBefore ?? '' }));
+    if (!settingsChange) {
+        runSimulation();
+    }
     document.getElementById('builder')?.scrollIntoView({ behavior: 'smooth' });
 };
 
@@ -212,7 +293,9 @@ const comparisonRows = computed(() => {
 
     return ids.map((id) => ({
         id,
-        name: itemById(id)?.name ?? t('ui.planner.item_n', { id }),
+        name: itemById(id)?.name
+            ?? compared.value.flatMap(({ scenario }) => scenario.lines).find((line) => line.itemId === id)?.name
+            ?? t('ui.planner.item_n', { id }),
         cells: compared.value.map(({ result: run }) => run.lines.find((line) => line.itemId === id) ?? null),
     }));
 });
@@ -221,32 +304,28 @@ const comparisonRows = computed(() => {
 <template>
     <Head :title="$t('ui.planner.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.planner.title') }}</h2>
+            <PageHeader :title="$t('ui.planner.title')" />
         </template>
 
-        <div class="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <EmptyState
                 v-if="items.length === 0"
                 icon="scale"
                 :title="$t('ui.planner.empty_title')"
                 :description="$t('ui.planner.empty_hint')"
-            >
-                <template #action>
-                    <Link :href="wishlistIndex.url()">
-                        <PrimaryButton type="button">{{ $t('ui.planner.go_wishlist') }}</PrimaryButton>
-                    </Link>
-                </template>
-            </EmptyState>
+                :action-label="$t('ui.planner.go_wishlist')"
+                :action-href="wishlistIndex.url()"
+            />
 
             <template v-else>
                 <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">
                     {{ $t('ui.planner.intro') }}
                 </p>
 
-                <div v-if="!hasFillRules" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-                    {{ $t('ui.planner.no_rules') }}
+                <div v-if="!hasFillRules" class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-300">
+                    {{ $t('ui.planner.no_rules_info') }}
                     <Link :href="bucketsIndex.url()" class="font-semibold underline">{{ $t('ui.planner.add_rule') }}</Link>
                     {{ $t('ui.planner.add_rule_tail') }}
                 </div>
@@ -271,6 +350,12 @@ const comparisonRows = computed(() => {
                     </div>
                 </div>
 
+                <div v-if="coverage" class="space-y-0.5 text-xs text-gray-500 dark:text-gray-400" data-test="income-coverage">
+                    <p>{{ $t('ui.planner.counting_incomes', { counted: coverage.counted, total: coverage.total, amount: format.money(coverage.countedAmount, currency) }) }}</p>
+                    <p v-if="coverage.overdue > 0">{{ $t('ui.planner.overdue_counted', { count: coverage.overdue }, coverage.overdue) }}</p>
+                    <p v-if="coverage.offBudget > 0">{{ $t('ui.planner.off_budget_incomes', { count: coverage.offBudget, amount: format.money(coverage.offBudgetAmount, currency) }, coverage.offBudget) }}</p>
+                </div>
+
                 <p v-if="error" class="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400">{{ error }}</p>
 
                 <section class="space-y-3">
@@ -285,7 +370,7 @@ const comparisonRows = computed(() => {
                                     <span class="text-xs text-gray-400">
                                         <span class="tracking-widest text-primary-500" :title="$t('ui.planner.importance', { value: item.importance })">{{ importance(item.importance) }}</span>
                                         <template v-if="item.bucket"> &middot; {{ item.bucket.name }}</template>
-                                        <template v-else> &middot; {{ $t('ui.planner.default_bucket') }}</template>
+                                        <template v-else> &middot; {{ $t('ui.planner.from_ready_only') }}</template>
                                         <template v-if="item.desiredBy"> &middot; {{ $t('ui.planner.by', { date: formatDate(item.desiredBy) }) }}</template>
                                     </span>
                                 </span>
@@ -295,7 +380,7 @@ const comparisonRows = computed(() => {
                     </ul>
                     <div class="flex flex-wrap gap-2">
                         <PrimaryButton type="button" :disabled="loading || selected.size === 0" @click="runSuggest">
-                            <DynamicIcon name="sparkles" class="mr-1.5 h-4 w-4" />
+                            <DynamicIcon name="sparkles" class="h-4 w-4" />
                             {{ $t('ui.planner.suggest') }}
                         </PrimaryButton>
                         <SecondaryButton type="button" :disabled="selected.size === 0" @click="startFromSelection">{{ $t('ui.planner.build') }}</SecondaryButton>
@@ -337,18 +422,13 @@ const comparisonRows = computed(() => {
                             <li v-for="(row, index) in order" :key="row.itemId" class="rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                                 <div class="flex items-center gap-2">
                                     <span class="w-5 text-xs font-semibold text-gray-400">{{ index + 1 }}.</span>
-                                    <span class="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">{{ itemById(row.itemId)?.name }}</span>
-                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="index === 0" :title="$t('ui.planner.buy_earlier')" @click="move(index, -1)">
-                                        <DynamicIcon name="chevron-down" class="h-4 w-4 rotate-180" />
-                                    </button>
-                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-gray-700" :disabled="index === order.length - 1" :title="$t('ui.planner.buy_later')" @click="move(index, 1)">
-                                        <DynamicIcon name="chevron-down" class="h-4 w-4" />
-                                    </button>
-                                    <button type="button" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.planner.remove')" @click="removeLine(index)">
-                                        <DynamicIcon name="x-mark" class="h-4 w-4" />
-                                    </button>
+                                    <span class="min-w-0 flex-1 truncate text-sm font-medium" :class="isPlannable(row) ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through dark:text-gray-500'">{{ lineName(row) }}</span>
+                                    <IconButton icon="chevron-down" icon-class="h-4 w-4 rotate-180" :label="$t('ui.planner.buy_earlier')" :disabled="index === 0" @click="move(index, -1)" />
+                                    <IconButton icon="chevron-down" :label="$t('ui.planner.buy_later')" :disabled="index === order.length - 1" @click="move(index, 1)" />
+                                    <IconButton icon="x-mark" variant="danger" :label="$t('ui.planner.remove')" @click="removeLine(index)" />
                                 </div>
-                                <div class="mt-1.5 flex items-center gap-2 pl-7 text-xs text-gray-500 dark:text-gray-400">
+                                <p v-if="!isPlannable(row)" class="mt-1 pl-7 text-xs text-amber-600 dark:text-amber-400">{{ $t('ui.planner.left_out') }}</p>
+                                <div v-else class="mt-1.5 flex items-center gap-2 pl-7 text-xs text-gray-500 dark:text-gray-400">
                                     <label :for="`nb-${row.itemId}`">{{ $t('ui.planner.not_before') }}</label>
                                     <input :id="`nb-${row.itemId}`" v-model="row.notBefore" type="date" class="rounded-md border-gray-300 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-700" @change="runSimulation" />
                                 </div>
@@ -356,7 +436,8 @@ const comparisonRows = computed(() => {
                         </ol>
 
                         <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                            <p v-if="!result" class="text-sm text-gray-400">{{ $t('ui.planner.working') }}</p>
+                            <p v-if="plannableRows.length === 0" class="text-sm text-gray-400">{{ $t('ui.planner.nothing_plannable') }}</p>
+                            <p v-else-if="!result" class="text-sm text-gray-400">{{ $t('ui.planner.working') }}</p>
                             <ScenarioResult v-else :result="result" :currency="currency" :horizon-months="horizon" />
                             <div class="mt-3">
                                 <SecondaryButton v-if="!showSave" type="button" @click="showSave = true">{{ $t('ui.planner.save_compare') }}</SecondaryButton>
@@ -384,10 +465,9 @@ const comparisonRows = computed(() => {
                                     <span class="text-xs text-gray-400">{{ $t('ui.planner.plan_meta', { count: scenario.lines.length }) }} &middot; {{ scenario.currency }} &middot; {{ viewLabel(scenario.view) }} &middot; {{ $t('ui.planner.months', { count: scenario.horizonMonths }) }}</span>
                                 </span>
                             </label>
+                            <p v-if="compareIds.has(scenario.id) && !scenarioHasPlannableLines(scenario)" class="order-last w-full pl-7 text-xs text-amber-600 dark:text-amber-400">{{ $t('ui.planner.nothing_plannable') }}</p>
                             <button type="button" class="text-xs font-medium text-primary-600 hover:underline dark:text-primary-400" @click="loadScenario(scenario)">{{ $t('ui.planner.open') }}</button>
-                            <button type="button" class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10" :title="$t('ui.common.delete')" @click="deleteScenario(scenario)">
-                                <DynamicIcon name="trash" class="h-4 w-4" />
-                            </button>
+                            <IconButton icon="trash" variant="danger" :label="$t('ui.common.delete')" @click="deleteScenario(scenario)" />
                         </li>
                     </ul>
                     <p class="text-xs text-gray-400">{{ $t('ui.planner.compare_hint') }}</p>

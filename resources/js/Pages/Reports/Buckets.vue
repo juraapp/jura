@@ -1,7 +1,9 @@
 <script setup>
+import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import Money from '@/Components/Money.vue';
 import SegmentedControl from '@/Components/SegmentedControl.vue';
@@ -29,11 +31,11 @@ const changeView = (value) => {
     router.get(bucketsReport.url({ query: { view: value } }), {}, { preserveScroll: true, preserveState: true });
 };
 
-const viewHints = {
+const viewHints = computed(() => ({
     conservative: t('ui.reports_buckets.hint_conservative'),
     expected: t('ui.reports_buckets.hint_expected'),
     optimistic: t('ui.reports_buckets.hint_optimistic'),
-};
+}));
 
 const balanceOptions = (currency) => ({
     chart: { type: 'bar', height: Math.max(180, currency.buckets.length * 46), fontFamily: 'Roboto, sans-serif', toolbar: { show: false } },
@@ -65,12 +67,12 @@ const targetPercent = (bucket) => (bucket.cap ? Math.max(0, Math.min(100, (bucke
 <template>
     <Head :title="$t('ui.reports_buckets.title')" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout width="wide">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ $t('ui.reports_buckets.title') }}</h2>
+            <PageHeader :title="$t('ui.reports_buckets.title')" />
         </template>
 
-        <div class="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="space-y-8">
             <EmptyState
                 v-if="currencies.length === 0"
                 icon="chart-pie"
@@ -130,7 +132,7 @@ const targetPercent = (bucket) => (bucket.cap ? Math.max(0, Math.min(100, (bucke
                             </thead>
                             <tbody class="divide-y divide-gray-100 tabular-nums dark:divide-gray-700">
                                 <tr v-for="bucket in currency.buckets" :key="bucket.id" class="text-gray-700 dark:text-gray-200">
-                                    <td class="px-4 py-2 font-medium">{{ bucket.name }}<span v-if="bucket.isDefault" class="ml-1.5 rounded-full bg-primary-50 px-1.5 py-0.5 text-xs text-primary-700 dark:bg-primary-500/10 dark:text-primary-400">{{ $t('ui.reports_buckets.default') }}</span></td>
+                                    <td class="px-4 py-2 font-medium">{{ bucket.name }}</td>
                                     <td class="px-4 py-2 text-right"><Money :amount="bucket.available" :currency="currency.currency" /></td>
                                     <td class="px-4 py-2 text-right">
                                         <template v-if="bucket.cap && bucket.kind === 'savings'"><Money :amount="bucket.cap" :currency="currency.currency" /> <span class="text-xs text-gray-400">({{ format.number(targetPercent(bucket), 0) }}%)</span></template>

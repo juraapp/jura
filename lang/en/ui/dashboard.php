@@ -40,4 +40,5 @@ return [
     'distribution' => 'Current money distribution',
     'no_positive' => 'You don\'t have a positive balance in any account yet.',
     'net_worth_evolution' => 'Net worth evolution',
+    'needs_review' => 'Needs review ({count})',
 ];
