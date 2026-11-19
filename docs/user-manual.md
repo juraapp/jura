@@ -315,13 +315,13 @@ income arrives:
 - **Fixed amount**: for example 150,000 from every income. If the bucket has a cycle, the amount is per cycle instead:
   income tops the bucket up to it, so three payments in a month still give 150,000 in total, not 450,000.
 - **Share of what is left**: a percentage of the income that is still unclaimed when this bucket is reached in the
-  priority order. Put it after the fixed buckets: for example Purchase 80.95% of what is left (17/21) and
-  Restoration 100% of what is left; anything the Purchase bucket cannot take (it is full) flows on to Restoration.
+  priority order. Put it after the fixed buckets: for example Laptop fund 75% of what is left and Extras 100% of
+  what is left; anything the Laptop fund cannot take (it is full) flows on to Extras.
 - **Fill up to its target**: tops up whatever is missing.
 
 - **Raise it later** (advanced options): from the cycle *after* another bucket reaches its target (or is completed),
-  a fixed or percent fill switches to a new value. Example: General savings 150,000 per month, then 300,000 once the
-  Purchase fund is full. It takes effect from the following cycle, never mid-cycle.
+  a fixed or percent fill switches to a new value. Example: Emergency fund 100,000 per month, then 250,000 once the
+  Laptop fund is full. It takes effect from the following cycle, never mid-cycle.
 
 Buckets are offered each income in **priority order** (P0 first, then P1, and so on), so the important ones are filled before
 the rest. A bucket with a target stops filling once the target is reached. Whatever no bucket claims stays **ready to
@@ -412,23 +412,23 @@ buckets. There are two ways:
 Undoing a wish-list purchase reopens the bucket and brings its leftover back: in full from ready to assign, or from
 the bucket it moved to, up to what that bucket still holds (whatever it already used stays used).
 
-**Worked example: saving for a car.** You earn 4,500,000 in month 1 (three payments) and 2,000,000 a month after
-that, and want leisure money, a general savings pot, a 10,000,000 car fund and a pot for repairs:
+**Worked example: saving for a laptop.** You earn 3,000,000 in month 1 (two payments) and 2,400,000 a month after
+that, and want fun money, an emergency fund, a 6,000,000 laptop fund and a pot for extras:
 
 | Bucket | Kind | Setup |
 | --- | --- | --- |
-| Leisure | Spending limit | Category *Leisure*, limit 150,000 a month, **P0**, fill: fixed 150,000 |
-| General savings | Savings | Cycle: every 1 month, **P1**, fill: fixed 150,000, *Raise it later*: 300,000 when *Purchase fund* is full |
-| Purchase fund | Savings | Target 10,000,000, **P2**, no cycle, fill: share of what is left 80.95% (that is 17/21), tick *Close this bucket when a wish-list item paid from it is bought*, leftover moves to *Restoration* |
-| Restoration | Savings | **P3**, no cycle, fill: share of what is left 100% |
+| Fun | Spending limit | Category *Entertainment*, limit 200,000 a month, **P0**, fill: fixed 200,000 |
+| Emergency fund | Savings | Cycle: every 1 month, **P1**, fill: fixed 100,000, *Raise it later*: 250,000 when *Laptop fund* is full |
+| Laptop fund | Savings | Target 6,000,000, **P2**, no cycle, fill: share of what is left 75%, tick *Close this bucket when a wish-list item paid from it is bought*, leftover moves to *Extras* |
+| Extras | Savings | **P3**, no cycle, fill: share of what is left 100% |
 
-Then add a **used car** to the wish list at 10,000,000 using the *Purchase fund* bucket, and plan your incomes in
+Then add a **laptop** to the wish list at 6,000,000 using the *Laptop fund* bucket, and plan your incomes in
 **Upcoming & cash flow**. What you will see:
-- Each month, Leisure and General savings take 150,000 once, however many payments arrive. What remains is split 17/21
-  to the Purchase fund and the rest to Restoration. When the Purchase fund is full, the remainder goes to Restoration.
-- In the **Planner**, *Suggest the best order* gives the month you can buy the car. When you really buy it from the
-  wish list, the Purchase fund closes, anything above 10,000,000 moves to Restoration, and General savings steps up to
-  300,000 from the next month.
+- Each month, Fun takes 200,000 and the Emergency fund 100,000 once, however many payments arrive. What remains is
+  split 75% to the Laptop fund and the rest to Extras. When the Laptop fund is full, the remainder goes to Extras.
+- In the **Planner**, *Suggest the best order* gives the month you can buy the laptop. When you really buy it from the
+  wish list, the Laptop fund closes, anything above 6,000,000 moves to Extras, and the Emergency fund steps up to
+  250,000 from the next month.
 - In **Upcoming & cash flow**, an account with an interest rate (see *Accounts*) adds a projected *Interest* column, so the
   forecast includes what your bank "boxes" earn.
 
