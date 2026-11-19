@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { Deferred, Link, router, usePage } from '@inertiajs/vue3';
+import { Deferred, router, usePage } from '@inertiajs/vue3';
 import DynamicIcon from '@/Components/DynamicIcon.vue';
 import { onClickOutside } from '@/composables/onClickOutside';
 import { read, readAll } from '@/routes/notifications';
@@ -14,8 +14,18 @@ const root = ref(null);
 
 onClickOutside(root, () => (open.value = false));
 
-const markAsRead = (notificationId) => {
-    router.patch(read.url(notificationId), {}, { preserveScroll: true, only: ['notifications'] });
+/**
+ * A plain click marks the notification read and opens its page in one visit (the server redirects). Modified or
+ * middle clicks keep the browser's own behaviour, so a notification can still open in a new tab.
+ */
+const openNotification = (event, notification) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+    }
+
+    event.preventDefault();
+    open.value = false;
+    router.patch(read.url(notification.id));
 };
 
 const markAllAsRead = () => {
@@ -63,13 +73,13 @@ const markAllAsRead = () => {
                     </template>
 
                     <template v-if="page.props.notifications?.items?.length">
-                        <Link
+                        <a
                             v-for="notification in page.props.notifications.items"
                             :key="notification.id"
                             :href="notification.url"
-                            class="flex gap-3 border-b border-gray-50 px-4 py-3 last:border-0 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/40"
+                            class="flex w-full gap-3 border-b border-gray-50 px-4 py-3 text-left last:border-0 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/40"
                             :class="{ 'opacity-60': notification.readAt }"
-                            @click="markAsRead(notification.id)"
+                            @click="openNotification($event, notification)"
                         >
                             <span
                                 class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
@@ -83,7 +93,7 @@ const markAllAsRead = () => {
                                 <p class="text-sm text-gray-700 dark:text-gray-300">{{ notification.message }}</p>
                                 <p class="mt-0.5 text-xs text-gray-400">{{ format.dateTime(new Date(notification.createdAt)) }}</p>
                             </div>
-                        </Link>
+                        </a>
                     </template>
                     <p v-else class="px-4 py-8 text-center text-sm text-gray-400">{{ $t('ui.shell.notifications.empty') }}</p>
                 </Deferred>
